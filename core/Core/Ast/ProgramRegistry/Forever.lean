@@ -49,7 +49,7 @@ theorem forever_annahme (scope : Scope) (result : Option (Ty .value)) :
   · rintro s c ⟨op, operands⟩ head guard
     exact ⟨c, (foreverForm scope result).befehl args, head, guard⟩
   · intro t c s w stepPlan u spur next step execute ev
-    obtain ⟨rfl, _⟩ := ((foreverForm scope result).befehl args).vollzug_genau (w := w) step execute
+    obtain ⟨rfl, _⟩ := ((foreverForm scope result).befehl args).vollzug_genau (h := Or.inl rfl) (w := w) step execute
     exact List.not_mem_nil
 
 -- Mirror boundedWhile_ideal for the back-jump instruction.

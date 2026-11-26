@@ -227,14 +227,43 @@ theorem lauf_temp1 (ρ : I.Lauf (fragA.einheit .x86_64))
           (b.ideal_privat (fragA_rein b hmem0) c0 (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal
         cases same
         cases after
-        have hakt : Semantik.plan.aktion = .intern := rfl
         obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
-        rw [hakt] at fuehrt
-        generalize hau : spur0.2 = au at fuehrt
-        cases fuehrt with
-        | intern =>
-          rw [hstate]
-          exact hall c
+        rcases b.plan_privat_aktion (fragA_rein b hmem0) ((ρ.zeit.zustand t).lokal c0) with hL|⟨v1,a1,hL⟩|⟨g1,hL⟩|⟨v2,k2,hL⟩|⟨l3,k3,p3,hL⟩
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal c0) 0).aktion = .intern := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | intern =>
+            rw [hstate]
+            exact hall c
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal c0) 0).aktion = .maskiere v1 a1 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | maskiere _ _ =>
+            rw [hstate]
+            exact hall c
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal c0) 0).aktion = .prioritaet g1 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | prioritaet _ =>
+            rw [hstate]
+            exact hall c
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal c0) 0).aktion = .sende v2 k2 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | sende _ _ =>
+            rw [hstate]
+            exact hall c
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal c0) 0).aktion = .leite l3 k3 p3 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | leite _ _ _ =>
+            rw [hstate]
+            exact hall c
       | antwort _ reply =>
         obtain ⟨_, _, _, hstate⟩ := reply
         rw [hstate]
@@ -294,7 +323,7 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
     refine ⟨eineTabelle_akzeptiert,
       fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => ?_⟩
     have hpriv := fragA_rein i (List.mem_of_getElem? (kopf_code hkopf))
-    obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus hpriv
+    obtain ⟨rfl, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _⟩ := i.vollzug_genau_privat hpriv (w := w) himpl haus
     exact spurRespektiert_leer _ _ _
   refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, fun b => Befehl.regelLokal fragA .x86_64 b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal fragA .x86_64
@@ -305,10 +334,18 @@ theorem fragA_akzeptiert : Akzeptiert (fragA.einheit .x86_64) := by
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, head, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute
-        (fragA_rein b (List.mem_of_getElem? (kopf_code head)))
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+      obtain ⟨rfl, _, _, hfragen, hantworten, _, _, _, _, hbuchung, _, _, _, hepoch, _, _⟩ := b.vollzug_genau_privat (fragA_rein b (List.mem_of_getElem? (kopf_code head))) (w := w) transfer execute
+      obtain ⟨_, hnach⟩ := (b.impl_privat (fragA_rein b (List.mem_of_getElem? (kopf_code head))) c s w _ _).1 transfer
+      have hb : next.buchung = s.buchung := by simp only [hbuchung, hnach, Befehl.nach]
+      refine ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [], ?_, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩
+      · rw [hb]
+        exact (List.append_nil _).symm
+      · intro h
+        have e1 : next.fragen = s.fragen := by simp only [hfragen, hnach, Befehl.nach]
+        have e2 : next.antworten = s.antworten := by simp only [hantworten, hnach, Befehl.nach]
+        have e3 : next.epoche = s.epoche := by simp only [hepoch, hnach, Befehl.nach]
+        simp only [OffeneGriffeEigen, e1, e2, e3, hb, AussengriffeEigen] at h ⊢
+        exact h
   · intro run conforms
     change (∀ pred ∈ fragA.klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ fragA.klauseln.invariant, _) ∧

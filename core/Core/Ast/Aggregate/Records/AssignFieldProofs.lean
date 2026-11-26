@@ -244,8 +244,8 @@ public theorem AssignFieldErfuellbarAm : AssignFieldErfuellbarAmAussage := by
   let E := form.einheit platform args
   let s₀ := (I.start E start).2
   let s₁ := (Befehl.literal 0 1).nach eintritt s₀
-  have h₁ : E.system.ISchritt eintritt s₀ () [plan] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
-  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [plan] .start h₁
+  have h₁ : E.system.ISchritt eintritt s₀ () [_] s₁ := ⟨.literal 0 1, rfl, rfl, rfl⟩
+  have reached : E.system.IErreichbar s₀ s₁ := .schritt eintritt () [_] .start h₁
   refine ⟨ctx, args, form.erfuellbar_aus_erreichbar platform start args s₁ reached ?_ ?_⟩
   · exact form.realisiert (fun args => by
       change (((expr 0 args.value).code ++ [Befehl.setzeRecordFeld 0 args.ref.index args.name args.labels args.types args.index])[(expr 0 args.value).code.length]? =
@@ -297,8 +297,8 @@ public theorem AssignFieldProgram : AssignFieldProgramAussage := by
       (head : E.system.kopf s eintritt = some b)
       (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
       E.system.IErreichbar (I.start E start).2 (b.nach eintritt s) :=
-    .schritt eintritt () [plan] reached
-      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+    .schritt eintritt () [_] reached
+      ⟨b, head, (b.ideal_privat priv eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
   let defineSchema := Befehl.definiereRecord name.val value.labels value.types
   let defineMain := functionInstruction RecordExample.scope mainName [] none false
     (functionCode none none body) none

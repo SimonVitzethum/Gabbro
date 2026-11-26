@@ -43,7 +43,7 @@ theorem variantValue_annahme : VariantValueAnnahmeAussage := by
   · rintro s c ⟨op, operands⟩ head guard
     exact ⟨c, form.befehl args, head, guard⟩
   · intro t c s w stepPlan u spur next step execute ev
-    obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau (w := w) step execute
+    obtain ⟨rfl, _⟩ := (form.befehl args).vollzug_genau (h := Or.inl rfl) (w := w) step execute
     exact List.not_mem_nil
 
 private theorem vv_caseCode_inv (slot : Nat) {ty : Option (Ty .value)}

@@ -51,7 +51,7 @@ def textIndexUnit : Ast.Unit :=
       (by
         change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
         omega) value
-      (by dsimp [value, Expr.static]; exact ⟨trivial, trivial⟩)
+      (by dsimp only [value, Expr.static]; exact ⟨trivial, trivial⟩)
       (by
         change (0 : Int) ≤ 0 ∧ (255 : Int) ≤ 255
         omega)) .done⟩
@@ -165,7 +165,7 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
     (hEqR : Zustand.regionLive (ρ.zeit.zustand t) = Zustand.regionLive sPre)
     (hHead : kopf textIndexCode sPre eintritt = some b)
-    (hPriv : b.Privat)
+    (hPriv : b.klasse = .lokal ∨ b.klasse = .ruf)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
     (hFrPre : sPre.fragen = []) :
@@ -188,10 +188,10 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
   have stepT : I.Schritt textIndexEinheit.einrichtung textIndexEinheit.system
       textIndexEinheit.katalog ρ.hw t
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩)
-      (b.nach eintritt (ρ.zeit.zustand t)) :=
+      (b.maschinennach eintritt (ρ.zeit.zustand t) (b.nach eintritt (ρ.zeit.zustand t))) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug _ _ _ _)
+      ⟨b, headT, (b.ideal_privat (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))) eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
+      (b.vollzug textIndexEinheit.einrichtung _ _ _ (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))))
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
@@ -216,15 +216,17 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
           rfl
         subst b'
         obtain ⟨same, after⟩ :=
-          (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
+          (b.ideal_privat (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))) eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
-        have hakt : Semantik.plan.aktion = .intern := rfl
+        have hp : b.Privat := (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h)))
         obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
-        rw [hakt] at fuehrt
-        generalize hau : spur0.2 = au at fuehrt
-        cases fuehrt with
-        | intern =>
+        rcases b.plan_privat_aktion (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))) ((ρ.zeit.zustand t).lokal eintritt) with hL|⟨v1,a1,hL⟩|⟨g1,hL⟩|⟨v2,k2,hL⟩|⟨l3,k3,p3,hL⟩
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | intern =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
             simp only [Befehl.nach, hEqL, hEqR]
@@ -236,6 +238,22 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
             simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, txt_regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
+        · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
+        · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
+        · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
+        · have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
       · exfalso
         obtain ⟨b', head', _⟩ := regel
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by

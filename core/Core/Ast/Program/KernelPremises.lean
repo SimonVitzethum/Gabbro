@@ -52,8 +52,8 @@ def ProgramInstructionPremises (constructor : Name) (platform : Plattform) (star
     b.programConstructor = some constructor ∧ Ast.Parse text tree ∧
     let E := elaborieren platform tree
     E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s eintritt = some b ∧
-      E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-      E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+      E.system.ISchritt eintritt s () [b.plan (s.lokal eintritt) 0] (b.nach eintritt s) ∧
+      E.system.ImplSchritt eintritt s () [b.plan (s.lokal eintritt) 0] (b.nach eintritt s)
 
 private theorem at_source {category : Category} {tree : category.Tree}
     {platform : Plattform} {start : AussenStart} {s : Zustand} {b : Befehl}
@@ -62,8 +62,8 @@ private theorem at_source {category : Category} {tree : category.Tree}
     (head : (elaborieren platform tree).system.kopf s eintritt = some b) :
     ProgramInstructionPremises constructor platform start :=
   ⟨category, tree, Ast.print tree, s, b, tag, Ast.parse_print tree, reach, head,
-    ⟨b, head, (b.ideal_privat (Befehl.privat_von_programConstructor tag) eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
-      ⟨b, head, (b.impl_privat (Befehl.privat_von_programConstructor tag) eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩⟩
+    ⟨b, head, (b.ideal_privat (Befehl.privat_von_programConstructor tag) eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩,
+      ⟨b, head, (b.impl_privat (Befehl.privat_von_programConstructor tag) eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩⟩
 
 private theorem Quellform.program_occurrence {category : Category} {args : Type}
     (form : Quellform category args) {platform : Plattform} {start : AussenStart}
@@ -79,8 +79,8 @@ private theorem reach_step {p : Fragment} {platform : Plattform} {start : Zustan
     (head : (p.einheit platform).system.kopf s eintritt = some b)
     (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     (p.einheit platform).system.IErreichbar start (b.nach eintritt s) :=
-  .schritt eintritt () [plan] reach
-      ⟨b, head, (b.ideal_privat priv eintritt s () [plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+  .schritt eintritt () [_] reach
+      ⟨b, head, (b.ideal_privat priv eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
 
 private theorem while_occurrences :
     (∀ platform start, ProgramInstructionPremises ``Befehl.setzePasszahl platform start) ∧

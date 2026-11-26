@@ -118,6 +118,10 @@ private theorem ausfuehrbar_fuehrtAus (e : Einrichtung Nat Zelle Int Nat Rahmen 
   | wechsle kern kind =>
     rcases h with ⟨hfrei, hlaeuft, hnirgends, handers⟩
     exact ⟨_, FuehrtAus.wechsle hfrei hlaeuft hnirgends handers⟩
+  | maskiere _ _ => exact ⟨_, FuehrtAus.maskiere _ _⟩
+  | prioritaet _ => exact ⟨_, FuehrtAus.prioritaet _⟩
+  | sende _ _ => exact ⟨_, FuehrtAus.sende _ _⟩
+  | leite _ _ _ => exact ⟨_, FuehrtAus.leite _ _ _⟩
   | warte _ => exact False.elim h
   | sperre _ _ => exact False.elim h
   | frage _ => exact False.elim h

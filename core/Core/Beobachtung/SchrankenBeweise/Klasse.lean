@@ -112,7 +112,7 @@ theorem schranken_lokal_einheit (p : Semantik.Fragment) (platform : Plattform)
     obtain ⟨i, kopfI, rule⟩ := regel
     have same : i = b := Option.some.inj (kopfI.symm.trans kopf)
     rw [same] at rule
-    obtain ⟨_, nachBefehl⟩ := b.vollzug_genau (show b.impl c vor w [_] _ from rule) aus (Or.inl klasse)
+    obtain ⟨_, nachBefehl⟩ := b.vollzug_genau (Or.inl klasse) (show b.impl c vor w [_] _ from rule) aus
     subst nachBefehl
     rw [klasse]
     refine And.intro (fun z hz => hz) ?_

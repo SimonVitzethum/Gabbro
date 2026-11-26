@@ -171,7 +171,7 @@ theorem TextTypeRegelAntwortSicher : TextTypeRegelAntwortSicherAussage := by
   intro t c s choice stepPlan u spur next head impl execute
   have hp : stepPlan = plan := (List.cons.inj impl.1).1
   subst stepPlan
-  obtain ⟨hspur, _⟩ := b.vollzug_genau (w := choice) impl execute
+  obtain ⟨hspur, _⟩ := b.vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   subst spur
   constructor
   · intro answer
@@ -188,7 +188,7 @@ theorem TextTypeKostenUndSpur : TextTypeKostenUndSpurAussage := by
   let form := typeUseForm ctx textTypeUse
   let b := form.befehl args
   intro t c s choice stepPlan u spur next head impl execute
-  obtain ⟨hspur, _⟩ := b.vollzug_genau (w := choice) impl execute
+  obtain ⟨hspur, _⟩ := b.vollzug_genau (h := Or.inl rfl) (w := choice) impl execute
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   change ((form.fragment args).einheit platform).stotterLaenge b + [stepPlan].length = 1

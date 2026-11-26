@@ -21,17 +21,24 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat
     (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     RegelSicher (p.sicherheitsEinheit platform) b := by
   intro H ρ t c w vor zwischen nach plan spur head impl execute
-  obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) impl execute h
-  have okB := ok b (kopf_mem head)
+  obtain ⟨hspur, _, hstatus, _, _, _, _, hinitial, hgraph, hbuchung,
+    hrechte, _, _, _, _, hsperren⟩ :=
+    b.vollzug_genau_privat h (w := w) impl execute
+  subst hspur
+  obtain ⟨_, hnach⟩ := (b.impl_privat h c vor w [plan] zwischen).1 impl
   have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Zelle Int) := List.not_mem_nil
+  have hub : nach.buchung = vor.buchung := by rw [hbuchung, hnach]; rfl
   have wirkungen :
-      NeueWirkungen vor (b.nach c vor) (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
-    Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
-  refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
-  · intro i actor access recorded _
+      NeueWirkungen vor nach (⟨[], []⟩ : SchrittSpur Zelle Int) [] :=
+    Or.inr ⟨ohneAbsturz, by rw [hub, List.append_nil]⟩
+  have hgr : vor.graph = nach.graph := by rw [hgraph, hnach]; rfl
+  refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => hgr ▸ ordered, ?_, ?_⟩
+  · intro i actor l recorded _
     cases recorded
   · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
     intro _ obj alive lost
+    have hrech : nach.rechte = vor.rechte := by rw [hrechte, hnach]; rfl
+    rw [hrech] at lost
     exact nomatch alive.symm.trans lost
   · intro vorSicher
     refine ⟨fun _ _ => trivial, ?_⟩
@@ -42,26 +49,55 @@ theorem Befehl.sicher (p : Fragment) (platform : Plattform) (ps : List Praedikat
     rw [List.getElem?_map] at hinner
     obtain ⟨q, hsome, rfl⟩ := Option.map_eq_some_iff.mp hinner
     rw [← tab, ← List.getElem?_map] at declared
-    have hok := pruefeBefehlErhalt_richtig ps b q
-      (List.mem_of_getElem? hsome) okB
-    have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i :=
-      writersNach
+    have hstNach : ∀ c', vor.status c' = .laeuft → nach.status c' = .laeuft := by
+      intro c' hst
+      rw [hstatus, hnach]
+      exact hst
+    have writersVor : ∀ c', vor.status c' = .laeuft → ¬ vor.buchung.schreibt c' i := by
+      intro c' hst
+      have h1 := writersNach c' (hstNach c' hst)
+      rw [hub] at h1
+      exact h1
     have vorGilt : q.gilt vor := vorSicher.2 i _ declared writersVor
-    exact q.gilt_nach b c vor hok vorGilt
+    have hinit : nach.initial = vor.initial := by rw [hinitial, hnach]; rfl
+    exact q.gilt_of_initial vor nach hinit.symm vorGilt
   · intro _ l changeOwner
-    exact (changeOwner rfl).elim
+    have hbes : (nach.sperren l).besitzer = (vor.sperren l).besitzer := by
+      rw [hsperren, hnach]; rfl
+    exact (changeOwner hbes.symm).elim
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
   · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
       fun _ mem => (List.not_mem_nil mem).elim⟩
 
-/-- The local value transfer leaves the question ledger and its authority unchanged. -/
+/-- The local value transfer leaves the question ledger and its authority unchanged: the machine
+    step keeps the questions, answers, epoch and outside ledger, so pending authority carries over. -/
 theorem Befehl.antwortSicher (p : Fragment) (platform : Plattform) (b : Befehl)
     (h : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl) | exact Quellform.privat _ _) :
     Sicherheit.RegelAntwortSicher (p.sicherheitsEinheit platform) b := by
   intro t c w vor zwischen nach stepPlan spur _ impl execute befugt
-  obtain ⟨_, rfl⟩ := b.vollzug_genau (w := w) impl execute h
-  exact befugt
+  obtain ⟨hspur, _, _, hfragen, hantworten, _, _, _, _, hbuchung, _, _, _, hepoche, _⟩ :=
+    b.vollzug_genau_privat h (w := w) impl execute
+  subst hspur
+  obtain ⟨_, hnach⟩ := (b.impl_privat h c vor w [stepPlan] zwischen).1 impl
+  have hfr : nach.fragen = vor.fragen := by rw [hfragen, hnach]; rfl
+  have hep : nach.epoche = vor.epoche := by rw [hepoche, hnach]; rfl
+  have hant : nach.antworten = vor.antworten := by rw [hantworten, hnach]; rfl
+  have hb : nach.buchung = vor.buchung := by rw [hbuchung, hnach]; rfl
+  intro q mem le unanswered
+  rw [hfr] at mem
+  rw [hep] at le
+  rw [hant] at unanswered
+  obtain ⟨⟨c', nummer, griffe⟩, register⟩ := befugt q mem le unanswered
+  refine ⟨⟨c', nummer, ?_⟩, ?_⟩
+  · intro z hz
+    have hz' := griffe z hz
+    simp only [EigeneGriffe, hb] at hz' ⊢
+    exact hz'
+  · intro reg
+    have hr := register reg
+    simp only [RegisterErlaubt, hb] at hr ⊢
+    exact hr
 
 theorem Befehl.sicherheitsPflichten (p : Fragment) (platform : Plattform)
     (ps : List Praedikat)

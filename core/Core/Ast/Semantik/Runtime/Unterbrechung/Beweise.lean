@@ -22,7 +22,7 @@ open Maschine Katalog Beobachtung
 /-- A frame-only step leaves the machine fields the delivery decision reads. -/
 private theorem ideal_nach_gleich (b : Befehl) (h : b.Privat) (c : Kontext) (s u : Zustand)
     (w : PUnit.{1}) (plans : List Plan) (step : b.ideal c s w plans u) :
-    plans = [Semantik.plan] ∧ u.kerne = s.kerne ∧ u.status = s.status ∧
+    plans = [b.plan (s.lokal c) 0] ∧ u.kerne = s.kerne ∧ u.status = s.status ∧
       u.geliefert = s.geliefert ∧ u.epoche = s.epoche := by
   obtain ⟨hplan, hu⟩ := (b.ideal_privat h c s w plans u).1 step
   refine ⟨hplan, ?_, ?_, ?_, ?_⟩ <;> rw [hu] <;> rfl
