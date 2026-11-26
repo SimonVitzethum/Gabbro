@@ -226,7 +226,7 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     exact ha
   have hmitPc7 : mitPc 8 r7_0 = r7 := by
     change { r7 with pc := 8 + 0 } = r7
-    rfl
+    rw [show (8 : Nat) + 0 = r7.pc by rw [hpc7]]
   obtain ⟨kR, rR, hrunR, hpcR, hrRaus, hpresR, hlokR, hrueckR, hstoppR⟩ :=
     precRumpfLauf cgBlk cg aus frei freiCg y i a v r7_0 hr7_0pc hr7_0y hr7_0i hr7_0a
       hausFrei hfreiCg hcg hvCg hv
@@ -250,14 +250,15 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hrEpc : rE.pc = cgBlk.length + 96 := by
     change 8 + rR.pc = cgBlk.length + 96
     rw [hpcR]
+    omega
   have hrEy : rE.temp (frei + 2) = some (natVal y) := by
     change rR.temp (frei + 2) = some (natVal y)
     rw [hpresR (frei + 2) (by omega) (by omega) (by omega) (by omega)]
     exact hr7_0y
   obtain ⟨rEnd, hrunEnde, hpcEnde, hrEndY, hpresEnde, hlokEnde, hrueckEnde, hstoppEnde⟩ :=
     precEndeGanzLauf cgBlk aus frei y rE hrEpc hrEy
-  refine ⟨3 + kR + 8, rEnd, ?_, hpcEnde, hrEndY, ?_, ?_, ?_, ?_⟩
-  · rw [Function.iterate_add_apply, hrunMitte, hrunEnde]
+  refine ⟨3 + kR + 8, rEnd, ?_, hpcEnde, hrEndY, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [show 3 + kR + 8 = 3 + (kR + 8) by omega, Function.iterate_add_apply, hrunMitte, hrunEnde]
   · change rEnd.temp aus = some (natVal v)
     rw [hpresEnde aus (by omega)]
     change rR.temp aus = some (natVal v)
@@ -268,7 +269,6 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     rw [hpresR s (by omega) hne (by omega) (by omega)]
     change r7_0.temp s = r.temp s
     rw [hpres7 s (ltNeAdd hs) (ltNeAdd hs)]
-    rfl
   · change rEnd.lokale = r.lokale
     exact hlokEnde.trans (hlokR.trans hlok7)
   · change rEnd.rueckgabe = r.rueckgabe
