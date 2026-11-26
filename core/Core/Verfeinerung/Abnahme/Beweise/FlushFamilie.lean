@@ -10,6 +10,8 @@
 module
 
 public import Core.Verfeinerung.Abnahme.Flush
+public import Core.Ast.LowLevel.Mem.Execution
+import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivateObligations
 
 @[expose] public section
 
@@ -75,5 +77,64 @@ theorem FlushFamilienAussage.konkretKeineZelle
   have protokoll := FlushFamilienAussage.konkret U pflicht valid matched
   exact FlushProtokoll.frei_bei_freigabe protokoll zellen kernVon bereich nurKerne
     keineFuellung handlerLeert release z bereichZ
+
+private theorem flushLabelGleich {Id : Type} (sicht : FlushSicht Ort Wert Wahl Id)
+    {konkret ideal : Option (SchrittWahl Wahl × SchrittSpur Ort Wert)}
+    (matched : SpurAbgleich konkret ideal) {phase} (seen : sicht.lesen konkret = some phase) :
+    konkret = ideal := by
+  cases matched with
+  | pause => rfl
+  | privat c w =>
+    rw [sicht.privat, sicht.leer] at seen
+    cases seen
+  | schritt event => rfl
+
+/-- The observed release belongs to the specified send. Every existing core has a handler and
+    acknowledgement between those cuts, with full labels preserved at those same cuts in I.
+    The send and release observations must come from the unit's actual staged binding. -/
+theorem FlushFamilienAussage.konkretFreigabekette
+    (U : FlushEinheit L Ort Wert Raum Lok Grund Bedingung Wahl F)
+    (pflicht : FlushFamilienAussage U)
+    {ρ : Maschine.Lauf U.einheit} {η : Lauf U.einheit}
+    (valid : Laeufe U.einheit η) (matched : Laufabgleich ρ η)
+    {id : U.bindung.Id} {s r : Nat} {targets : List Kern}
+    (send : U.bindung.sicht.lesen (ρ.zeit.spur s) = some (id, .senden targets))
+    (release : U.bindung.sicht.lesen (ρ.zeit.spur r) = some (id, .freigeben)) :
+    s < r ∧ (∀ t, s ≤ t → t < r → ρ.zeit.spur t ≠ some (.absturz, absturzSpur)) ∧
+    ρ.zeit.spur s = η.zeit.spur s ∧ ρ.zeit.spur r = η.zeit.spur r ∧
+    ∀ k, k < η.umgebung.kernzahl → ∃ h a, s < h ∧ h < a ∧ a < r ∧
+      U.bindung.sicht.lesen (ρ.zeit.spur h) = some (id, .handler k) ∧
+      U.bindung.sicht.lesen (ρ.zeit.spur a) = some (id, .bestaetigen k) ∧
+      ρ.zeit.spur h = η.zeit.spur h ∧ ρ.zeit.spur a = η.zeit.spur a := by
+  have protocol := FlushFamilienAussage.konkret U pflicht valid matched
+  obtain ⟨s', targets', before, sent, noCrash, all⟩ := protocol.freigabe id r release
+  have sameCut := protocol.eineSendung id targets targets' s s' send sent
+  subst s'
+  refine ⟨before, noCrash, flushLabelGleich _ (matched.spur s) send,
+    flushLabelGleich _ (matched.spur r) release, ?_⟩
+  intro k existsCore
+  obtain ⟨h, a, sh, ha, ar, handler, ack⟩ :=
+    all k (protocol.abdeckung id targets' s sent k existsCore)
+  exact ⟨h, a, sh, ha, ar, handler, ack, flushLabelGleich _ (matched.spur h) handler,
+    flushLabelGleich _ (matched.spur a) ack⟩
+
+open Gabbro.Core.Ast.LowLevel in
+/-- The current checked Mem context steps cannot supply the observations needed by the family
+    bridge. They preserve the software queue and emit no phase that a lawful view can read. -/
+theorem memKontextOhneShootdown {Id : Type} {k : Katalog.Katalog}
+    {code : List MemInstruction} {hw : Katalog.HwLauf} {t : Nat}
+    {s next : MemState} {c : Kontext} {w : PUnit} {trace : SchrittSpur Nat UInt8}
+    (step : ImplSchritt (memProgram k code).einrichtung (memProgram k code).system k hw t
+      s (.kontext c w, trace) next) (sicht : FlushSicht Nat UInt8 PUnit Id) :
+    next.software = s.software ∧ sicht.lesen (some (.kontext c w, trace)) = none := by
+  cases step with
+  | kontext _ _ rule execute =>
+    obtain ⟨op, _, impl⟩ := rule
+    obtain ⟨frame, _, _, advance⟩ := MemInstruction.activateStepTransfer
+      (target := k.plattform.ziel) (op := op) (w := w) impl
+    obtain ⟨rfl, rfl⟩ := MemInstruction.activateVollzugGenau
+      (target := k.plattform.ziel) (op := op) (w := w) impl execute
+    rw [advance, sicht.privat, sicht.leer]
+    exact ⟨rfl, rfl⟩
 
 end Gabbro.Core.Maschine.I
