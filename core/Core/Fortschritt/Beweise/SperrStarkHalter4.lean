@@ -87,7 +87,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   · rcases hreg with ⟨hs, hreg⟩
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
-      subst u
+      rw [hueq] at hF
       rw [hueq] at hziel
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
@@ -106,7 +106,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
-      have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
+      have hlock_u := hlock
       cases hF
       rw [hziel]
       rcases hcrash with hvor | hnach
@@ -115,12 +115,12 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
           rw [← hnext]
           simp only [Function.update_self]
           exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
-        · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
+        · exact vorCrash4_von (s := s) rfl rfl hvor
       · exact (hnach.1 c hs k hlk).elim
   · rcases hreg with ⟨_, hss, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
-    have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
+    have hlock_u := hlock
     cases hF
     rw [hziel]
     rcases hcrash with hvor | hnach
@@ -140,7 +140,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
             exact hlock_u.2 e he
           · intro e he k'
             simpa only [SperrZustand.abgeben] using hnach.1 e (hlock_u.2 e (by simp at he; exact he)) k'
-      · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
+      · exact vorCrash4_von (s := s) rfl rfl hvor
     · exact (hnach.1 c (by
         have hg : (s.sperren ()).Gibt c _ := by
               exact hss
@@ -149,12 +149,12 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   · rcases hreg with ⟨hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
-    have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
+    have hlock_u := hlock
     cases hF
     rw [hziel]
     refine ⟨hlock_u, ?_⟩
     rcases hcrash with hvor | hnach
-    · exact Or.inl (vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor))
+    · exact Or.inl (vorCrash4_von (s := s) rfl rfl hvor)
     · exact Or.inr ⟨by intro d hd k'; simpa only using hnach.1 d hd k', hnach.2.2.1, hnach.2.2.2⟩
 
 /-- An answer arrival changes only the answer ledgers, never dispatch, masks or locks. -/
