@@ -201,6 +201,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
                       List.take_of_length_le (le_of_eq happLen)
                     rw [ht]
+                    have ht2 : L₂.take L₁.length = L₂ :=
+                      List.take_of_length_le (le_of_eq hlenP.symm)
                     have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
                       induction A with
                       | nil => exact List.Forall₂.nil
@@ -253,8 +255,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     · rw [hn1fragen, hn2fragen, hfragen]
                     · rw [hn1verlauf, hn2verlauf, hverlauf]
                     · rw [hn1antworten, hn2antworten, hantworten]
-                    · rw [hn1verbraucht, hn2verbraucht]
-                    · rw [hn1verworfen, hn2verworfen]
-                    · rw [hn1buchung, hn2buchung]
+                    · rw [hn1verbraucht, hn2verbraucht, hverbraucht]
+                    · rw [hn1verworfen, hn2verworfen, hverworfen]
+                    · rw [hn1buchung, hn2buchung, geraeteKopplung_buchung hkopp hz₁ hz₂]
 
 end Gabbro.Core.Beobachtung
