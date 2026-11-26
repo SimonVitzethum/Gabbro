@@ -427,7 +427,7 @@ def SperrFreigabeAussage : Prop :=
     (∀ n, b ≤ n → ∃ t, n ≤ t ∧ ∃ k, ρ.hw.gelegenheit t k ∧
       ∃ s, ρ.zeit.zustand t = some s ∧ (s.kerne k).laeuft = some h) →
     ρ.zeit.zustand b = some s → (s.sperren l).besitzer = some h →
-    (∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
+    (∀ k, b ≤ k → (ρ.hw.angebot k).crash = false) →
     ∃ r, b ≤ r ∧
       (∃ s₁ s₂, ρ.zeit.zustand r = some s₁ ∧ ρ.zeit.zustand (r + 1) = some s₂ ∧
         (s₁.sperren l).Gibt h (s₂.sperren l)) ∧
@@ -458,7 +458,7 @@ def SperrWarteFairAussage : Prop :=
         ∃ s, ρ.zeit.zustand t = some s ∧ (s.kerne k).laeuft = some h) →
     (∃ s, ρ.zeit.zustand a = some s ∧ (s.sperren l).schlange[i]? = some c) →
     (∀ s, ρ.zeit.zustand a = some s → (s.sperren l).schlange.Nodup) →
-    (∀ k, a ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
+    (∀ k, a ≤ k → (ρ.hw.angebot k).crash = false) →
     ∃ (b : Nat) (e : List Nat), a ≤ b ∧
       (∃ s, ρ.zeit.zustand b = some s ∧
         ((s.sperren l).besitzer = some c ∨

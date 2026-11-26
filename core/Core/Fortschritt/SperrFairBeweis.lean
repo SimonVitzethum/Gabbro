@@ -64,7 +64,7 @@ theorem zaehle_ge_one_of_mem (m : Nat → Bool) (a d t : Nat) (hlt : t < d)
   | succ d ih =>
     by_cases heq : t = d
     · subst heq
-      have hif : (if m (a + d) then 1 else 0) = 1 := if_pos h
+      have hif : (if m (a + t) then 1 else 0) = 1 := if_pos h
       simp only [I.zaehle, hif]
       omega
     · have hlt' : t < d := by omega
@@ -74,6 +74,40 @@ theorem zaehle_ge_one_of_mem (m : Nat → Bool) (a d t : Nat) (hlt : t < d)
         omega
       · simp only [I.zaehle, if_neg hif, Nat.add_zero]
         exact hih
+
+/-- A hardware crash-free suffix never records a crash: a recorded crash step carries
+    its hardware offer. -/
+theorem spur_kein_absturz_aus_hw {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type}
+    [DecidableEq L] {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
+    {ρ : Maschine.Lauf E} {b : Nat}
+    (h : ∀ k, b ≤ k → (ρ.hw.angebot k).crash = false) :
+    ∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur) := by
+  intro k hk hcon
+  have htakt := ρ.zeit.takt k
+  cases htakt with
+  | wartet label _ _ =>
+    rw [label] at hcon
+    cases hcon
+  | schritt label step =>
+    cases step with
+    | schritt h =>
+      cases h with
+      | kontext _ _ _ _ =>
+        have heq := Option.some.inj (label.symm.trans hcon)
+        have hfst := congrArg Prod.fst heq
+        cases hfst
+      | antwort _ _ =>
+        have heq := Option.some.inj (label.symm.trans hcon)
+        have hfst := congrArg Prod.fst heq
+        cases hfst
+      | interrupt _ _ =>
+        have heq := Option.some.inj (label.symm.trans hcon)
+        have hfst := congrArg Prod.fst heq
+        cases hfst
+      | absturz hab =>
+        have hoffer := hab.1.2
+        rw [h k hk] at hoffer
+        exact Bool.false_ne_true hoffer
 
 /-- The strengthened release sentence: with the impl bridge and the opportunity alignment,
     the holder is stepped until the hold bound forces its release. Where ownership breaks
@@ -85,6 +119,8 @@ theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
   have hne : E.schranken.halten l ≠ none := by
     rw [hhalten]
     exact Option.some_ne_none H
+  have hcrash_spur : ∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur) :=
+    spur_kein_absturz_aus_hw hcrash
   have hsome : ∀ t, b ≤ t → ∃ s', ρ.zeit.zustand t = some s' := by
     intro t ht
     induction t, ht using Nat.le_induction with
@@ -124,7 +160,11 @@ theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
         obtain ⟨n, hn⟩ := ih
         obtain ⟨t, ht, w, spur, hst⟩ := hsteps (b + n) (Nat.le_add_right b n)
         refine ⟨t + 1 - b, ?_⟩
-        simp only [Kontextkosten] at hn ⊢
+        have hKT : ∀ m, Kontextkosten ρ h b m = I.zaehle (fun t => match ρ.zeit.spur t with
+            | some (.kontext d _, _) => decide (h = d)
+            | some (.antwort _, _) | some (.interrupt _, _) | some (.absturz, _) | none => false) b m :=
+          fun m => rfl
+        rw [hKT] at hn ⊢
         have hmt : (fun t => match ρ.zeit.spur t with
             | some (.kontext d _, _) => decide (h = d)
             | some (.antwort _, _) | some (.interrupt _, _) | some (.absturz, _) | none => false) t = true := by
@@ -155,7 +195,7 @@ theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
         omega
     obtain ⟨n, hn⟩ := hmany (H + 1)
     obtain ⟨r, hbr, _, hg, hcost'⟩ :=
-      sperr_freigabe_bedingt hhalten hhalte hcrash hzs hown hn
+      sperr_freigabe_bedingt hhalten hhalte hcrash_spur hzs hown hn
     exact ⟨r, hbr, hg, hcost'⟩
   · -- First ownership break: the hold bound discharges the release directly.
     have hex : ∃ t, b ≤ t ∧ ∃ s', ρ.zeit.zustand t = some s' ∧
@@ -191,7 +231,7 @@ theorem sperr_freigabe_aus_scheduler : SperrFreigabeAussage := by
     have hz0' : ρ.zeit.zustand (r + 1) = some s₂ := by
       rw [hr1]
       exact hz0
-    obtain ⟨next, hg, hvn⟩ := besitzwechsel_ist_gibt hsr hz0' (hcrash r hbr) hownr hne0
+    obtain ⟨next, hg, hvn⟩ := besitzwechsel_ist_gibt hsr hz0' (hcrash_spur r hbr) hownr hne0
     have hcont : ∀ t, b ≤ t → t < b + (r + 1 - b) →
         ∃ s', ρ.zeit.zustand t = some s' ∧ (s'.sperren l).besitzer = some h := by
       intro t hbt htt
@@ -218,7 +258,9 @@ theorem sperr_warte_fair_aus_freigabe : SperrWarteFairAussage := by
   intro L Ort Wert Raum Lok Grund Bedingung Wahl F inst E ρ hU l c i H a
     akz hhalte hhalten hrun hfair hsched hret hbereit hagree hausricht hqueue hnodup hcrash
   have hsec : AbschnittWartefrei E := akzeptiert_abschnitt akz
-  refine sperr_warte_schranke_bis i i a (Nat.le_refl _) hhalten hhalte hqueue hnodup hcrash ?_
+  have hcrash_spur : ∀ k, a ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur) :=
+    spur_kein_absturz_aus_hw hcrash
+  refine sperr_warte_schranke_bis i i a (Nat.le_refl _) hhalten hhalte hqueue hnodup hcrash_spur ?_
   intro h b' s' hb hzs hown
   exact sperr_freigabe_aus_scheduler E ρ hU l h H b' s'
     (fun t s'' ht hzs' hown' => hbereit h t s'' (hb.trans ht) hzs' hown')
