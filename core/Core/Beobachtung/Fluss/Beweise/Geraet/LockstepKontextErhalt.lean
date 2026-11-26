@@ -89,6 +89,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
             obtain ⟨binding, access, required, target, ruleEq, hbind⟩ := geraete_rule_binding locals d
             subst binding
             obtain ⟨kopf₁, plan', hplans', rule₁'⟩ := geraete_kontext_regel ruleEq regel₁
+            let uL := u₁
             obtain ⟨quell, hepoche, hgeliefert, hkerne, hstatus⟩ :=
               (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
             obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
@@ -167,7 +168,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | issue owned₂A idle₂A =>
-                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ u₁ := by
+                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ uL := by
                           dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                           rw [ruleEq]
                           dsimp only [Rule.machine]
@@ -196,19 +197,19 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             hbuchung₂.symm hstatus₂
                           simpa only [hfragen] using h
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ u₁ u₂t quell
+                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
                             ⟨kopf₁, impl₁Ideal⟩ ⟨kopf₂, impl₂Ideal⟩).1
-                          have n1lokal : n₁.lokal = u₁.lokal := by rw [hlokal₁]; rfl
+                          have n1lokal : n₁.lokal = uL.lokal := by rw [hlokal₁]; rfl
                           have n2lokal : n₂.lokal = u₂t.lokal := by rw [hlokal₂]; rfl
-                          have n1status : n₁.status = u₁.status := by rw [hstatus₁]; rfl
+                          have n1status : n₁.status = uL.status := by rw [hstatus₁]; rfl
                           have n2status : n₂.status = u₂t.status := by rw [hstatus₂]; rfl
-                          have n1initial : n₁.initial = u₁.initial := by rw [hinitial₁]; rfl
+                          have n1initial : n₁.initial = uL.initial := by rw [hinitial₁]; rfl
                           have n2initial : n₂.initial = u₂t.initial := by rw [hinitial₂]; rfl
-                          have n1rechte : n₁.rechte = u₁.rechte := by rw [hrechte₁]; rfl
+                          have n1rechte : n₁.rechte = uL.rechte := by rw [hrechte₁]; rfl
                           have n2rechte : n₂.rechte = u₂t.rechte := by rw [hrechte₂]; rfl
-                          have n1leihen : n₁.leihen = u₁.leihen := by rw [hleihen₁]; rfl
+                          have n1leihen : n₁.leihen = uL.leihen := by rw [hleihen₁]; rfl
                           have n2leihen : n₂.leihen = u₂t.leihen := by rw [hleihen₂]; rfl
-                          have n1antwort : n₁.naechsteAntwort = u₁.naechsteAntwort := by
+                          have n1antwort : n₁.naechsteAntwort = uL.naechsteAntwort := by
                             funext c'
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁,
                               hverbraucht₁, hverworfen₁, Zustand.frage, setFrame]
@@ -302,7 +303,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | @consume owned₂A answer₂A pending₂A ready₂A sameQuestion₂A =>
-                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ u₁ := by
+                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ uL := by
                           dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
                           rw [ruleEq]
                           dsimp only [Rule.machine]
@@ -331,7 +332,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             (by simpa using lab₂) hz₂ hn₂ aus₂a hplansA' rfl kopf₂
                             hbuchung₂.symm hstatus₂
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
-                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ u₁ u₂t quell
+                          have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
                             ⟨kopf₁, impl₁Ideal⟩ ⟨kopf₂, impl₂Ideal⟩).1
                           refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
                           · simpa only [hlokal₁, hlokal₂] using hq.1
@@ -364,7 +365,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           · rw [hverbraucht₁, hverbraucht₂, hverbraucht]
                           · rw [hverworfen₁, hverworfen₂, hverworfen]
                           · rw [hbuchung₁, hbuchung₂, hbuch]
-                      | issue _ _ =>
+                      | issue _ idle₂A =>
                         exfalso
                         rw [pending₂] at idle₂A
                         cases idle₂A
