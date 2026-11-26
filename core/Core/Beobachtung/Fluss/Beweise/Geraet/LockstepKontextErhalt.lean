@@ -213,11 +213,11 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           have n1antwort : n₁.naechsteAntwort = uL.naechsteAntwort := by
                             funext c'
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₁,
-                              hverbraucht₁, hverworfen₁, Zustand.frage, setFrame]
+                              hverbraucht₁, hverworfen₁, Zustand.frage, setFrame, uL]
                           have n2antwort : n₂.naechsteAntwort = uR.naechsteAntwort := by
                             funext c'
                             simp only [Zustand.naechsteAntwort, Zustand.angekommen, hantworten₂,
-                              hverbraucht₂, hverworfen₂, Zustand.frage, setFrame]
+                              hverbraucht₂, hverworfen₂, Zustand.frage, setFrame, uR]
                           unfold QuellzustandGleich at hq ⊢
                           unfold AntwortSicht at hq ⊢
                           simpa only [n1lokal, n2lokal, n1status, n2status, n1initial, n2initial,
