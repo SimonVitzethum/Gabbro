@@ -234,7 +234,6 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
                     · cases h5
                 refine ⟨?_, ?_, ?_⟩
                 · intro slot lo hi hlook g hg
-                  rw [hfort] at hg ⊢
                   exact he.1 slot lo hi hlook g hg
                 · intro slot l hh hlook d hd cap txt hdt
                   exact he.2 slot l hh hlook d hd cap txt hdt
