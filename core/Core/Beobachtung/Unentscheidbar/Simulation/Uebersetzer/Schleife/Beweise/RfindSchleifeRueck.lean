@@ -69,10 +69,11 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       have hkLe : k ≤ schr := by
         by_contra hle
         have hkgt : schr < k := Nat.lt_of_not_ge hle
+        have hstepEnd : Schritt (rfindSchleife cfBlk aus frei) (some rEnd) = none :=
+          schrittAmEnde _ rEnd hpcEnd
         have h1none : (Schritt (rfindSchleife cfBlk aus frei))^[schr + 1] (some r) = none := by
           rw [show schr + 1 = 1 + schr by omega, Function.iterate_add_apply, hrun]
-          change Schritt (rfindSchleife cfBlk aus frei) (some rEnd) = none
-          exact schrittAmEnde (rfindSchleife cfBlk aus frei) rEnd hpcEnd
+          simpa only [Function.iterate_one] using hstepEnd
         obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le (by omega : schr + 1 ≤ k)
         have hknone : (Schritt (rfindSchleife cfBlk aus frei))^[k] (some r) = none := by
           rw [← ht]
