@@ -76,10 +76,12 @@ def Fortschritt : Prop :=
   ∀ k h hw t s c, hw.konform k h → s.SpeicherGut → s.status c = .laeuft →
     (∃ kern, (s.kerne kern).laeuft = some c) → FortschrittAm e Sy k hw t s c
 
-theorem fortschritt_aus_regeln (fertig : ∀ s c, Sy.kopf s c = none → Sy.fertig s c)
-    (regeln : ∀ i, RegelFortschritt Sy i) (komponierbar : ∀ i, RegelKomponierbar e Sy i) :
-    Fortschritt e Sy := by
-  have forms : IFortschritt Sy := Gabbro.Core.Ideal.fortschritt_aus_regeln Sy fertig regeln
+/-- **`I.Fortschritt` from the form-level `IFortschritt` and a composable step at every form.** The form-level
+    property supplies "finished / step / blocked"; the protocol supplies the crash alternative and the step through
+    the machine frame. It lets a caller reuse a form-level progress theorem (e.g. `system_fortschritt` of a
+    frame-only fragment) instead of rebuilding it from per-form obligations. -/
+theorem fortschritt_aus_formen (forms : IFortschritt Sy)
+    (komponierbar : ∀ i, RegelKomponierbar e Sy i) : Fortschritt e Sy := by
   intro k h hw t s c konform memory running _
   cases offer : (hw.angebot t).crash with
   | true =>
@@ -95,6 +97,11 @@ theorem fortschritt_aus_regeln (fertig : ∀ s c, Sy.kopf s c = none → Sy.fert
       · exact Or.inr (Or.inr (Or.inr (Or.inr
           ⟨⟨w, plans, u, rule⟩, fun kern dispatch slot => ready ⟨kern, slot, dispatch, running⟩⟩)))
     · exact Or.inr (Or.inr (Or.inl blocked))
+
+theorem fortschritt_aus_regeln (fertig : ∀ s c, Sy.kopf s c = none → Sy.fertig s c)
+    (regeln : ∀ i, RegelFortschritt Sy i) (komponierbar : ∀ i, RegelKomponierbar e Sy i) :
+    Fortschritt e Sy :=
+  fortschritt_aus_formen e Sy (Gabbro.Core.Ideal.fortschritt_aus_regeln Sy fertig regeln) komponierbar
 
 /-- **`I.Fortschritt` from a composable step at every head.** The step of an instruction that CHOOSES a value it
     reads (an access, MK-04) is not any ideal step: only a step whose read the memory model accepts runs through the

@@ -135,16 +135,81 @@ theorem ideal_akzeptierte_einheit_rein (P : Katalog.Plattform) (t : Ast.Unit)
             (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h)⟩
 
 
-/-- `I` IS DETERMINATE AND MAKES PROGRESS FOR EVERY ELABORATED UNIT. A frame-only fragment by the template of its classes
-    (`ideal_akzeptierte_einheit_rein`), a fragment with an access instruction by the pinned statements of
-    `ZugriffZielAussage` (the composed determinacy and the liveness of the memory model). -/
+/-- The frame-only case of the fragment-level theorem, lifted from the form-level obligations. Determinacy is
+    `system_bestimmt` and progress is `system_fortschritt` of the fragment's code (both discharged by `p.Rein`),
+    composed with the machine frame; `Fragment.fertig` is the no-head-is-finished obligation that both use. -/
+theorem ideal_fragment_einheit_rein (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform)
+    (rein : p.Rein) :
+    Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system ∧
+    Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system := by
+  refine ⟨Maschine.I.bestimmt_aus_formen (p.einheit platform).einrichtung (p.einheit platform).system
+    (Ast.Semantik.system_bestimmt p.code rein), ?_⟩
+  exact Maschine.I.fortschritt_aus_formen (p.einheit platform).einrichtung (p.einheit platform).system
+    (Ast.Semantik.system_fortschritt p.code rein)
+    (fun i => by
+      by_cases h : i.Privat
+      · exact Ast.Semantik.Befehl.komponierbar p platform i h
+      · intro t' s c w plans u hk _ _
+        exact absurd (rein i (Ast.Semantik.kopf_mem (code := p.code) hk)) h)
+
+/-- `I` IS DETERMINATE AND MAKES PROGRESS FOR THE UNIT OF ANY FRAGMENT IN THE TWO CLASSES. The class obligation
+    `klassenrein` is the only premise: a frame-only fragment uses the template rules (`ideal_fragment_einheit_rein`),
+    one with an access uses the pinned determinacy and liveness of `ZugriffZielAussage`. No source origin is assumed,
+    so an ordinary source unit, a unit carrying declared invariants and a linked whole are all covered once their
+    class obligation is proved. This is the fragment-level form of the eighth conjunct of `NichtLeer`; it does not
+    close the gap to arbitrary accepted units (see the counterexample below), and says nothing about `R₀`. -/
+theorem ideal_fragment_einheit (zugriff : ZugriffZielAussage)
+    (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
+    Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system ∧
+    Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system := by
+  by_cases rein : p.Rein
+  · exact ideal_fragment_einheit_rein p platform rein
+  · exact ⟨zugriff.2.1 p platform ⟨klassenrein, rein⟩,
+      fortschritt_klassenrein zugriff.2.2.1 p platform klassenrein⟩
+
+/-- The old, source-indexed statement is the fragment theorem restricted to the fragment of a source tree:
+    `fragment_klassenrein` supplies the class obligation. Its type is unchanged. -/
 theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) : IdealAkzeptierteEinheitAussage := by
   intro P t
-  by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
-  · exact ideal_akzeptierte_einheit_rein P t rein
-  · have klassenrein := Ast.Semantik.fragment_klassenrein Ast.Category.unit t
-    exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩,
-      fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
+  exact ideal_fragment_einheit zugriff (Ast.Semantik.fragment Ast.Category.unit t) P
+    (Ast.Semantik.fragment_klassenrein Ast.Category.unit t)
+
+/-- A source fragment — an ordinary unit or one carrying declared invariants — proves the class obligation: only
+    the clause table differs between `programm` and `programmMitInvarianten`, so the code and its classes are the
+    same. This is the exact existing inclusion for the first two fragment origins. -/
+theorem fragmentQuelleinheit_klassenrein {p : Ast.Semantik.Fragment} (h : p.Quelleinheit) : p.KlassenRein := by
+  rcases h with ⟨u, rfl⟩ | ⟨t, rfl⟩
+  · change (Ast.Semantik.programm u.baum).KlassenRein
+    exact Ast.Semantik.programm_klassenrein u.baum
+  · exact Ast.Semantik.programm_klassenrein t
+
+/-- The ideal guarantee for a source fragment: ordinary source and declared invariants are included, the class
+    obligation being discharged by `fragmentQuelleinheit_klassenrein`. -/
+theorem ideal_quelleinheit (zugriff : ZugriffZielAussage) (p : Ast.Semantik.Fragment)
+    (platform : Katalog.Plattform) (quelle : p.Quelleinheit) :
+    Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system ∧
+    Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system :=
+  ideal_fragment_einheit zugriff p platform (fragmentQuelleinheit_klassenrein quelle)
+
+/- **Exact scope of the generalization.** The premise of `ideal_fragment_einheit` is a property of the fragment's
+   code, not of its origin, so the three fragment origins are handled as follows.
+
+   * Ordinary source. `fragment Category.unit t = programmMitInvarianten ⟨t, []⟩`; `fragment_klassenrein` gives the
+     class obligation. `ideal_akzeptierte_einheit` above is this case.
+   * Declared invariants. `programmMitInvarianten u` differs from `programm u.baum` only in its clause table, so
+     `programm_klassenrein u.baum` gives the class obligation (`fragmentQuelleinheit_klassenrein`). `Quelleinheit`
+     covers both source origins exactly; no checker verdict is needed for determinacy or progress.
+   * Linked fragments. `Linken.verknuepfteFragmente plan` is a `Fragment`, so `ideal_fragment_einheit` applies as soon
+     as `(verknuepfteFragmente plan).KlassenRein` is supplied. `Linken.verknuepfte_klassenrein` derives it from one
+     `KlassenRein` premise per module (concatenation preserves the predicate). There is NO closed proof of that
+     obligation from `bauplanOk plan = true` alone: `Linken.linker_akzeptiert_aus_guard_transfer` likewise takes
+     `hpriv : ∀ b ∈ (verknuepfteFragmente plan).code, b.Privat` as a premise, and no module of the plan constrains
+     the classes of its instructions. That premise is the missing proof, not a theorem of the model.
+
+   The generalization does NOT close `idealLuecke`: the eighth conjunct of `NichtLeer` ranges over every accepted
+   `Einheit`, while the theorem above ranges over `Fragment.einheit` units with a proved class obligation. The
+   counterexample below (`lueckenEinheit`) is accepted but is not the elaboration of any fragment, so `R₀`, the goal
+   statements and the proof requirements stay exactly as they are and M12 is not claimed closed. -/
 
 /-- A system with no forms at any state: no rule steps, no head, nothing finished, never blocked. -/
 def keinFormenSystem : MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
