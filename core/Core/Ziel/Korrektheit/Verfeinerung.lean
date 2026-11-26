@@ -36,6 +36,7 @@ module
 public import Core.Ziel.Korrektheit.Maschine
 public import Core.Verfeinerung.Formen.Abdeckung
 public import Core.Verfeinerung.Fortschritt
+public import Core.Maschine.Start
 
 @[expose] public section
 
@@ -76,16 +77,21 @@ theorem zielFX_akzeptiert : ZielFXAkzeptiertAussage := by
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   exact pflicht.zielFX lauf k
 
-/-- PROGRESS FOR EVERY ACCEPTED ELABORATED UNIT on a hardware-fair history: the matched ideal run exists, no
-context hangs, and the per-cut progress alternatives hold. Feeds: `sim_ziel_fortschritt_im_lauf`,
-`Laufabgleich.fortschritt`, `deadlockfrei_aus_waechter`. Open: `FortschrittsPflichten` for the elaborated unit
-(`angebot`, `wahl`, `individuell`, `systemweit`: the dispatch and selection duties of the hardware-fair scheduler
-over `Fortschritt/Verzoegerung` and `Verhungern`) — M8 (Prover, after the scheduler duties are stated for
-`einheitVon`). -/
+/-- PROGRESS FOR EVERY ACCEPTED ELABORATED UNIT on a hardware-fair history, under the two run
+premises of the progress leg: the matched ideal run exists, no context hangs, and the per-cut
+progress alternatives hold. Feeds: `sim_ziel_fortschritt_im_lauf`, `Laufabgleich.fortschritt`,
+`deadlockfrei_aus_waechter`. The premises are `Maschine.SchedulerFair` (a continuously
+dispatched, live and rule-enabled context with infinitely many opportunities on its dispatch
+core is stepped infinitely often) and `Maschine.VerdraengungKehrtZurueck` (a live context
+displaced by an interrupt is dispatched again at a strictly later cut); both are properties of
+the execution model, not catalogue rows, and both are owner-approved (MK-11 decisions 1 and 2).
+Proved for the current instruction set in `Beweise/Fortschritt/SchedulerEinheit.lean`. -/
 def FortschrittAkzeptiertAussage : Prop :=
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ → Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      Maschine.SchedulerFair (einheitVon P t) ρ →
+      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ →
       ∃ η : Maschine.I.Lauf (einheitVon P t),
         Maschine.I.Laeufe (einheitVon P t) η ∧ Maschine.I.Sim (einheitVon P t) ρ η ∧
         (∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c) ∧
