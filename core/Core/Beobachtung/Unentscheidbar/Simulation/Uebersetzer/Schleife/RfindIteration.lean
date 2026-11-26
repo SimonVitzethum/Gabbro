@@ -167,8 +167,7 @@ theorem rfindNulltestPosLauf (cfBlk : List Befehl) (aus frei v : Nat) (r : Rahme
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
   refine ⟨r3, hrun3, ?_, ?_, ?_, rfl, rfl, rfl⟩
-  · dsimp only [r3, r2, r1]
-    rw [hpc]
+  · dsimp only [r3]
     omega
   · exact h25
   · intro s hs
@@ -200,7 +199,7 @@ theorem rfindNulltestNullLauf (cfBlk : List Befehl) (aus frei : Nat) (r : Rahmen
     have h := schrittVergleichNat blk r1 (45 + cfBlk.length) (frei + 5) 0 0 hpc1 h15 h16
       (rfindBeiNull1 cfBlk aus frei)
     rw [show Compare.eval .lt ((0 : Nat) : Int) ((0 : Nat) : Int) = false by
-      simp only [Compare.eval, Nat.cast_lt, decide_false]] at h
+      simp only [Compare.eval, Nat.cast_lt, decide_eq_false_iff_not]; omega] at h
     exact h
   have hpc2 : r2.pc = 46 + cfBlk.length := by dsimp only [r2]; omega
   have h25 : r2.temp (frei + 5) = some ⟨.bool, false⟩ := by dsimp only [r2]; rw [updateHit]
@@ -217,8 +216,7 @@ theorem rfindNulltestNullLauf (cfBlk : List Befehl) (aus frei : Nat) (r : Rahmen
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
   refine ⟨r3, hrun3, ?_, ?_, rfl, rfl, rfl⟩
-  · dsimp only [r3, r2, r1]
-    rw [hpc]
+  · dsimp only [r3]
     omega
   · exact h25
 
@@ -263,7 +261,7 @@ theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
   · dsimp only [r3]
     rw [hpc2]
     omega
-  · dsimp only [r3]
+  · dsimp only [r3, r2]
     rw [updateHit]
 
 /-- The copy segment writes the candidate into the output slot and stops at the loop end. -/
@@ -273,12 +271,38 @@ theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     ∃ rE : Rahmen,
       (Schritt (rfindSchleife cfBlk aus frei))^[3] (some r) = some rE ∧
       rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y) := by
-  have h := laufKopie (rfindSchleife cfBlk aus frei) r (50 + cfBlk.length) aus (frei + 2)
-    (some (natVal y)) hpc h2 (rfindBeiKopie0 cfBlk aus frei)
-    (rfindBeiKopie1 cfBlk aus frei) (rfindBeiKopie2 cfBlk aus frei)
-  refine ⟨_, h, ?_, ?_⟩
-  · rw [rfindSchleifeLaenge]
+  let blk := rfindSchleife cfBlk aus frei
+  let r1 : Rahmen := { r with pc := r.pc + 1, lokale := r.temp (frei + 2) :: r.lokale }
+  have e1 : Schritt blk (some r) = some r1 := by
+    change Schritt blk (some r) = some { r with pc := r.pc + 1, lokale := r.temp (frei + 2) :: r.lokale }
+    exact schrittBinden blk r (50 + cfBlk.length) (frei + 2) hpc (rfindBeiKopie0 cfBlk aus frei)
+  have hpc1 : r1.pc = 51 + cfBlk.length := by dsimp only [r1]; rw [hpc]; omega
+  have hloc : r1.lokale[0]?.join = some (natVal y) := by
+    dsimp only [r1]
+    rw [h2]
+    rfl
+  let r2 : Rahmen := { r1 with pc := r1.pc + 1, temp := Function.update r1.temp aus (some (natVal y)) }
+  have e2 : Schritt blk (some r1) = some r2 := by
+    change Schritt blk (some r1) = some { r1 with pc := r1.pc + 1, temp := Function.update r1.temp aus (some (natVal y)) }
+    exact schrittLesen blk r1 (51 + cfBlk.length) aus y hpc1 hloc (rfindBeiKopie1 cfBlk aus frei)
+  have hpc2 : r2.pc = 52 + cfBlk.length := by dsimp only [r2, r1]; rw [hpc]; omega
+  let r3 : Rahmen := { r2 with pc := r2.pc + 1, lokale := r1.lokale.drop 1 }
+  have e3 : Schritt blk (some r2) = some r3 := by
+    change Schritt blk (some r2) = some { r2 with pc := r2.pc + 1, lokale := r1.lokale.drop 1 }
+    exact schrittBlockEnde blk r2 (52 + cfBlk.length) 1 hpc2 (rfindBeiKopie2 cfBlk aus frei)
+  have e1' : (Schritt blk)^[1] (some r) = some r1 := by rw [schrittAlsIterate]; exact e1
+  have e2' : (Schritt blk)^[1] (some r1) = some r2 := by rw [schrittAlsIterate]; exact e2
+  have e3' : (Schritt blk)^[1] (some r2) = some r3 := by rw [schrittAlsIterate]; exact e3
+  have hrun2 : (Schritt blk)^[2] (some r) = some r2 := by
+    rw [show (2 : Nat) = 1 + 1 by omega, Function.iterate_add_apply, e1', e2']
+  have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
+    rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
+  refine ⟨r3, hrun3, ?_, ?_⟩
+  · dsimp only [r3]
+    rw [hpc2]
+    rw [rfindSchleifeLaenge]
     omega
-  · rw [updateHit]
+  · dsimp only [r3, r2]
+    rw [updateHit]
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
