@@ -72,6 +72,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
           generalize hg : s'.graph = g at hziel
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
             rw [hziel]
+            rfl
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
             ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
             fun hoffen q hmem hepo hant => ?_⟩
