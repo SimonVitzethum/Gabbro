@@ -118,7 +118,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rw [hp']
       simpa only [I, Nat.add_zero] using (getNachPrefix ((L ++ R) ++ cfBlk) I 0 (by
         dsimp only [I]
-        simp only [List.length_cons, List.length_nil]))
+        simp only [List.length_cons, List.length_nil]
+        omega))
     have eI : (Schritt (((L ++ R) ++ cfBlk) ++ I))^[1] (some rCcomp) =
         some (rCcomp.schreibe (frei + 2) (some (natVal 0))) := by
       simpa only [Rahmen.schreibe, Function.iterate_one] using
@@ -131,7 +132,6 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       simp only [rI, rCcomp, P, I, Rahmen.schreibe, mitPc, List.length_append,
         List.length_cons, List.length_nil]
       rw [hpcC]
-      omega
     have hrunFullI : (Schritt (P ++ S))^[kC + 1] (some rLR) = some rI :=
       laufImAnhang P S rLR (kC + 1) rI hrunI hpI
     let rI0 : Rahmen := { rI with pc := 0 }
@@ -140,30 +140,27 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rw [show P.length + 0 = rI.pc by rw [hpI, Nat.add_zero]]
     have hrI0a : rI0.temp (frei + 0) = some (natVal a) := by
       change rI.temp (frei + 0) = some (natVal a)
-      change (rCcomp.schreibe (frei + 2) (some (natVal 0))).temp (frei + 0) = some (natVal a)
-      rw [Rahmen.schreibe]
-      rw [updateMiss _ _ _ _ (by omega : frei + 0 ≠ frei + 2)]
+      change (Function.update rCcomp.temp (frei + 2) (some (natVal 0))) (frei + 0) = some (natVal a)
+      rw [updateMiss rCcomp.temp (frei + 0) (frei + 2) (some (natVal 0)) (by omega)]
       change rC.temp (frei + 0) = some (natVal a)
       rw [hpresC (frei + 0) (by omega) (by omega)]
       exact hrLR0a
     have hrI0k : rI0.temp (frei + 1) = some (natVal k) := by
       change rI.temp (frei + 1) = some (natVal k)
-      change (rCcomp.schreibe (frei + 2) (some (natVal 0))).temp (frei + 1) = some (natVal k)
-      rw [Rahmen.schreibe]
-      rw [updateMiss _ _ _ _ (by omega : frei + 1 ≠ frei + 2)]
+      change (Function.update rCcomp.temp (frei + 2) (some (natVal 0))) (frei + 1) = some (natVal k)
+      rw [updateMiss rCcomp.temp (frei + 1) (frei + 2) (some (natVal 0)) (by omega)]
       change rC.temp (frei + 1) = some (natVal k)
       rw [hpresC (frei + 1) (by omega) (by omega)]
       change rLR0.temp (frei + 1) = some (natVal k)
       exact hrLRk
     have hrI0c : rI0.temp (frei + 2) = some (natVal 0) := by
       change rI.temp (frei + 2) = some (natVal 0)
-      change (rCcomp.schreibe (frei + 2) (some (natVal 0))).temp (frei + 2) = some (natVal 0)
-      rw [Rahmen.schreibe, updateHit]
+      change (Function.update rCcomp.temp (frei + 2) (some (natVal 0))) (frei + 2) = some (natVal 0)
+      rw [updateHit]
     have hrI0v : rI0.temp aus = some (natVal v0) := by
       change rI.temp aus = some (natVal v0)
-      change (rCcomp.schreibe (frei + 2) (some (natVal 0))).temp aus = some (natVal v0)
-      rw [Rahmen.schreibe]
-      rw [updateMiss _ _ _ _ (by omega : aus ≠ frei + 2)]
+      change (Function.update rCcomp.temp (frei + 2) (some (natVal 0))) aus = some (natVal v0)
+      rw [updateMiss rCcomp.temp aus (frei + 2) (some (natVal 0)) (by omega)]
       change rC.temp aus = some (natVal v0)
       exact hrCaus
     obtain ⟨kS, rS, hrunS, hpcS, hrSaus, hpresS, hlokS, hrueckS, hstoppS⟩ :=
