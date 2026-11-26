@@ -116,7 +116,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         simp only [rCcomp, mitPc, List.length_append]
         rw [hpcC]
       rw [hp']
-      simpa only [I, Nat.add_zero] using (getNachPrefix ((L ++ R) ++ cfBlk) I 0 (by
+      simpa only [I, Nat.add_zero, List.getElem?_cons_zero] using (getNachPrefix ((L ++ R) ++ cfBlk) I 0 (by
         dsimp only [I]
         simp only [List.length_cons, List.length_nil]
         omega))
@@ -164,13 +164,16 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       change rC.temp aus = some (natVal v0)
       exact hrCaus
     obtain ⟨kS, rS, hrunS, hpcS, hrSaus, hpresS, hlokS, hrueckS, hstoppS⟩ :=
-      precSchleifeVorwaerts cgBlk cf cg a aus frei freiCg 0 v0 v rI0
-        rfl hrI0a (by simpa only [Nat.zero_add] using hrI0k) hrI0c hrI0v
-        haus hfreiCg20 hcg hcgV hcfEval hvFolge
+      precSchleifeVorwaerts cgBlk cf cg a aus frei freiCg k v0 v rI0
+        rfl hrI0a hrI0k hrI0c hrI0v
+        haus hfreiCg20 hcg hcgV hcfEval hv
     have hbleibS := laufBleibtVorEnde S rI0 kS rS hrunS hpcS
     have hshiftS : (Schritt (P ++ S))^[kS] (some rI) = some (mitPc P.length rS) := by
       have hs := laufMitPc P S [] hvS rI0 kS hbleibS
-      simpa only [List.append_nil, hmitI, hrunS] using hs
+      rw [hmitI] at hs
+      rw [hrunS] at hs
+      simpa only [List.append_nil] using hs
+    rw [hprecBlk]
     refine ⟨kS + (kC + 1), mitPc P.length rS, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rw [Function.iterate_add_apply, hrunFullI, hshiftS]
     · rw [hprecBlk]
