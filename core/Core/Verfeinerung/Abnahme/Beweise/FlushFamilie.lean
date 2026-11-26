@@ -131,9 +131,9 @@ theorem memKontextOhneShootdown {Id : Type} {k : Katalog.Katalog}
   | kontext _ _ rule execute =>
     obtain ⟨op, _, impl⟩ := rule
     obtain ⟨frame, _, _, advance⟩ := MemInstruction.activateStepTransfer
-      (target := k.plattform.ziel) (op := op) impl
+      (target := k.plattform.ziel) (op := op) (w := w) impl
     obtain ⟨rfl, rfl⟩ := MemInstruction.activateVollzugGenau
-      (target := k.plattform.ziel) (op := op) impl execute
+      (target := k.plattform.ziel) (op := op) (w := w) impl execute
     rw [advance, sicht.privat, sicht.leer]
     exact ⟨rfl, rfl⟩
 
