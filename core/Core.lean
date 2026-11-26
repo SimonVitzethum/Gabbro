@@ -107,6 +107,9 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAntwortErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepPauseErhalt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
@@ -222,6 +225,9 @@ public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
 public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
+public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
+public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
