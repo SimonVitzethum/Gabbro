@@ -25,7 +25,7 @@ private theorem pruefeMass_einrichtung {u : Ast.Unit} {name : Identifier}
     simpa only [FunktionsKern.massIntervall, declared, Option.map_some] using interval
   cases endpoints
   have exactRead : some (⟨m.lo, m.hi, value⟩ : Ganzzahl) = some a := by
-    simpa only [Rahmen.zahl, operand, Option.some_bind, alsGanzzahl] using read
+    simpa only [Rahmen.zahl, operand, alsGanzzahl] using read
   cases exactRead
   exact ⟨le_rfl, le_rfl⟩
 
@@ -64,5 +64,103 @@ theorem measurePrologue_kostenEinrichtung {u : Ast.Unit} {name : Identifier}
   have running := trace.aktiv active
   exact ⟨r, trace, lookup, install, trace.walk.schritt ⟨_, running.1, running.2, lookup, rfl⟩,
     atWrite.auswerten install.gueltig _⟩
+
+private theorem loop_left {a b : Fragment} {pc : Nat} {limit : SchleifenGrenze}
+    (atTest : (pc, limit) ∈ a.schleifen) : (pc, limit) ∈ (a.anhaengen b).schleifen :=
+  List.mem_append_left _ atTest
+
+private theorem loop_right {a b : Fragment} {pc : Nat} {limit : SchleifenGrenze}
+    (atTest : (pc, limit) ∈ b.schleifen) :
+    (pc + a.code.length, limit) ∈ (a.anhaengen b).schleifen :=
+  List.mem_append_right _ (List.mem_map.mpr ⟨(pc, limit), atTest, rfl⟩)
+
+private theorem loop_relocated {pre body post : Fragment} {pc : Nat} {limit : SchleifenGrenze}
+    {u : Ast.Unit}
+    (table : (programm u).schleifen = ((pre.anhaengen body).anhaengen post).schleifen)
+    (atTest : (pc, limit) ∈ body.schleifen) :
+    (pc + pre.code.length, limit) ∈ (programm u).schleifen := by
+  rw [table]
+  exact loop_left (loop_right atTest)
+
+/-- The while setup and its table row remain paired when the source statement
+    is placed in the unit. The setup counts from its own PC past the condition. -/
+theorem whileBounded_kostenEinrichtung {u : Ast.Unit} {lo hi : Int}
+    (condition : Expr scope .bool) (bound : Expr scope (.int lo hi))
+    (static : bound.static) (nonnegative : 0 ≤ lo) (handler : Identifier)
+    (body : BracedBlock result scope) (pre post : Fragment) (r : Rahmen)
+    (table : (programm u).schleifen =
+      ((pre.anhaengen (stmt (.whileBounded condition bound static nonnegative handler body))).anhaengen
+        post).schleifen)
+    (position : r.pc = pre.code.length + (expr 0 bound).code.length)
+    (value : Zahl lo hi) (operand : r.temp 0 = some ⟨.int lo hi, value⟩) :
+    KostenEinrichtung u (.setzePasszahl 0 ((expr 0 condition).code.length + 1)) r := by
+  let limit := SchleifenGrenze.whileBounded bound
+  have localRow :
+      ((expr 0 bound).code.length + ((expr 0 condition).code.length + 1), limit) ∈
+        (stmt (.whileBounded condition bound static nonnegative handler body)).schleifen := by
+    rw [stmt]
+    apply loop_left
+    apply loop_left
+    have row := loop_right (a := (((expr 0 bound).anhaengen
+      (.einzel (.setzePasszahl 0 ((expr 0 condition).code.length + 1)))).anhaengen (expr 0 condition)))
+      (b := { Fragment.einzel (whileInstruction condition (bracedBlock body) handler) with
+        schleifen := [(0, limit)] }) List.mem_cons_self
+    simpa only [Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+      List.length_nil, Nat.zero_add, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using row
+  have row := loop_relocated table localRow
+  intro a read
+  have same : some (⟨lo, hi, value⟩ : Ganzzahl) = some a := by
+    simpa only [Rahmen.zahl, operand, alsGanzzahl] using read
+  cases same
+  refine ⟨limit, ?_, Nat.le_refl _⟩
+  rw [position]
+  simpa only [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using row
+
+/-- The range setup installs both fields at its following instruction, using
+    the same typed endpoints as the relocated range-test row. -/
+theorem forRange_kostenEinrichtung {u : Ast.Unit} {low lowHi highLo high : Int}
+    (name : Identifier) (ordinary : ordinaryLocal name)
+    (lower : Expr scope (.int low lowHi)) (upper : Expr scope (.int highLo high))
+    (static : lower.static ∧ upper.static) (handler : Option Identifier)
+    (body : BracedBlock result (rangeBinding name low high :: scope))
+    (pre post : Fragment) (r : Rahmen)
+    (table : (programm u).schleifen =
+      ((pre.anhaengen (stmt (.forRange name ordinary lower upper static handler body))).anhaengen
+        post).schleifen)
+    (position : r.pc = pre.code.length + ((expr 0 lower).code.length + (expr 1 upper).code.length))
+    (start : Zahl low lowHi) (stop : Zahl highLo high)
+    (lowerOperand : r.temp 0 = some ⟨.int low lowHi, start⟩)
+    (upperOperand : r.temp 1 = some ⟨.int highLo high, stop⟩) :
+    KostenEinrichtung u
+      (.forAnfang 0 1 (rangeBinding name low high).type ((bracedBlock body).code.length + 4)
+        (body.rangeUses name).1 ((body.rangeUses name).2 && handler.isNone)) r := by
+  let limit := SchleifenGrenze.forRange lower upper
+  have localRow :
+      ((expr 0 lower).code.length + (expr 1 upper).code.length + 1, limit) ∈
+        (stmt (.forRange name ordinary lower upper static handler body)).schleifen := by
+    cases uses : body.rangeUses name with
+    | mk shadows writes =>
+      simp only [stmt, uses]
+      apply loop_left
+      apply loop_left
+      apply loop_left
+      have row := loop_right (a := (((expr 0 lower).anhaengen (expr 1 upper)).anhaengen
+        (.einzel (.forAnfang 0 1 (rangeBinding name low high).type ((bracedBlock body).code.length + 4)
+          shadows (writes && handler.isNone)))))
+        (b := { Fragment.einzel (forInstruction (bracedBlock body) handler) with
+          schleifen := [(0, limit)] }) List.mem_cons_self
+      simpa only [Fragment.anhaengen, Fragment.einzel, List.length_append, List.length_cons,
+        List.length_nil, Nat.zero_add] using row
+  have row := loop_relocated table localRow
+  intro a b readA readB _
+  have sameA : some (⟨low, lowHi, start⟩ : Ganzzahl) = some a := by
+    simpa only [Rahmen.zahl, lowerOperand, alsGanzzahl] using readA
+  have sameB : some (⟨highLo, high, stop⟩ : Ganzzahl) = some b := by
+    simpa only [Rahmen.zahl, upperOperand, alsGanzzahl] using readB
+  cases sameA
+  cases sameB
+  refine ⟨limit, high, ?_, Nat.le_refl _, rfl, le_rfl⟩
+  rw [position]
+  simpa only [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using row
 
 end Gabbro.Core.Beobachtung
