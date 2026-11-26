@@ -33,12 +33,13 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   obtain ⟨kp, rp, hrunP, hpcP, h4P, hpresP, hlokP, hrueckP, hstoppP⟩ :=
     paarVorwaerts (frei + 0) (frei + 2) (frei + 4) (frei + 10) r a y
       hpc ha hy (by omega) (by omega)
-  have hpcPaarEnde : rp.pc = (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)).length := by
-    rw [hpcP, paarBerechnungLaenge]
-  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hrunP hpcPaarEnde
+  have hpcPaarEnde : rp.pc = (rfindPaar frei).length := by
+    rw [hpcP, rfindPaar, paarBerechnungLaenge]
+  change (Schritt (rfindPaar frei))^[kp] (some r) = some rp at hrunP
+  have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
-    exact (laufAnhang (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) _ r kp hbleibP).trans hrunP
+    exact (laufAnhang (rfindPaar frei) _ r kp hbleibP).trans hrunP
   let r0 : Rahmen := { rp with pc := 0 }
   have hmit0 : mitPc 44 r0 = rp := by
     change { rp with pc := 44 + 0 } = rp
@@ -52,9 +53,9 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     (hcfNr (Nat.pair a y) r0 rfl h04).1 v hv
   have hpcCEnde : rc.pc = cfBlk.length := by rw [hpcC]
   have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hrunC hpcCEnde
-  have hshift := laufMitPc (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) cfBlk ((rfindNullTest frei ++ rfindRueck cfBlk frei) ++
-    kopie aus (frei + 2)) hvBlk r0 kcf hbleibC
-  rw [paarBerechnungLaenge, hrunC] at hshift
+  have hshift := laufMitPc (rfindPaar frei) cfBlk (rfindRest cfBlk aus frei) hvBlk r0 kcf hbleibC
+  have hpaarLen : (rfindPaar frei).length = 44 := by rw [rfindPaar, paarBerechnungLaenge]
+  rw [hpaarLen, hrunC] at hshift
   have hrunCAll : (Schritt (rfindSchleife cfBlk aus frei))^[kcf] (some rp) = some (mitPc 44 rc) := by
     rw [← hmit0]
     rw [rfindSchleifeAlsAnhang]
@@ -147,12 +148,13 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   obtain ⟨kp, rp, hrunP, hpcP, h4P, hpresP, hlokP, hrueckP, hstoppP⟩ :=
     paarVorwaerts (frei + 0) (frei + 2) (frei + 4) (frei + 10) r a y
       hpc ha hy (by omega) (by omega)
-  have hpcPaarEnde : rp.pc = (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)).length := by
-    rw [hpcP, paarBerechnungLaenge]
-  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hrunP hpcPaarEnde
+  have hpcPaarEnde : rp.pc = (rfindPaar frei).length := by
+    rw [hpcP, rfindPaar, paarBerechnungLaenge]
+  change (Schritt (rfindPaar frei))^[kp] (some r) = some rp at hrunP
+  have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
-    exact (laufAnhang (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) _ r kp hbleibP).trans hrunP
+    exact (laufAnhang (rfindPaar frei) _ r kp hbleibP).trans hrunP
   let r0 : Rahmen := { rp with pc := 0 }
   have hmit0 : mitPc 44 r0 = rp := by
     change { rp with pc := 44 + 0 } = rp
@@ -165,9 +167,9 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     (hcfNr (Nat.pair a y) r0 rfl h04).1 0 hzero
   have hpcCEnde : rc.pc = cfBlk.length := by rw [hpcC]
   have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hrunC hpcCEnde
-  have hshift := laufMitPc (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) cfBlk ((rfindNullTest frei ++ rfindRueck cfBlk frei) ++
-    kopie aus (frei + 2)) hvBlk r0 kcf hbleibC
-  rw [paarBerechnungLaenge, hrunC] at hshift
+  have hshift := laufMitPc (rfindPaar frei) cfBlk (rfindRest cfBlk aus frei) hvBlk r0 kcf hbleibC
+  have hpaarLen : (rfindPaar frei).length = 44 := by rw [rfindPaar, paarBerechnungLaenge]
+  rw [hpaarLen, hrunC] at hshift
   have hrunCAll : (Schritt (rfindSchleife cfBlk aus frei))^[kcf] (some rp) = some (mitPc 44 rc) := by
     rw [← hmit0]
     rw [rfindSchleifeAlsAnhang]

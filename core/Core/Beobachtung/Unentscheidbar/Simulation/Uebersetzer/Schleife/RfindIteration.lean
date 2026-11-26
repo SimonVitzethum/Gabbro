@@ -13,12 +13,19 @@ namespace Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 
-/-- The loop as a pair block, the translated block, and the three tail segments. -/
+/-- The pairing block of the minimisation loop, named so composed runs compare
+    the same constant instead of a large expanded expression. -/
+def rfindPaar (frei : Nat) : List Befehl :=
+  paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)
+
+/-- The zero test, back edge and copy segment after the translated block. -/
+def rfindRest (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
+  (rfindNullTest frei ++ rfindRueck cfBlk frei) ++ kopie aus (frei + 2)
+
+/-- The loop as the pairing block, the translated block and the tail. -/
 theorem rfindSchleifeAlsAnhang (cfBlk : List Befehl) (aus frei : Nat) :
-    rfindSchleife cfBlk aus frei =
-      paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10) ++
-        (cfBlk ++ ((rfindNullTest frei ++ rfindRueck cfBlk frei) ++ kopie aus (frei + 2))) := by
-  simp only [rfindSchleife, rfindNullTest, rfindRueck, List.append_assoc]
+    rfindSchleife cfBlk aus frei = rfindPaar frei ++ cfBlk ++ rfindRest cfBlk aus frei := by
+  simp only [rfindSchleife, rfindPaar, rfindRest, rfindNullTest, rfindRueck, List.append_assoc]
 
 /-- A counter inside the front part of the loop reads the same instruction in the standalone front. -/
 theorem rfindSchleifeBeiVorne (cfBlk : List Befehl) (aus frei j : Nat)
