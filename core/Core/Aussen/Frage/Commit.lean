@@ -17,9 +17,8 @@ public import Core.Katalog.Aussen
 
 @[expose] public section
 
-namespace Gabbro.Core.Aussenfrage
+namespace Gabbro.Core.Katalog
 
-open Gabbro.Core.Katalog
 open Gabbro.Core.Aussen
 
 /-- **Validity at commit, as carried by the answer.** The first branch is the same-event check at
@@ -27,6 +26,11 @@ open Gabbro.Core.Aussen
 def Antwort.commitGueltig (p : Plattform) (q : Frage) (a : Antwort) : Prop :=
   (∀ t ∈ q.zugriffe, t.handle.origin ∈ a.checkedObjects) ∨
     ∀ t ∈ q.zugriffe, ReihenStabil p t.handle.origin.object
+
+/-- Stability is a finite membership check of the declared row. -/
+instance (p : Plattform) (o : Objekt) : Decidable (ReihenStabil p o) := by
+  unfold ReihenStabil Plattform.stabilGemeldet Plattform.stabilZugesichert
+  infer_instance
 
 /-- The guard is decidable: both branches are finite checks over the row's access list. -/
 instance (p : Plattform) (q : Frage) (a : Antwort) : Decidable (Antwort.commitGueltig p q a) := by
@@ -36,6 +40,11 @@ instance (p : Plattform) (q : Frage) (a : Antwort) : Decidable (Antwort.commitGu
 /-- The guard of an arrived answer. -/
 def AntwortEreignis.gueltigBeiCommit (p : Plattform) (a : AntwortEreignis) : Prop :=
   Antwort.commitGueltig p a.question a.reply
+
+/-- The arrived-answer guard is decidable by the same finite checks. -/
+instance (p : Plattform) (a : AntwortEreignis) : Decidable (AntwortEreignis.gueltigBeiCommit p a) := by
+  unfold AntwortEreignis.gueltigBeiCommit
+  infer_instance
 
 /-- An atomic ok answer carries the origins of all row accesses from its commit snapshot, so it
     passes the guard. -/
@@ -54,9 +63,9 @@ theorem Antwort.commitGueltig_von_atomar {p : Plattform} {s : AussenSicht} {q : 
     have originEq : t.handle.origin = s.herkunft t.handle.origin.object := by
       have h := gueltig
       simp only [AussenSicht.gueltig, Bool.and_eq_true] at h
-      simpa using h.2.2.2.1
+      exact beq_iff_eq.mp h.1.2
     rw [checked]
-    exact List.mem_map.mpr ⟨t, mem, by simpa [originEq]⟩
+    exact List.mem_map.mpr ⟨t, mem, originEq.symm⟩
 
 /-- An answer with no checked origin fails the guard unless every touched object is declared
     stable: an unchanged outside is not assumed by the guard. -/
@@ -70,4 +79,4 @@ theorem Antwort.commitGueltig_nicht_leer (p : Plattform) (q : Frage) (a : Antwor
     exact (by simpa only [leer, List.not_mem_nil] using frisch t mem)
   | inr stabil => exact ninstabil (stabil t mem)
 
-end Gabbro.Core.Aussenfrage
+end Gabbro.Core.Katalog

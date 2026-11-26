@@ -15,9 +15,8 @@ public import Core.Ast.Semantik.Runtime.Frame
 
 @[expose] public section
 
-namespace Gabbro.Core.Aussenfrage
+namespace Gabbro.Core.Katalog
 
-open Gabbro.Core.Katalog
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 
@@ -49,7 +48,7 @@ def AussenWert.rueckgabe : AussenWert → RueckgabeArt
   | .register _ => .register
   | .registerWritten _ _ => .register
   | .firmware _ _ _ => .daten
-  | .exchange _ _ => .daten
+  | .exchanged _ _ => .daten
 
 /-- An answer value fits the declared return kind exactly when the two kinds agree. -/
 def AussenWert.passt (v : AussenWert) (deklariert : RueckgabeArt) : Bool :=
@@ -70,7 +69,7 @@ def AussenWert.alsDynamisch : AussenWert → Dynamisch
   | .data bytes => bytesWert bytes
   | .written bytes => bytesWert bytes
   | .firmware _ _ response => bytesWert response
-  | .exchange _ response => bytesWert response
+  | .exchanged _ response => bytesWert response
   | .handle h => ⟨.ownedRegion, h.channel⟩
   | .register value => registerWert value
   | .registerWritten _ value => registerWert value
@@ -86,18 +85,26 @@ def Antwort.uebersetzt (q : Frage) (a : Antwort) : Option Dynamisch :=
 theorem Antwort.uebersetzt_von_ok (q : Frage) (a : Antwort) (v : AussenWert)
     (result : a.result = Except.ok v) (passt : v.passt q.operation.rueckgabe = true) :
     Antwort.uebersetzt q a = some v.alsDynamisch := by
-  simp only [Antwort.uebersetzt, result, passt]
+  simp only [Antwort.uebersetzt, result, passt, if_true]
 
 /-- An answer of another kind translates to nothing. -/
 theorem Antwort.uebersetzt_fremd (q : Frage) (a : Antwort) (v : AussenWert)
     (result : a.result = Except.ok v) (passt : v.passt q.operation.rueckgabe = false) :
     Antwort.uebersetzt q a = none := by
-  simp only [Antwort.uebersetzt, result, passt]
+  simp only [Antwort.uebersetzt, result, passt, Bool.false_eq_true, if_false]
 
 /-- An error answer translates to nothing. -/
 theorem Antwort.uebersetzt_fehler (q : Frage) (a : Antwort) (e : AussenFehler)
     (result : a.result = Except.error e) : Antwort.uebersetzt q a = none := by
   simp only [Antwort.uebersetzt, result]
+
+end Gabbro.Core.Katalog
+
+namespace Gabbro.Core.Aussenfrage
+
+open Gabbro.Core.Katalog
+open Gabbro.Core.Ast
+open Gabbro.Core.Ast.Semantik
 
 /-- **The matching value case is reachable.** A hosted read of bytes fits the declared kind and
     translates to a frame value. -/
