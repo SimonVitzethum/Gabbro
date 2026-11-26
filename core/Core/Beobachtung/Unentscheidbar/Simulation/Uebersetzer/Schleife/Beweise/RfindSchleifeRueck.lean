@@ -28,7 +28,6 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       BlockKorrekt cfBlk cf (frei + 4) (frei + 6) freiCf →
       VerschiebbaresProgramm cfBlk →
       BleibtImBlock cfBlk →
-      frei + 20 ≤ freiCf → frei + 10 ≤ freiP →
       (Schritt (rfindSchleife cfBlk aus frei))^[schr] (some r) = some rEnd →
       rEnd.pc = (rfindSchleife cfBlk aus frei).length →
       ∃ z, Nat.Partrec.Code.eval (.rfind' cf) (Nat.pair a m0) = Part.some z ∧
@@ -39,7 +38,7 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   intro m0 y r rEnd schr
   revert m0 y r rEnd
   refine Nat.strong_induction_on schr ?_
-  intro schr ih m0 y r rEnd hpc ha hm hy hmy hvor hcf hv hbl hfreiCf hfreiP hrun hpcEnd
+  intro schr ih m0 y r rEnd hpc ha hm hy hmy hvor hcf hv hbl hrun hpcEnd
   by_cases hzero : Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some 0
   · obtain ⟨k, rRef, hrunRef, hpcRef, hausRef, hpresRef, hlokRef, hrueckRef, hstoppRef⟩ :=
       rfindExitIter cfBlk cf a aus frei freiCf m0 y r hpc ha hm hy hcf hv hzero
@@ -98,7 +97,7 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         · exact hvor zz hmzz (by omega)
       obtain ⟨z, hEvalZ, hy1le, hausZ, hpresTail, hlokTail, hrueckTail, hstoppTail⟩ :=
         ih (schr - k) (by omega) m0 (y + 1) r1 rEnd hpc1 ha1 hm1 hy1 (by omega)
-          hvorErweitert hcf hv hbl hfreiCf hfreiP htail hpcEnd
+          hvorErweitert hcf hv hbl htail hpcEnd
       have hyz : y ≤ z := by omega
       refine ⟨z, hEvalZ, hyz, hausZ, ?_, ?_, ?_, ?_⟩
       · intro s hsl hsaus

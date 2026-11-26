@@ -105,7 +105,9 @@ theorem rfindErreich (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       (∀ y, m1 ≤ y → y < y1 → ∃ v', Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v') →
       (∀ y, m1 ≤ y → y < y1 → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0) →
       ∃ K rE, (Schritt (rfindSchleife cfBlk aus frei))^[K] (some r1) = some rE ∧
-        rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y1) := by
+        rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y1) ∧
+        (∀ s, s < frei → s ≠ aus → rE.temp s = r1.temp s) ∧
+        rE.lokale = r1.lokale ∧ rE.rueckgabe = r1.rueckgabe ∧ rE.stopp = r1.stopp := by
   intro d
   induction d with
   | zero =>
@@ -114,10 +116,14 @@ theorem rfindErreich (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       have hzM : Nat.Partrec.Code.eval cf (Nat.pair a m1) = Part.some 0 := by
         rw [← hy1m]
         exact hz
-      obtain ⟨k, rE, hrunE, hpcE, haus, _, _, _, _⟩ :=
+      obtain ⟨k, rE, hrunE, hpcE, haus, hpresE, hlokE, hrueckE, hstoppE⟩ :=
         rfindExitIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1 hcfBlk hvBlk hzM
-      refine ⟨k, rE, hrunE, hpcE, ?_⟩
-      simpa only [hy1m] using haus
+      refine ⟨k, rE, hrunE, hpcE, ?_, ?_, ?_, ?_, ?_⟩
+      · simpa only [hy1m] using haus
+      · exact hpresE
+      · exact hlokE
+      · exact hrueckE
+      · exact hstoppE
   | succ d ih =>
       intro m0 m1 y1 hgap hm0m hmy r1 hpc1 ha1 hm1 hy1 hz hd hn
       have hmlt : m1 < y1 := by omega
@@ -125,7 +131,7 @@ theorem rfindErreich (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         hd m1 (by omega) hmlt
       have hnM : Nat.Partrec.Code.eval cf (Nat.pair a m1) ≠ Part.some 0 :=
         hn m1 (by omega) hmlt
-      obtain ⟨k1, r2, _, hrun1, rpc2, ra2, hm2, hy2, _, _, _, _⟩ :=
+      obtain ⟨k1, r2, _, hrun1, rpc2, ra2, hm2, hy2, hlok2, hrueck2, hstopp2, hpres2⟩ :=
         rfindWeiterIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1
           hcfBlk hvBlk hdM hnM
       have hgap' : y1 - (m1 + 1) = d := by omega
@@ -137,10 +143,19 @@ theorem rfindErreich (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       have hn' : ∀ y, m1 + 1 ≤ y → y < y1 →
           Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0 :=
         fun y hy1 hy2 => hn y (by omega) hy2
-      obtain ⟨k2, rE, hrun2, hpcE, hausE⟩ :=
+      obtain ⟨k2, rE, hrun2, hpcE, hausE, hpresE, hlokE, hrueckE, hstoppE⟩ :=
         ih m0 (m1 + 1) y1 hgap' hm0' hmy' r2 rpc2 ra2 hm2 hy2 hz hd' hn'
-      refine ⟨k2 + k1, rE, ?_, hpcE, ?_⟩
+      refine ⟨k2 + k1, rE, ?_, hpcE, ?_, ?_, ?_, ?_, ?_⟩
       · rw [Function.iterate_add_apply, hrun1, hrun2]
       · exact hausE
+      · intro s hs hsa
+        rw [hpresE s hs hsa]
+        exact hpres2 s hs hsa
+      · rw [hlokE]
+        exact hlok2
+      · rw [hrueckE]
+        exact hrueck2
+      · rw [hstoppE]
+        exact hstopp2
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
