@@ -21,7 +21,7 @@ theorem rfindNullTestLaenge (frei : Nat) : (rfindNullTest frei).length = 3 := by
 
 /-- The back-edge segment of the minimisation loop. -/
 def rfindRueck (cfBlk : List Befehl) (frei : Nat) : List Befehl :=
-  [.literal (frei + 7) 1, .binaer .add (frei + 2),
+  [.literal (frei + 3) 1, .binaer .add (frei + 2),
     .zurueckSprung (49 + cfBlk.length)]
 
 theorem rfindRueckLaenge (cfBlk : List Befehl) (frei : Nat) :

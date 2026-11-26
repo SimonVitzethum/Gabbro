@@ -23,7 +23,7 @@ def rfindSchleife (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
     cfBlk ++
     [.literal (frei + 5) 0, .vergleichen .lt (frei + 5),
       .springeWenn (frei + 5) false 4] ++
-    [.literal (frei + 7) 1, .binaer .add (frei + 2),
+    [.literal (frei + 3) 1, .binaer .add (frei + 2),
       .zurueckSprung (49 + cfBlk.length)] ++
     kopie aus (frei + 2)
 

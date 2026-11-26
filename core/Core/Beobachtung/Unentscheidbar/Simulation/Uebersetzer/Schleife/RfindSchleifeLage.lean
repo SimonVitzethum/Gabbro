@@ -22,7 +22,7 @@ theorem rfindSchleifeNulltestLage :
 /-- The back edge of the concrete loop sits at offset 49 and jumps to offset
     zero. -/
 theorem rfindSchleifeRueckkehrLage :
-    (rfindSchleife ([] : List Befehl) 0 10)[47]? = some (.literal 17 1) ∧
+    (rfindSchleife ([] : List Befehl) 0 10)[47]? = some (.literal 13 1) ∧
     (rfindSchleife ([] : List Befehl) 0 10)[48]? = some (.binaer .add 12) ∧
     (rfindSchleife ([] : List Befehl) 0 10)[49]? = some (.zurueckSprung 49) := by
   constructor
