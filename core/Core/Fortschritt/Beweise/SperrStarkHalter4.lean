@@ -71,6 +71,29 @@ theorem lockStatisch4_von {s u : Zustand Unit Unit Unit Unit Bool Unit}
   rw [hsperren]
   exact hlock
 
+theorem lockStatisch4_sperr {s : Zustand Unit Unit Unit Unit Bool Unit} {c : Kontext}
+    {next : SperrZustand} {a : SperrAktion} (hlock : lockStatisch4 s) (hs : statisch4 c)
+    (hss : SperrSchritt a c (s.sperren ()) next) :
+    lockStatisch4 {s with sperren := Function.update s.sperren () next} := by
+  dsimp only [lockStatisch4] at hlock ⊢
+  cases hss with
+  | ticket =>
+    simp only [Function.update_self, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
+    exact ⟨hlock.1, fun d hd => Or.elim hd hlock.2 (fun hdc => hdc ▸ hs)⟩
+  | nehmen hn =>
+    obtain ⟨r, hs0, hnext⟩ := nimmt_inv hn
+    rw [← hnext]
+    simp only [Function.update_self]
+    exact ⟨hs, hlock.2⟩
+  | geben hg =>
+    obtain ⟨q, hs0, hnext⟩ := gibt_abgeben hg
+    rw [← hnext]
+    cases q with
+    | nil => simp only [SperrZustand.abgeben, Function.update_self]
+    | cons d rest =>
+      simp only [SperrZustand.abgeben, Function.update_self]
+      exact ⟨hlock.2 d (by simp [hs0]), fun e he => hlock.2 e (by simp [hs0, he])⟩
+
 /-- A context step keeps the invariant: the rule only changes the lock, never dispatch, masks
     or liveness; after a crash no static context is dispatched, so no rule can fire. -/
 theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
@@ -85,81 +108,54 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   rcases hinv with ⟨hlock, hcrash⟩
   rcases hreg with hreg | hreg | hreg
   · rcases hreg with ⟨hs, hreg⟩
-    rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
+    rcases hreg with ⟨_, _, hpeq, hueq⟩ | ⟨_, _, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
-      have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF with
       | sperre hnextF _ =>
         rw [hziel]
         rcases hcrash with hvor | hnach
-        · refine ⟨?_, Or.inl ?_⟩
-          · cases hnextF
-            simp only [Function.update_self, toggleUpdate, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
-            constructor
-            · simpa only [toggleUpdate] using hlock_u.1
-            · intro d hd
-              rcases hd with hd | rfl
-              · simpa only [toggleUpdate] using hlock_u.2 d hd
-              · exact hs
-          · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
+        · refine ⟨lockStatisch4_sperr hlock hs hnextF, Or.inl ?_⟩
+          exact vorCrash4_von (s := s) rfl rfl (vorCrash4_von (s := s) rfl rfl hvor)
         · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
-      have hlock_u := hlock
       cases hF with
       | sperre hnextF _ =>
         rw [hziel]
         rcases hcrash with hvor | hnach
-        · refine ⟨?_, Or.inl ?_⟩
-          · cases hnextF with
-            | nehmen hn => obtain ⟨r, _, hnext⟩ := nimmt_inv hn
-            rw [← hnext]
-            simp only [Function.update_self]
-            exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
-          · exact vorCrash4_von (s := s) rfl rfl hvor
+        · refine ⟨lockStatisch4_sperr hlock hs hnextF, Or.inl ?_⟩
+          exact vorCrash4_von (s := s) rfl rfl hvor
         · exact (hnach.1 c hs k hlk).elim
-  · rcases hreg with ⟨_, hss, hpeq, hueq⟩
+  · rcases hreg with ⟨_, _, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
-    have hlock_u := hlock
+    have hs : statisch4 c := by
+      cases hlockstate : (s.sperren ()).besitzer with
+      | none =>
+        -- the give rule cannot fire on a free lock; this branch is unreachable
+        cases hss_dummy : (s.sperren ()) with | mk b q => rw [hlockstate] at hss_dummy; cases b <;> simp at hss_dummy
+      | some h =>
+        dsimp only [lockStatisch4] at hlock
+        rw [hlockstate] at hlock
+        exact hlock.1
     cases hF with
     | sperre hnextF _ =>
       rw [hziel]
       rcases hcrash with hvor | hnach
-      · refine ⟨?_, Or.inl ?_⟩
-        · cases hnextF with
-          | geben hg => obtain ⟨q, _, hnext⟩ := gibt_abgeben hg
-          rw [← hnext]
-        cases q with
-        | nil =>
-          exact ⟨by simp only [SperrZustand.abgeben],
-            by simp only [SperrZustand.abgeben]; intro d hd; cases hd⟩
-        | cons d rest =>
-          refine ⟨⟨?_, ?_⟩, ?_⟩
-          · simp only [SperrZustand.abgeben]
-            exact hlock_u.2 d (by simp)
-          · intro e he
-            simp only [SperrZustand.abgeben] at he ⊢
-            exact hlock_u.2 e he
-          · intro e he k'
-            simpa only [SperrZustand.abgeben] using hnach.1 e (hlock_u.2 e (by simp at he; exact he)) k'
-      · exact vorCrash4_von (s := s) rfl rfl hvor
-    · exact (hnach.1 c (by
-        have hg : (s.sperren ()).Gibt c _ := by
-              exact hss
-        cases hg
-        exact hlock_u.1) k hlk).elim
+      · refine ⟨lockStatisch4_sperr hlock hs hnextF, Or.inl ?_⟩
+        exact vorCrash4_von (s := s) rfl rfl hvor
+      · exact (hnach.1 c hs k hlk).elim
   · rcases hreg with ⟨hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
-    have hlock_u := hlock
-    cases hF
-    rw [hziel]
-    refine ⟨hlock_u, ?_⟩
-    rcases hcrash with hvor | hnach
-    · exact Or.inl (vorCrash4_von (s := s) rfl rfl hvor)
-    · exact Or.inr ⟨by intro d hd k'; simpa only using hnach.1 d hd k', hnach.2.2.1, hnach.2.2.2⟩
+    cases hF with
+    | intern =>
+      rw [hziel]
+      refine ⟨hlock, ?_⟩
+      rcases hcrash with hvor | hnach
+      · exact Or.inl (vorCrash4_von (s := s) rfl rfl hvor)
+      · exact Or.inr ⟨by intro d hd k'; simpa only using hnach.1 d hd k', hnach.2.2.1, hnach.2.2.2⟩
 
 /-- An answer arrival changes only the answer ledgers, never dispatch, masks or locks. -/
 theorem e4_antwort_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
