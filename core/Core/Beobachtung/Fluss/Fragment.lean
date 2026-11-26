@@ -362,7 +362,7 @@ theorem stummer_schritt_koppelt
                     · have e1 : a.epoche = vor.epoche := by rw [(Option.some.inj ha).symm, hepoche₁]; rfl
                       have e2 : b.epoche = w₂.epoche := by rw [(Option.some.inj hb).symm, hepoche₂]; rfl
                       simp only [e1, e2, epocheEq]
-                    · have g1 : a.geliefert = vor.geliefert := by rw [hgeliefert₁]; rfl
+                    · have g1 : a.geliefert = vor.geliefert := by rw [(Option.some.inj ha).symm, hgeliefert₁]; rfl
                       have g2 : b.geliefert = w₂.geliefert := by rw [(Option.some.inj hb).symm, hgeliefert₂]; rfl
                       simp only [g1, g2, geliefertEq]
                     · have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
@@ -378,14 +378,14 @@ theorem stummer_schritt_koppelt
                         rw [hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
-                        rw [stateEq₁, stateEq₂]
+                        rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
                       · rw [hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
                         rw [hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
-                        rw [stateEq₁, stateEq₂]
+                        rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         funext k
                         have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
                         have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
@@ -397,7 +397,7 @@ theorem stummer_schritt_koppelt
                         rw [hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
-                        rw [stateEq₁, stateEq₂]
+                        rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         funext k
                         have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
                         have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
@@ -409,14 +409,14 @@ theorem stummer_schritt_koppelt
                         rw [hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
-                        rw [stateEq₁, stateEq₂]
+                        rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
                       · rw [hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
                         rw [hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
-                        rw [stateEq₁, stateEq₂]
+                        rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                     · have s1 : a.status = vor.status := by rw [hstatus₁]; rfl
                       have s2 : b.status = w₂.status := by rw [(Option.some.inj hb).symm, hstatus₂]; rfl
                       simp only [s1, s2, statusEq]
