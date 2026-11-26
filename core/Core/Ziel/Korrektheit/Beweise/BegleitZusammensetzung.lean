@@ -172,10 +172,10 @@ def NIAkzeptiertAussage.nichtTrivial := Beobachtung.ni_erfuellbar
     open (M9). The progress leg is closed by `fortschritt_akzeptiert` from the two run premises. -/
 theorem ZielAusTeilenAussage.erfuellbar
     (fortschritt : FortschrittAkzeptiertAussage)
-    (schranken : SchrankenAkzeptiertAussage Plattform.x86_64) (zugriff : ZugriffNIFragmentAussage) :
+    (schranken : SchrankenAkzeptiertAussage Plattform.x86_64) :
     ∃ (P : Plattform) (B : FormBeleg), BildGueltigAussage P ∧ FormenGedecktAussage P B ∧
       FortschrittAkzeptiertAussage ∧ SchrankenAkzeptiertAussage P ∧ NIAkzeptiertAussage P :=
-  ⟨Plattform.x86_64, beleg, bildGueltig _, beleg_gedeckt, fortschritt, schranken, niAkzeptiert _ zugriff⟩
+  ⟨Plattform.x86_64, beleg, bildGueltig _, beleg_gedeckt, fortschritt, schranken, niAkzeptiert _⟩
 
 /-- A leg of the composition is a real restriction: a registry whose form never occurs breaks coverage. -/
 theorem ZielAusTeilenAussage.nichtTrivial :
