@@ -160,6 +160,7 @@ theorem precPaarPaarWert (aus frei y i a : Nat) (r rEnd : Rahmen) (k : Nat)
     (hy : r.temp (frei + 2) = some (natVal y))
     (hi : r.temp aus = some (natVal i))
     (ha : r.temp (frei + 0) = some (natVal a))
+    (hausFrei : aus < frei)
     (hk : (Schritt (precPaarEins aus frei ++ precPaarZwei aus frei))^[k]
       (some r) = some rEnd)
     (hpcEnd : rEnd.pc = 44 + 44) :
@@ -183,7 +184,7 @@ theorem precPaarPaarWert (aus frei y i a : Nat) (r rEnd : Rahmen) (k : Nat)
   have hpc1' : r1.pc = 44 := by
     rw [hpc1, precPaarEinsLaenge]
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
-    paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i rfl hy hi
+    paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i hpc hy hi
       (by omega) (by omega) j2 r1 hrun1' hpc1'
   have hkdecomp : (Schritt (precPaarEins aus frei ++ precPaarZwei aus frei))^[k] (some r) =
       (Schritt (precPaarEins aus frei ++ precPaarZwei aus frei))^[k - j2]
@@ -304,7 +305,7 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     dsimp only [P]
     rw [List.length_append, precPaarEinsLaenge, precPaarZweiLaenge]
   obtain ⟨hr2pair, hpres2, hlok2, hrueck2, hstopp2⟩ :=
-    precPaarPaarWert aus frei y i a r r2 j1 hpc hy hi ha hrun12 hpc2'
+    precPaarPaarWert aus frei y i a r r2 j1 hpc hy hi ha hausFrei hrun12 hpc2'
   have hr2_0p : r2_0.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) := hr2pair
   obtain ⟨v, hvEval, hrCgaus, hpresCg, hlokCg, hrueckCg, hstoppCg⟩ :=
     (hcgNr (Nat.pair a (Nat.pair y i)) r2_0 rfl hr2_0p).2 (k - j1) rCg hrunCg hpcCg
