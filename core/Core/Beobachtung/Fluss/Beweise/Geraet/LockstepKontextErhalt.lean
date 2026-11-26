@@ -40,7 +40,7 @@ private theorem geraete_gleich_beob_schritt {ρ₁ ρ₂ : Lauf (d.unit locals)}
     simpa only [L₁, L₂, NiedrigeBeob] using hlen
   have htake : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A := by
     apply List.take_of_length_le
-    simpa only [List.length_append, hlenP]
+    simpa only [List.length_append, hlenP] using (le_refl (L₂.length + A.length))
   rw [htake]
   have hcov : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) L₁ L₂ := by
     have hc := (geraeteKopplung_kopplung hkopp).1
@@ -103,7 +103,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
               | none => rfl
               | some auswahl =>
                 obtain ⟨kern, id, irq⟩ := auswahl
-                exact (geraete_interrupt_schliesst_kontext_aus
+                exact (geraete_interrupt_schliesst_kontext_aus (E := d.unit locals)
                   (vergleich.links.2.1.2 t) hI bereit₁).elim
             have keinAbsturz₂ : (ρ₂.hw.angebot t).crash = false := by
               rw [← geraete_angebot_gleich vergleich t]
@@ -131,7 +131,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
               have keineAntwort₂ : ¬ ∃ a hw t', s₂.AntwortAngeboten (d.unit locals).katalog hw t' a :=
                 geraete_issue_schliesst_ankunft_aus (target := target) hinv₂ owned₂ idle₂
               have gut₂ : s₂.SpeicherGut := geraete_lauf_speicher_gut vergleich.rechts t hz₂
-              obtain ⟨spur₂, u₂t, n₂t, regel₂t, aus₂t, _, _, _, _, _, _, _⟩ :=
+              obtain ⟨spur₂, u₂t, n₂t, regel₂t, aus₂t, _, _, _, _, _, _, _, _⟩ :=
                 geraete_issue_transport vergleich hkopp hz₁ hz₂ gut₂ quell regel₁ ruleEq aus₁
                   hplans' rfl owned₁ idle₁
               have tick₂ := ρ₂.zeit.takt t
@@ -156,7 +156,11 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       obtain ⟨kernA, gelegA, laufA, _⟩ := bereit₂a
                       have gelegEq : kernA = kern₁ := by
                         dsimp only [HwLauf.gelegenheit] at geleg₁ gelegA
-                        exact Option.some.inj (gelegA.symm.trans geleg₁)
+                        have hcore := congrArg (fun a => a.core) (geraete_angebot_gleich vergleich t)
+                        have geleg₂ : (ρ₂.hw.angebot t).core = some kern₁ := by
+                          rw [← hcore]
+                          exact geleg₁
+                        exact Option.some.inj (gelegA.symm.trans geleg₂)
                       subst kernA
                       have laufA' : (s₁.kerne kern₁).laeuft = some _ := by
                         rw [hkerne]
@@ -263,7 +267,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                 exact ready₁
               have keineAntwort₂ : ¬ ∃ a hw t', s₂.AntwortAngeboten (d.unit locals).katalog hw t' a :=
                 geraete_consume_schliesst_ankunft_aus (target := target) hinv₂ owned₂ pending₂ ready₂
-              obtain ⟨spur₂, u₂t, n₂t, regel₂t, aus₂t⟩ :=
+              obtain ⟨spur₂, u₂t, n₂t, regel₂t, aus₂t, _, _, _, _, _, _, _, _⟩ :=
                 geraete_consume_transport vergleich hkopp hz₁ hz₂ quell regel₁ ruleEq aus₁
                   hplans' rfl owned₁ pending₁ ready₁ sameQuestion₁
               have tick₂ := ρ₂.zeit.takt t
@@ -288,7 +292,11 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       obtain ⟨kernA, gelegA, laufA, _⟩ := bereit₂a
                       have gelegEq : kernA = kern₁ := by
                         dsimp only [HwLauf.gelegenheit] at geleg₁ gelegA
-                        exact Option.some.inj (gelegA.symm.trans geleg₁)
+                        have hcore := congrArg (fun a => a.core) (geraete_angebot_gleich vergleich t)
+                        have geleg₂ : (ρ₂.hw.angebot t).core = some kern₁ := by
+                          rw [← hcore]
+                          exact geleg₁
+                        exact Option.some.inj (gelegA.symm.trans geleg₂)
                       subst kernA
                       have laufA' : (s₁.kerne kern₁).laeuft = some _ := by
                         rw [hkerne]
