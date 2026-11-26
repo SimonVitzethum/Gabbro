@@ -278,7 +278,7 @@ def Schrittform.verbraucheNach (F : Schrittform) (c : Kontext) (s : Zustand) : Z
       let s1 := s.verbrauche c
       let ziel := (F.operand (s.lokal c)).ziel
       match Antwort.uebersetzt a.question a.reply with
-      | some _ =>
+      | some _v =>
         { s1 with lokal := Function.update s1.lokal c (verbraucheSchreibe ziel a.question (s1.lokal c) a.reply) }
       | none =>
         { s1 with

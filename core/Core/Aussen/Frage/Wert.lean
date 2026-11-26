@@ -32,23 +32,23 @@ inductive RueckgabeArt where
 /-- The row of an operation declares its return kind. -/
 def AussenOperation.rueckgabe : AussenOperation → RueckgabeArt
   | .read => .daten
-  | .write _ => .quittung
-  | .resolve _ => .griff
-  | .firmware _ _ => .daten
-  | .exchange _ => .daten
-  | .registerRead _ => .register
-  | .registerWrite _ _ => .register
-  | .waitRegister _ _ => .register
+  | .write _bytes => .quittung
+  | .resolve _name => .griff
+  | .firmware _service _request => .daten
+  | .exchange _message => .daten
+  | .registerRead _offset => .register
+  | .registerWrite _offset _value => .register
+  | .waitRegister _offset _expected => .register
 
 /-- The kind carried by an answer value. -/
 def AussenWert.rueckgabe : AussenWert → RueckgabeArt
-  | .data _ => .daten
-  | .written _ => .quittung
-  | .handle _ => .griff
-  | .register _ => .register
-  | .registerWritten _ _ => .register
-  | .firmware _ _ _ => .daten
-  | .exchanged _ _ => .daten
+  | .data _bytes => .daten
+  | .written _bytes => .quittung
+  | .handle _handle => .griff
+  | .register _value => .register
+  | .registerWritten _offset _value => .register
+  | .firmware _service _request _response => .daten
+  | .exchanged _request _response => .daten
 
 /-- An answer value fits the declared return kind exactly when the two kinds agree. -/
 def AussenWert.passt (v : AussenWert) (deklariert : RueckgabeArt) : Bool :=
@@ -79,7 +79,7 @@ def AussenWert.alsDynamisch : AussenWert → Dynamisch
 def Antwort.uebersetzt (q : Frage) (a : Antwort) : Option Dynamisch :=
   match a.result with
   | Except.ok v => if v.passt q.operation.rueckgabe then some v.alsDynamisch else none
-  | Except.error _ => none
+  | Except.error _fehler => none
 
 /-- A fitting ok answer translates to exactly its own frame value. -/
 theorem Antwort.uebersetzt_von_ok (q : Frage) (a : Antwort) (v : AussenWert)
