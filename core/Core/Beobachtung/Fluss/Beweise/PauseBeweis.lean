@@ -133,15 +133,24 @@ theorem pauseNI : PauseNIAussage := by
               exact stat₂
           have rahmen₁ : Zustandsrahmen v₁ (f₂.nach c₂ v₁) :=
             ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-          have auth₁ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := by
+          have auth₁ : ∀ l ∈ (f₂.plan (v₁.lokal c₂) 0).lesen, l.art.liest := by
+            have hleer := (f₂.plan_privat_leer (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂)) (v₁.lokal c₂)).1
             intro l hl
+            rw [hleer] at hl
             cases hl
-          have speicher₁ : Speicherfolge v₁.initial (.kontext c₂) v₁.graph _ [] v₁.graph :=
-            Speicherfolge.nil _
+          have speicher₁ : Speicherfolge v₁.initial (.kontext c₂) v₁.graph
+              ([] ++ (f₂.plan (v₁.lokal c₂) 0).lesen ++
+                schreibEreignisse (f₂.plan (v₁.lokal c₂) 0).fuss (f₂.plan (v₁.lokal c₂) 0).schreibt
+                  (f₂.plan (v₁.lokal c₂) 0).modus (f₂.plan (v₁.lokal c₂) 0).wert ++
+              List.map (aussenEtikett E.einrichtung) ([] : List Ereignis)) [] v₁.graph := by
+            have hlf := f₂.plan_privat_leer (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂)) (v₁.lokal c₂)
+            simp only [hlf.1, hlf.2, schreibEreignisse, List.filter_nil, List.map_nil, List.nil_append,
+              List.append_nil]
+            exact Speicherfolge.nil _
           have aus₁ : FuehrtSchrittAus E.einrichtung t c₂ v₁ (f₂.nach c₂ v₁)
               (f₂.plan (v₁.lokal c₂) 0) ⟨[], []⟩ (f₂.nach c₂ v₁) :=
             ⟨rahmen₁, auth₁, [], _, .intern, speicher₁, rfl⟩
-          have regel₁ : E.system.ImplSchritt c₂ v₁ w₂ [Ast.Semantik.plan] (f₂.nach c₂ v₁) :=
+          have regel₁ : E.system.ImplSchritt c₂ v₁ w₂ [_] (f₂.nach c₂ v₁) :=
             ⟨f₂, kopf₁, (f₂.impl_privat (rein f₂ (Ast.Semantik.kopf_mem (code := p.code) kopf₂)) c₂ v₁ w₂ [_] (f₂.nach c₂ v₁)).2 ⟨rfl, rfl⟩⟩
           have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t v₁
               (.kontext c₂ w₂, ⟨[], []⟩) (f₂.nach c₂ v₁) :=
