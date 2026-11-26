@@ -426,9 +426,19 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
         have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a := by
-          simp only [List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
+          have h₂ : s.antworten.length < (s.antworten ++ [a]).length := by
+            simp only [List.length_append, List.length_singleton]
+            omega
+          have hres := List.getElem_append_right (as := s.antworten) (bs := [a])
+            (i := s.antworten.length) (le_refl _) (h₂ := h₂)
+          simpa only [Nat.sub_self, List.getElem_cons_zero] using hres
         have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a' := by
-          simp only [List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
+          have h₂ : s.antworten.length < (s.antworten ++ [a']).length := by
+            simp only [List.length_append, List.length_singleton]
+            omega
+          have hres := List.getElem_append_right (as := s.antworten) (bs := [a'])
+            (i := s.antworten.length) (le_refl _) (h₂ := h₂)
+          simpa only [Nat.sub_self, List.getElem_cons_zero] using hres
         rw [hgeta] at hzua
         rw [hgeta'] at hzua'
         have hqeq : s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ = s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ := rfl
