@@ -73,6 +73,8 @@ theorem precPaarPaarWert (cgBlk : List Befehl) (aus frei y i a : Nat)
       rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   let paar1 := paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
   let paar2 := paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
+  have haF1 : frei + 2 < frei + 10 := by omega
+  have hbF1 : aus < frei + 10 := by omega
   have hlen1 : 0 < paar1.length := by dsimp only [paar1]; rw [paarBerechnungLaenge]; omega
   have hlen2 : 0 < paar2.length := by dsimp only [paar2]; rw [paarBerechnungLaenge]; omega
   have hlocal1 : BleibtImBlock paar1 := by
@@ -93,7 +95,7 @@ theorem precPaarPaarWert (cgBlk : List Befehl) (aus frei y i a : Nat)
     randAusEndePrefix paar1 paar2 hlocal1 hlen1 hlen2 r k rEnd hpc hk' hpcEnd'
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
     paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i rfl hy hi
-      (by omega) (by omega) j2 r1 hrun1 hpc1
+      haF1 hbF1 j2 r1 hrun1 hpc1
   admit
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
