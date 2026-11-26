@@ -12,14 +12,14 @@
   1. `idealLuecke`: `I` is determinate and progresses for EVERY accepted elaborated unit, not only for units
      of the shape `einheitVon P t` (`ideal_akzeptierte_einheit`). This is the eighth conjunct of `NichtLeer`;
      `R₀` quantifies over all accepted units of `Ast.Semantik.Einheit`.
-  2. `niLuecke`: noninterference for EVERY accepted elaborated unit, not only for source-denoted ones
-     (`niAkzeptiert` goes through `fragment_nichtinterferent`, which needs a fragment and its `Rein` duty).
+  2. `niSpuren`: low-trace equivalence for every admitted comparison of every accepted unit.
+     `zielNI_iff_vergleich` proves the comparison-run existence required by the fixed NI leg.
   3. `hang`: the no-hang leg of `Verfeinert` holds for EVERY ideal run matching the implementation run
      (`FortschrittAkzeptiertAussage` supplies it only for the ideal run its own witness returns; `Sim` does
      not determine that witness uniquely).
 
-  `zielAusTeilenOhneIdealUndNI` delivers the middle part and the first seven conjuncts are discharged inline;
-  it needs no extra premise beyond `hang`. `zielAusTeilenMitFortschritt` closes the progress leg by
+  `zielAusTeilenVerfeinerung` delivers the middle part. The first seven conjuncts of `NichtLeer`
+  are discharged inline. `zielAusTeilenMitFortschritt` closes the progress leg by
   `fortschritt_akzeptiert`, proved from the two owner-approved run premises
   (`Maschine.SchedulerFair`, `Maschine.VerdraengungKehrtZurueck`).
 -/
@@ -29,6 +29,7 @@ public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise2.ZielNI
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
@@ -109,8 +110,7 @@ theorem zielAusTeilenVerfeinerung (P : Katalog.Plattform) (B : FormBeleg) :
 theorem zielAusTeilenMitLuecken
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
-    (niLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
-      Beobachtung.Nichtinterferent E) (P : Katalog.Plattform) (B : FormBeleg) :
+    (niSpuren : VergleichSpurenAussage) (P : Katalog.Plattform) (B : FormBeleg) :
     ZielAusTeilenAussage P B := by
   intro bildG formG fortschritt schranken ni
   unfold Ziel.GabbroZielForm
@@ -141,26 +141,7 @@ theorem zielAusTeilenMitLuecken
       exact idealLuecke E hacc
   · constructor
     · exact zielAusTeilenVerfeinerung hang P B bildG formG fortschritt schranken ni
-    · intro E H₁ H₂ ρ₁ s₂ hacc hw₁ hw₂ laufR gleiche zulStart niedrig
-      rcases ρ₁ with ⟨E₁, ρ₁'⟩
-      change E₁ = E ∧ Maschine.Laeufe E₁ H₁ ρ₁' at laufR
-      have e₁ : E₁ = E := laufR.1
-      subst E₁
-      have run₁ : Maschine.Laeufe E H₁ ρ₁' := laufR.2
-      obtain ⟨⟨ρ₂', run₂, stEq, polEq⟩, rest⟩ :=
-        (niLuecke E hacc) H₁ H₂ ρ₁' s₂ hw₁ hw₂ run₁ gleiche zulStart niedrig
-      constructor
-      · refine ⟨⟨E, ρ₂'⟩, ⟨⟨rfl, run₂⟩, stEq, ?_⟩⟩
-        exact ⟨rfl, ⟨rfl, polEq⟩⟩
-      · intro ρ₂ lauf₂ st₂ pol₂
-        rcases ρ₂ with ⟨E₂, ρ₂''⟩
-        change E₂ = E ∧ Maschine.Laeufe E₂ H₂ ρ₂'' at lauf₂
-        change E = E ∧ ∃ h : E₂ = E, Beobachtung.GleichePolitik E ρ₁' (h ▸ ρ₂'') at pol₂
-        have e₂ : E₂ = E := lauf₂.1
-        subst E₂
-        obtain ⟨_, h, pol⟩ := pol₂
-        cases h
-        exact rest ρ₂'' lauf₂.2 st₂ pol
+    · exact (zielNI_iff_vergleich P B).2 niSpuren
 
 /-- The goal follows with the progress leg closed by the two run premises, with the three gaps
     supplied. Needs the liveness of the memory model for access heads
@@ -169,14 +150,13 @@ theorem zielAusTeilenMitLuecken
 theorem zielAusTeilenMitFortschritt
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
-    (niLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
-      Beobachtung.Nichtinterferent E)
+    (niSpuren : VergleichSpurenAussage)
     (existiert : ZugriffSchrittExistiertAussage)
     (P : Katalog.Plattform) (B : FormBeleg) :
     BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
       NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
   intro bildG formG schranken ni
-  exact zielAusTeilenMitLuecken hang idealLuecke niLuecke P B bildG formG
+  exact zielAusTeilenMitLuecken hang idealLuecke niSpuren P B bildG formG
     (fortschritt_akzeptiert existiert) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit

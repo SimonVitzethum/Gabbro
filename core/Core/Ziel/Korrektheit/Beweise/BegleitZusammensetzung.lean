@@ -19,6 +19,7 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise2.ZielNI
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 public import Core.Maschine.Start
 public import Core.Annahme.Annahme
@@ -167,6 +168,15 @@ theorem NIAkzeptiertAussage.erfuellbar :
 /-- Noninterference has content: the comparison premise of two low-equal runs with different high answers is
     satisfiable (`ni_erfuellbar` at the generic unit type). -/
 def NIAkzeptiertAussage.nichtTrivial := Beobachtung.ni_erfuellbar
+
+/-- Acceptance and the trace-comparison premises hold jointly at the concrete unit type.
+    The accepted empty source unit's admitted run is a reflexive comparison. -/
+theorem VergleichSpurenAussage.erfuellbar (P : Plattform) :
+    ∃ (E : Ast.Semantik.Einheit) (H₁ H₂ : Umgebung) (ρ₁ ρ₂ : Lauf E),
+      Annahme.Akzeptiert E ∧ Beobachtung.Vergleich E H₁ H₂ ρ₁ ρ₂ := by
+  obtain ⟨H, _, _, ρ, lauf⟩ := trivialUnit_lauf P
+  exact ⟨einheitVon P trivialUnit, H, H, ρ, ρ, trivialUnit_akzeptiert P,
+    ⟨lauf, lauf, rfl, rfl, rfl⟩⟩
 
 /-- The five legs of the goal hold jointly as soon as the two open ones are supplied: image validity, form
     coverage, progress and noninterference are proved here; `SchrankenAkzeptiertAussage` is the leg still
