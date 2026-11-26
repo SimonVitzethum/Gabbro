@@ -104,11 +104,18 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepTransport
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAntwortErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKontextErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInterruptErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepPauseErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKopplungAlle
+public import Core.Beobachtung.Fluss.Beweise.Geraet.GeraeteProtokollNI
+public import Core.Beobachtung.Fluss.Beweise.Geraet.GeraeteNI
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeob
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeobMehr
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphKopplungBeweis
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
@@ -235,6 +242,7 @@ public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
 public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
