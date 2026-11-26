@@ -35,7 +35,7 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       hpc ha hy (by omega) (by omega)
   have hpcPaarEnde : rp.pc = (rfindPaar frei).length := by
     rw [hpcP, rfindPaar, paarBerechnungLaenge]
-  change (Schritt (rfindPaar frei))^[kp] (some r) = some rp at hrunP
+  rw [← rfindPaar] at hrunP
   have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
@@ -150,7 +150,7 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       hpc ha hy (by omega) (by omega)
   have hpcPaarEnde : rp.pc = (rfindPaar frei).length := by
     rw [hpcP, rfindPaar, paarBerechnungLaenge]
-  change (Schritt (rfindPaar frei))^[kp] (some r) = some rp at hrunP
+  rw [← rfindPaar] at hrunP
   have hbleibP := laufBleibtVorEnde (rfindPaar frei) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]

@@ -15,11 +15,11 @@ open Gabbro.Core.Ast.Semantik
 
 /-- The pairing block of the minimisation loop, named so composed runs compare
     the same constant instead of a large expanded expression. -/
-def rfindPaar (frei : Nat) : List Befehl :=
+@[irreducible] def rfindPaar (frei : Nat) : List Befehl :=
   paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)
 
 /-- The zero test, back edge and copy segment after the translated block. -/
-def rfindRest (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
+@[irreducible] def rfindRest (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
   (rfindNullTest frei ++ rfindRueck cfBlk frei) ++ kopie aus (frei + 2)
 
 /-- The loop as the pairing block, the translated block and the tail. -/
