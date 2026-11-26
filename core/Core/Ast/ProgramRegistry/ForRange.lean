@@ -49,7 +49,7 @@ theorem forRange_annahme (scope : Scope) (result : Option (Ty .value)) : (forRan
   · rintro s c ⟨op, operands⟩ head guard
     exact ⟨c, (forRangeForm scope result).befehl args, head, guard⟩
   · intro t c s w stepPlan u spur next step execute ev
-    obtain ⟨rfl, _⟩ := ((forRangeForm scope result).befehl args).vollzug_genau (w := w) step execute
+    obtain ⟨rfl, _⟩ := ((forRangeForm scope result).befehl args).vollzug_genau (h := Or.inl rfl) (w := w) step execute
     exact List.not_mem_nil
 
 -- Mirror binary_am_ort and Befehl.bestimmt for the new instruction.

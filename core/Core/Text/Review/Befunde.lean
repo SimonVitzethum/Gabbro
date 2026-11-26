@@ -100,7 +100,7 @@ theorem textKostenUndSpur_allQuellformen {category : Gabbro.Core.Ast.Category} {
   subst stepPlan
   have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
-  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute (form.privat args)
+  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (h := Or.inl rfl) (w := choice) step execute (form.privat args)
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   rfl
@@ -118,7 +118,7 @@ theorem antwortSicher_allQuellformen {category : Gabbro.Core.Ast.Category} {Argu
   subst stepPlan
   have uEq : u = (form.befehl args).nach c s := transfer.2
   subst u
-  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (w := choice) step execute (form.privat args)
+  obtain ⟨spurEq, _⟩ := (form.befehl args).vollzug_genau (h := Or.inl rfl) (w := choice) step execute (form.privat args)
   subst spur
   constructor
   · intro answer h

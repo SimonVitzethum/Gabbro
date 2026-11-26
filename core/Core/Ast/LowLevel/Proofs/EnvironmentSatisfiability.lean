@@ -24,14 +24,14 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     cases step with
     | kontext _ _ rule execute =>
       obtain ⟨b, head, transfer⟩ := rule
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (w := w) transfer execute (rein b (kopf_mem (code := p.code) head))
+      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (h := Or.inl rfl) (w := w) transfer execute
       exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
         (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
   · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i hkopf t c' sv u sv' w q spur himpl haus => ?_⟩
     have memb : i ∈ p.code := kopf_mem hkopf
-    obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus (rein i memb)
+    obtain ⟨rfl, _⟩ := i.vollzug_genau (h := Or.inl rfl) (w := w) himpl haus
     exact spurRespektiert_leer _ _ _
   · intro run conforms
     change (∀ pred ∈ p.klauseln.voraus, _) ∧

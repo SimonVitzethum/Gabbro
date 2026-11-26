@@ -361,7 +361,7 @@ theorem substringRegelAntwortSicher : SubstringRegelAntwortSicherAussage := by
   intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
-  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (h := Or.inl rfl) (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
   subst stepPlan
   subst spur
@@ -377,7 +377,7 @@ theorem substringKostenUndSpur : SubstringKostenUndSpurAussage := by
   intro tstamp ctx st choice stepPlan u spur trail _ hImpl hExec
   let p := (substringForm scope).fragment args
   let b := (substringForm scope).befehl args
-  obtain ⟨htrail, _⟩ := b.vollzug_genau (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
+  obtain ⟨htrail, _⟩ := b.vollzug_genau (h := Or.inl rfl) (e := (p.einheit platform).einrichtung) (w := choice) hImpl hExec
   subst spur
   refine ⟨rfl, rfl, ?_⟩
   have hplan : stepPlan = plan := (List.cons.inj hImpl.1).1
