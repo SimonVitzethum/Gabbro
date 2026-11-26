@@ -62,9 +62,10 @@ theorem rfindEvalBeiNull (cf : Nat.Partrec.Code) (a m : Nat)
     intro j hj
     exact (Nat.not_lt_zero _ hj).elim⟩
   have hR : Nat.rfind p = Part.some 0 := Part.eq_some_iff.2 hmemR
-  change (Nat.rfind p).map (fun n => n + m) = Part.some m
-  rw [hR]
-  simp only [Part.map_some, Nat.zero_add]
+  have hgoal : (Nat.rfind p).map (fun n => n + m) = Part.some m := by
+    rw [hR]
+    simp only [Part.map_some, Nat.zero_add]
+  simpa only [Nat.Partrec.Code.eval, Nat.unpaired, Nat.unpair_pair, p] using hgoal
 
 /-- Skipping a defined nonzero start does not change the minimisation result,
     because the search for the first zero starts one candidate later. -/
@@ -108,10 +109,11 @@ theorem rfindEvalWeiter (cf : Nat.Partrec.Code) (a m y : Nat)
       exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', by simp [hvne]⟩
   have hmemR : (y - m) ∈ Nat.rfind p := Nat.mem_rfind.2 ⟨hmemZ, hmemF⟩
   have hR : Nat.rfind p = Part.some (y - m) := Part.eq_some_iff.2 hmemR
-  change (Nat.rfind p).map (fun n => n + m) = Part.some y
-  rw [hR]
-  simp only [Part.map_some]
-  congr 1
-  omega
+  have hgoal : (Nat.rfind p).map (fun n => n + m) = Part.some y := by
+    rw [hR]
+    simp only [Part.map_some]
+    congr 1
+    omega
+  simpa only [Nat.Partrec.Code.eval, Nat.unpaired, Nat.unpair_pair, p] using hgoal
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
