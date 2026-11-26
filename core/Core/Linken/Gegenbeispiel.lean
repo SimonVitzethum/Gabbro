@@ -16,7 +16,7 @@ open Gabbro.Core.Katalog
 
 /-- A fragment from a plain instruction list: no clauses, empty scope, no entries, no memory. -/
 def codeFrag (code : List Befehl) : Fragment :=
-  ⟨code, .leer, [], fun _ => none, .leer⟩
+  ⟨code, .leer, [], fun _ => none, .leer, []⟩
 
 theorem codeFrag_code (code : List Befehl) : (codeFrag code).code = code :=
   rfl

@@ -19,13 +19,13 @@
                 context step of an admitted run executes the Befehl at its head, and
                 that Befehl is one the estimator charged (`f ∈ (programm u.baum).code`,
                 whose class rows the estimator sums in `fragmentKosten`); loop counters
-                (`zaehler`/`obergrenzen`) stay below the estimator value; installed
+                (`zaehler`/`obergrenzen`) stay within their source bounds; installed
                 measures stay inside their static `decreases` interval. Proof sketch:
                 heads come from the elaborated fragment (`Fragment.einheit` rules are
                 exactly the code); the counter bounds follow the loop-entry commands
                 (`setzePasszahl`, `forAnfang`) with the static trip bounds
-                (`boundSchranke`, `forSchranke`) below the estimator value (every class
-                row costs one tick, `klassenKosten`); the measure bound follows the
+                (`boundSchranke`, `forSchranke`) recorded on the test instruction;
+                the measure bound follows the
                 runtime descent check (`Rahmen.setzeMass`: a new measure is installed
                 only strictly below the previous same-function mass, else the frame
                 halts) with the `decreases` clause (`KlauselnWahr` over `I`, carried by
@@ -37,7 +37,7 @@
                 each step costs its context exactly one tick
                 (`kontextkosten_schritt_gleich`); straight-line code is counted once;
                 `whileBounded`/`forRange` bodies run at most their static trip bound by
-                (ii); recursive re-entries descend strictly by (iv), so the `spanne`
+                (ii); recursive re-entries descend strictly by (iv), so the interval width
                 bounds the cycle activations; calls cost their verified table entry or
                 their structural estimate. Protocol ticks are foreign to every context,
                 so they add nothing to the window. Difficulty: mittel (given the
@@ -101,7 +101,8 @@ def EintrittSegmentAussage (P : Katalog.Plattform) (u : UnitMitSchranken)
 /-- **The source-to-machine correspondence** (`KostenSchrittKorrespondenzAussage`):
     for every accepted unit whose estimator is defined, every context step of every
     admitted run executes the Befehl at its head, and that Befehl is one the
-    estimator charged; loop counters stay below the estimator value; installed
+    estimator charged; counters and range endpoints stay within the test site's
+    static bounds; installed
     measures stay inside their static `decreases` interval. Open for Hy4; the sketch is
     in the file header. Difficulty: schwer. -/
 def KostenSchrittKorrespondenzAussage : Prop :=
@@ -119,10 +120,13 @@ def KostenSchrittKorrespondenzAussage : Prop :=
         f ∈ (programm u.baum).code) ∧
       (∀ t s (c : Kontext) (pc n : Nat),
         ρ.zeit.zustand t = some s →
-        (s.lokal c).zaehler pc = some n → n ≤ E) ∧
+        (s.lokal c).zaehler pc = some n →
+        ∃ grenze, (pc, grenze) ∈ (programm u.baum).schleifen ∧ n ≤ grenze.paesse) ∧
       (∀ t s (c : Kontext) (pc : Nat) (b : Ganzzahl),
         ρ.zeit.zustand t = some s →
-        (s.lokal c).obergrenzen pc = some b → b.zahl.wert.toNat ≤ E) ∧
+        (s.lokal c).obergrenzen pc = some b →
+        ∃ grenze hi, (pc, grenze) ∈ (programm u.baum).schleifen ∧
+          grenze.oben = some hi ∧ b.zahl.wert ≤ hi) ∧
       ∀ t s (c : Kontext) (name : Identifier) (n : Nat) (lo hi : Int)
         (kern : FunktionsKern),
         ρ.zeit.zustand t = some s →

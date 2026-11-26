@@ -160,7 +160,8 @@ def stmt : Stmt result before after → Fragment
     let test := expr 0 condition
     let body := bracedBlock body
     let set := Fragment.einzel (.setzePasszahl 0 (test.code.length + 1))
-    let branch := Fragment.einzel (whileInstruction condition body handler)
+    let branch := Fragment.schleifentest (whileInstruction condition body handler)
+      (SchleifenGrenze.whileBounded bound)
     let again := Fragment.einzel (.zurueckSprung (test.code.length + body.code.length + 1))
     (((((expr 0 bound).anhaengen set).anhaengen test).anhaengen branch).anhaengen body).anhaengen again
   | @Stmt.forRange _ scope low _ _ high name _ lo hi _ overflow body =>
@@ -169,7 +170,8 @@ def stmt : Stmt result before after → Fragment
     let body := bracedBlock body
     let endpoints := (expr 0 lo).anhaengen (expr 1 hi)
     let setup := Fragment.einzel (.forAnfang 0 1 index (body.code.length + 4) shadow (writes && overflow.isNone))
-    let branch := Fragment.einzel (forInstruction body overflow)
+    let branch := Fragment.schleifentest (forInstruction body overflow)
+      (SchleifenGrenze.forRange lo hi)
     let again := Fragment.einzel (.forNaechster (body.code.length + 1) index)
     (((((endpoints.anhaengen setup).anhaengen branch).anhaengen body).anhaengen again).anhaengen
       (.einzel (.blockEnde 1)))

@@ -64,14 +64,14 @@ def fragmentKosten (z : Wirkungsklasse → KlassenKostenzeile) (p : Fragment) : 
 
 /-- The static trip bound of a `whileBounded` loop: the upper endpoint of the
     static bound expression, which the bound value never exceeds. -/
-def boundSchranke {scope : Scope} {lo hi : Int} (_ : Expr scope (.int lo hi)) : Nat :=
-  hi.toNat
+def boundSchranke {scope : Scope} {lo hi : Int} (bound : Expr scope (.int lo hi)) : Nat :=
+  (SchleifenGrenze.whileBounded bound).paesse
 
 /-- The static trip bound of a `forRange` loop: the static span between the
     lowest possible start and the highest possible end, clamped at zero. -/
 def forSchranke {scope : Scope} {low lowHi highLo high : Int}
-    (_ : Expr scope (.int low lowHi)) (_ : Expr scope (.int highLo high)) : Nat :=
-  (high - low).toNat
+    (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high)) : Nat :=
+  (SchleifenGrenze.forRange lo hi).paesse
 
 mutual
 

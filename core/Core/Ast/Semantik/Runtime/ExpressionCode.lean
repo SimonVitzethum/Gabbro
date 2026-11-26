@@ -8,6 +8,21 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Katalog
 
+/-- The static maximum counter and, for a range loop, the upper expression's
+    static endpoint. Both are indexed by the address of the loop test. -/
+structure SchleifenGrenze where
+  paesse : Nat
+  oben : Option Int
+
+def SchleifenGrenze.whileBounded {lo hi : Int} (_ : Expr scope (.int lo hi)) :
+    SchleifenGrenze :=
+  ⟨hi.toNat, none⟩
+
+def SchleifenGrenze.forRange {low lowHi highLo high : Int}
+    (_ : Expr scope (.int low lowHi)) (_ : Expr scope (.int highLo high)) :
+    SchleifenGrenze :=
+  ⟨(high - low).toNat, some high⟩
+
 /-- Elaborating a fragment records both its executable instructions and its written clauses.
     Sequencing preserves the order of the instructions and of each kind of clause. -/
 structure Fragment where
@@ -20,21 +35,27 @@ structure Fragment where
   /-- The memory the fragment declares: its locks, its address spaces and the initial content of the
       cells of its regions. -/
   speicher : Speicherplan
+  schleifen : List (Nat × SchleifenGrenze) := []
 
-def Fragment.leer : Fragment := ⟨[], .leer, [], fun _ => none, .leer⟩
+def Fragment.leer : Fragment := ⟨[], .leer, [], fun _ => none, .leer, []⟩
 
-def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, [], fun _ => none, .leer⟩
+def Fragment.einzel (b : Befehl) : Fragment := ⟨[b], .leer, [], fun _ => none, .leer, []⟩
 
 /-- Sequencing shifts the entries of the second fragment behind the first one's instructions; the
     first fragment's entry of a context wins. -/
 def Fragment.anhaengen (a b : Fragment) : Fragment :=
   ⟨a.code ++ b.code, a.klauseln.anhaengen b.klauseln, a.eingang,
-    fun c => (a.eintritte c).or ((b.eintritte c).map (· + a.code.length)), a.speicher.anhaengen b.speicher⟩
+    fun c => (a.eintritte c).or ((b.eintritte c).map (· + a.code.length)), a.speicher.anhaengen b.speicher,
+    a.schleifen ++ b.schleifen.map (fun (pc, grenze) => (pc + a.code.length, grenze))⟩
 
 /-- **A body for the contexts selected by `gilt`**: the whole fragment is what each of them runs
     from its first instruction (handlers, NMI handlers and threads started by the program). -/
 def Fragment.rumpf (gilt : Kontext → Bool) (body : Fragment) : Fragment :=
   { body with eintritte := fun c => if gilt c then some 0 else body.eintritte c }
+
+/-- A test instruction carrying the source type's loop bound at its own PC. -/
+def Fragment.schleifentest (b : Befehl) (grenze : SchleifenGrenze) : Fragment :=
+  { Fragment.einzel b with schleifen := [(0, grenze)] }
 
 mutual
 

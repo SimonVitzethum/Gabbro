@@ -245,12 +245,13 @@ private theorem kk_lauf :
 
 /-- The corrected measure statement has jointly satisfiable premises at a positive mass. -/
 theorem kostenKorrespondenzMass_nichtTrivial :
-    EndlichAkzeptiertAussage Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile ∧
-    schaetzeEinheit Wirkungsklasse.kostenZeile [] kkBaum = some 5 ∧
-    ∃ (h : Umgebung) (ρ : Lauf (einheitMitSchranken Plattform.x86_64 kkUnit)) s kern,
-      Laeufe (einheitMitSchranken Plattform.x86_64 kkUnit) h ρ ∧
+    ∃ (u : UnitMitSchranken) (h : Umgebung)
+      (ρ : Lauf (einheitMitSchranken Plattform.x86_64 u)) (s : Zustand) (kern : FunktionsKern),
+      EndlichAkzeptiertAussage Plattform.x86_64 u [] Wirkungsklasse.kostenZeile ∧
+      schaetzeEinheit Wirkungsklasse.kostenZeile [] u.baum = some 5 ∧
+      Laeufe (einheitMitSchranken Plattform.x86_64 u) h ρ ∧
       ρ.zeit.zustand 4 = some s ∧ (s.lokal eintritt).funktion = some mainName ∧
-      (s.lokal eintritt).mass = some 6 ∧ findeKern kkBaum.2 mainName = some kern ∧
+      (s.lokal eintritt).mass = some 6 ∧ findeKern u.baum.2 mainName = some kern ∧
       kern.massIntervall = some (6, 6) ∧ 6 ≤ (6 : Int) ∧ (6 : Int) ≤ 6 := by
   obtain ⟨h, ρ, lauf, _, s, hcut, hfunk, hmass⟩ := kk_lauf
   cases hfinde : findeKern kkBaum.2 mainName with
@@ -258,7 +259,7 @@ theorem kostenKorrespondenzMass_nichtTrivial :
   | some kern =>
     have hs := kk_intervall
     rw [hfinde] at hs
-    exact ⟨kk_akk, kk_schaetze, h, ρ, s, kern, lauf, hcut, hfunk, hmass, rfl,
+    exact ⟨kkUnit, h, ρ, s, kern, kk_akk, kk_schaetze, lauf, hcut, hfunk, hmass, hfinde,
       Option.some.inj hs, le_rfl, le_rfl⟩
 
 /-- The measure prologue makes the admitted entry prefix cost more than the estimate. -/
