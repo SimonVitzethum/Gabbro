@@ -94,6 +94,12 @@ def Antwortspur (spur : SchrittSpur Ort Wert) : List AntwortEreignis :=
     | .antwort a => some a
     | _ => none
 
+private theorem aktions_antwortbuch {e : Einrichtung L Ort Wert Raum Lok Grund Bedingung}
+    {s u v : Zustand L Ort Wert Raum Lok Grund} {t c akt locks outside}
+    (frame : Zustandsrahmen s u) (action : FuehrtAus e t c s u akt locks outside v) :
+    v.antworten = s.antworten ++ Antwortspur (Ort := Ort) (Wert := Wert) ⟨[], outside⟩ := by
+  cases action <;> exact frame.antworten.trans (List.append_nil _).symm
+
 /-- The concrete answer book is exactly the ordered arrival trace at every cut
     from an empty book. In particular, consuming a reply leaves this trace intact. -/
 theorem antwortbuch_im_lauf
@@ -124,7 +130,7 @@ theorem antwortbuch_im_lauf
           | kontext _ _ _ execute =>
             obtain ⟨frame, _, _, _, action, _, state⟩ := execute
             rw [state]
-            cases action <;> exact frame.antworten.trans (List.append_nil _).symm
+            exact aktions_antwortbuch frame action
           | antwort _ arrives =>
             obtain ⟨trace, book, _⟩ := arrives.ankunft E.einrichtung
             rw [book]
@@ -145,10 +151,10 @@ theorem antwortbuch_im_lauf
 def Antwortabgleich (ρ : Maschine.Lauf E) (η : Lauf E) : Prop :=
   ∀ k : Maschine.Schnitt E ρ,
     let j := Zeitlauf.schnittBild ρ.zeit η.zeit k
-    let prefix := Zeitlauf.praefix (fun n => (ρ.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) k.val
-    ∃ s, ρ.zeit.zustand k.val = some s ∧ s.antworten = prefix ∧
-      (η.zeit.zustand j.val).antworten = prefix ∧
-      Zeitlauf.praefix (fun n => (η.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) j.val = prefix ∧
+    let ankunft := Zeitlauf.praefix (fun n => (ρ.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) k.val
+    ∃ s, ρ.zeit.zustand k.val = some s ∧ s.antworten = ankunft ∧
+      (η.zeit.zustand j.val).antworten = ankunft ∧
+      Zeitlauf.praefix (fun n => (η.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) j.val = ankunft ∧
       s.verbraucht = (η.zeit.zustand j.val).verbraucht ∧
       s.verworfen = (η.zeit.zustand j.val).verworfen
 
