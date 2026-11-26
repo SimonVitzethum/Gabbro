@@ -77,6 +77,10 @@ private theorem ideal_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lo
      · exact update_rahmen ok (ok c)
      · exact faeden_gut ok install)
 
+private theorem protokoll_lokal {e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit}
+    {v : Zustand} (action : FuehrtAus e t c s u a labels events v) : v.lokal = u.lokal := by
+  cases action <;> rfl
+
 private theorem kopf_position {code : List Befehl} (head : kopf code s c = some b) :
     code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
@@ -131,9 +135,12 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
           | kontext _ _ rule effect =>
             obtain ⟨b, head, instruction⟩ := rule
             have good := ideal_gut (w := PUnit.unit) ok (installs t _ _ _ before ok head) instruction
-            obtain ⟨_, _, _, _, protocol, _, after⟩ := effect
+            obtain ⟨_, _, _, v, protocol, _, after⟩ := effect
             rw [after]
-            cases protocol <;> exact good
+            intro d
+            change g.RahmenGut (v.lokal d)
+            rw [protokoll_lokal protocol]
+            exact good d
           | antwort _ answer =>
             obtain ⟨_, _, _, after⟩ := answer
             rw [after]
