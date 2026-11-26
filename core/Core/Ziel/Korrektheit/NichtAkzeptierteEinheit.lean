@@ -404,12 +404,12 @@ theorem textIndexUnit_nicht_waechter :
 /-- The witness unit lies on the decidable guard fragment. -/
 theorem textIndexFragment : WaechterAnalyse.waechterFragmentCode textIndexCode = true := by
   rw [textIndexUnit_code]
-  decide
+  rfl
 
 /-- The computable guard checker refuses the witness unit. -/
 theorem textIndexRefusiert : WaechterAnalyse.waechterPruefeCode textIndexCode = false := by
   rw [textIndexUnit_code]
-  decide
+  rfl
 
 /-- The witness: a source unit whose elaboration is not accepted. -/
 theorem nichtAkzeptierteEinheit :

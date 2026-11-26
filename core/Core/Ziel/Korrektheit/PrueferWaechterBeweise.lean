@@ -74,7 +74,7 @@ theorem prueferWaechterVollstaendigNichtFuerAlle :
     have hcode : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
         [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
     rw [hcode]
-    decide
+    rfl
   have hA : Annahme.WaechterHalten (einheitVon Katalog.Plattform.x86_64 trivialUnit) :=
     (trivialUnit_akzeptiert Katalog.Plattform.x86_64).2.2
   have hres := hall Katalog.Plattform.x86_64 trivialUnit hfrag hA
@@ -89,7 +89,7 @@ theorem prueferWaechterDecidierbar_akzeptiertTrivial :
   have hcode : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
       [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
   rw [hcode]
-  decide
+  rfl
 
 /-- The first half of non-triviality: the deployed checker accepts the empty source
     unit, because its elaboration is accepted on every platform. -/

@@ -174,13 +174,13 @@ theorem WaechterFragmentVollstaendigAussage.erfuellbar :
     have hcode : (fragment Ast.Category.unit trivialUnit).code =
         [Befehl.starte mainName, Befehl.ende] := rfl
     rw [hcode]
-    decide
+    rfl
   · exact (trivialUnit_akzeptiert Katalog.Plattform.x86_64).2.2
   · show waechterPruefeCode (fragment Ast.Category.unit trivialUnit).code = true
     have hcode : (fragment Ast.Category.unit trivialUnit).code =
         [Befehl.starte mainName, Befehl.ende] := rfl
     rw [hcode]
-    decide
+    rfl
 
 /-- The fragment statement is load-bearing: the witness unit lies on the fragment
     while the analysis refuses it, so completeness does not hold vacuously. -/
@@ -190,9 +190,9 @@ theorem WaechterFragmentVollstaendigAussage.nichtTrivial :
   refine ⟨fragment Ast.Category.unit textIndexUnit, Katalog.Plattform.x86_64, ?_, ?_⟩
   · show waechterFragmentCode textIndexCode = true
     rw [textIndexUnit_code]
-    decide
+    rfl
   · show waechterPruefeCode textIndexCode = false
     rw [textIndexUnit_code]
-    decide
+    rfl
 
 end Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse

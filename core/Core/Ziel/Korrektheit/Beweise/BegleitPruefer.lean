@@ -225,7 +225,7 @@ theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombi
       have hcode : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
           [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
       rw [hcode]
-      decide
+      rfl
     simp only [Pruefer.pruefe, hL, hK, hW]
     rfl
   · have hFL : prueferKombiniert.fragmentLokal
@@ -237,7 +237,7 @@ theorem prueferKombiniert_nichtTrivial : PrueferNichtTrivialAussage prueferKombi
       have hcode : (Ast.Semantik.programmMitInvarianten ⟨textIndexUnit, []⟩).code =
           textIndexCode := rfl
       rw [hcode, textIndexUnit_code]
-      decide
+      rfl
     have hFW : prueferKombiniert.fragmentWaechter
         Katalog.Plattform.x86_64 textIndexUnit = true := by
       rw [prueferKombiniert_fragmentWaechter]
