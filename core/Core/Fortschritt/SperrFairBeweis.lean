@@ -39,7 +39,7 @@ theorem sperrHalterImplBereit_nichtTrivial :
       E_wait.system.ImplSchritt stuckHalter s w [plan] u ∧
       FuehrtSchrittAus E_wait.einrichtung 0 stuckHalter s u plan spur s' := by
   refine ⟨⟨sW0, rfl, rfl, ew_halter_bereit, sW0_live _, ⟨0, sW0_kerne0⟩, hw2_crash 0⟩, ?_⟩
-  rintro ⟨s, _, _, _, hzs, himpl, _⟩
+  rintro ⟨s, _, _, _, _, _, hzs, himpl, _⟩
   have hss : s = sW0 := Option.some.inj (hzs.symm.trans rfl)
   subst hss
   obtain ⟨i, _, himpl⟩ := himpl
