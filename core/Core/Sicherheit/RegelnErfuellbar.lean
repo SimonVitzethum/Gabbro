@@ -163,7 +163,7 @@ private theorem arithmetik_schritt
   have hp : b.Privat := priv.elim Or.inl (Or.inr ∘ Or.inl)
   have hmasch : b.maschinennach eintritt s (b.nach eintritt s) = b.nach eintritt s :=
     b.maschinennach_lokal_ruf priv _ _ _
-  .schritt (.kontext normal bereit
+  exact .schritt (.kontext normal bereit
     ⟨b, kopf, (b.impl_privat hp eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
     (hmasch ▸ b.vollzug _ t eintritt s hp))
 
