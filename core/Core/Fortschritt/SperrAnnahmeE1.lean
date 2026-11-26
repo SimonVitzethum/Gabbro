@@ -156,9 +156,9 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         cases hF
         case sperre hF' _ =>
           cases hF' with
-          | ticket _ _ =>
-            rw [heq]
-            simpa only [Function.update_self] using hpre
+      | ticket _ _ =>
+        rw [heq]
+        exact hpre
       · subst hueq
         have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
         subst hplan
