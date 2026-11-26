@@ -55,8 +55,7 @@ theorem KostenGrenzen.start (g : KostenGrenzen) (scope : Scope) : g.RahmenGut (R
   · intro _ h; cases h
   · intro _ h; cases h
 
-variable {g : KostenGrenzen} {r : Rahmen} {b : Befehl},
-    fun _ h => nomatch h⟩
+variable {g : KostenGrenzen} {r : Rahmen} {b : Befehl}
 
 private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
     (args : List (Ty .value)) (bind : Option (Ty .value)) : g.RahmenGut (r.ruf name args bind) := by
@@ -67,7 +66,7 @@ private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
   all_goals
     repeat' first
     | exact ok
-    | refine ⟨(g.start []).1, ?_⟩
+    | refine ⟨⟨fun _ _ h => by cases h, fun _ _ h => by cases h, fun _ h => by cases h⟩, ?_⟩
       intro k mem
       rcases List.mem_cons.mp mem with rfl | tail
       · exact ok.1
