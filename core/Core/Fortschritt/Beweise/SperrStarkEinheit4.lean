@@ -146,13 +146,6 @@ theorem s4_0_maske (k : Kern) : (s4_0.kerne k).maske = fun _ => true := by
 theorem s4_0_graph_gut : s4_0.graph.graph.Konsistent ∧ s4_0.graph.graph.Vollstaendig :=
   ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
 
-theorem e4_ideal_ticket {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
-    {next : SperrZustand} (hs : statisch4 c)
-    (hn : SperrSchritt .ticket c (s.sperren ()) next) :
-    E_4.system.ISchritt c s () [ticketPlan] (toggleUpdate c s) := by
-  refine ⟨(), rfl, ?_⟩
-  exact Or.inl ⟨hs, Or.inl ⟨next, hn, rfl, rfl⟩⟩
-
 theorem e4_impl_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hs : statisch4 c)
     (hn : SperrSchritt .nehmen c (s.sperren ()) next) :
@@ -160,11 +153,12 @@ theorem e4_impl_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
   refine ⟨(), rfl, ?_⟩
   exact Or.inl ⟨hs, Or.inr ⟨next, hn, rfl, rfl⟩⟩
 
-theorem e4_ideal_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
-    {next : SperrZustand} (hg : (s.sperren ()).Gibt c next) :
-    E_4.system.ISchritt c s () [wGebenPlan] s := by
+theorem e4_impl_ticket {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
+    {next : SperrZustand} (hs : statisch4 c)
+    (hn : SperrSchritt .ticket c (s.sperren ()) next) :
+    E_4.system.ImplSchritt c s () [ticketPlan] (toggleUpdate c s) := by
   refine ⟨(), rfl, ?_⟩
-  exact Or.inr (Or.inl ⟨next, SperrSchritt.geben hg, rfl, rfl⟩)
+  exact Or.inl ⟨hs, Or.inl ⟨next, hn, rfl, rfl⟩⟩
 
 theorem e4_impl_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hg : (s.sperren ()).Gibt c next) :
@@ -192,39 +186,10 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
   | kontext normal bereit regel aus =>
     obtain ⟨i, _, hideal⟩ := regel
     cases i
-    rcases hideal with ⟨_, ⟨_, _, hpeq, hueq⟩ | ⟨_, _, hpeq, hueq⟩⟩ |
-      ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
+    change e4RegelIdeal c s w [_] _ at hideal
+    rcases hideal with ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
       subst hueq
-      obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
-      have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
-      rw [hakt] at hF
-      obtain ⟨_, au⟩ := spur
-      cases hF
-      case sperre _ _ =>
-        generalize hg : s'.graph = g at hziel
-        have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-          simp only [hziel, toggleUpdate]
-        refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
-          ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
-          fun hoffen q hmem hepo hant => ?_⟩
-        rw [hziel] at hmem hepo hant ⊢
-        exact hoffen q hmem hepo hant
-    · obtain rfl := (List.cons.inj hpeq).1
-      obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
-      have hakt : nehmenPlan.aktion = .sperre () .nehmen := rfl
-      rw [hakt] at hF
-      obtain ⟨_, au⟩ := spur
-      cases hF
-      case sperre _ _ =>
-        have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-          rw [hziel, hueq]
-        refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
-          ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
-          fun hoffen q hmem hepo hant => ?_⟩
-        rw [hziel, hueq] at hmem hepo hant ⊢
-        exact hoffen q hmem hepo hant
-    · obtain rfl := (List.cons.inj hpeq).1
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
       have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
       rw [hakt] at hF
@@ -239,6 +204,7 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
         rw [hziel, hueq] at hmem hepo hant ⊢
         exact hoffen q hmem hepo hant
     · obtain rfl := (List.cons.inj hpeq).1
+      subst hueq
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
       have hakt : stutterPlan.aktion = .intern := rfl
       rw [hakt] at hF
@@ -262,10 +228,9 @@ theorem e4_fluss : FlussLokal E_4 := by
     | unit =>
       refine ⟨?_, fun low => (Bool.false_ne_true (e1Hoch_verborgen.symm.trans low)).elim⟩
       intro c v w p u step
-      have hideal : e4Regel c v w [p] u := step.2
+      have hideal : e4RegelIdeal c v w [p] u := step.2
       refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun _ => ?_⟩
-      rcases hideal with ⟨_, ⟨_, _, hpeq, rfl⟩ | ⟨_, _, hpeq, rfl⟩⟩ |
-        ⟨_, _, hpeq, rfl⟩ | ⟨hpeq, rfl⟩
+      rcases hideal with ⟨_, _, hpeq, rfl⟩ | ⟨hpeq, rfl⟩
       all_goals
         obtain rfl := (List.cons.inj hpeq).1
         exact ⟨⟨fun c p h => (Bool.false_ne_true (e1Hoch_verborgen.symm.trans h)).elim,
