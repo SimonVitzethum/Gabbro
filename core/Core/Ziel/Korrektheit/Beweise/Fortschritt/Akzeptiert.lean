@@ -20,7 +20,6 @@ public import Core.Verfeinerung.Fortschritt
 public import Core.Verfeinerung.Simulation
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
 public import Core.Ziel.Korrektheit.Zugriff
-import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 import Core.Fortschritt.Verdraengung
 
@@ -62,20 +61,22 @@ open Ast.Semantik in
 /-- A delivered handler writes its result and ends on its core. The implementation
     and ideal machine take the same return, restoring the interrupted entry. -/
 theorem handler_abschluss_erfuellbar (start : AussenStart) (boot : start.assignment 0 = some 0) :
+    let handler := Kontext.handler 0 0 (Nat.pair 0 0)
     let body := (Fragment.einzel (.literal 0 7)).anhaengen (.einzel (.faden (.beende 0)))
-    let p := (Fragment.einzel (.literal 0 1)).anhaengen (body.rumpf (fun c => decide (c = Hv)))
+    let p := (Fragment.einzel (.literal 0 1)).anhaengen (body.rumpf (fun c => decide (c = handler)))
     let E := p.einheit .x86_64
     let z := (Maschine.I.start E start).2
-    ∃ entered ready returned ingress,
-      ImplSchritt E.einrichtung E.system E.katalog hwV 0 z (.interrupt (0, 0), ingress) entered ∧
-      (entered.kerne 0).laeuft = some Hv ∧
-      ImplSchritt E.einrichtung E.system E.katalog hwV 1 entered (.kontext Hv (), ⟨[], []⟩) ready ∧
-      ImplSchritt E.einrichtung E.system E.katalog hwV 2 ready (.kontext Hv (), ⟨[], []⟩) returned ∧
-      Maschine.I.Schritt E.einrichtung E.system E.katalog hwV 2 ready (.kontext Hv (), ⟨[], []⟩) returned ∧
+    ∃ H hw entered ready returned ingress,
+      FairLaeufe E.katalog H hw ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 0 z (.interrupt (0, 0), ingress) entered ∧
+      (entered.kerne 0).laeuft = some handler ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 1 entered (.kontext handler (), ⟨[], []⟩) ready ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 2 ready (.kontext handler (), ⟨[], []⟩) returned ∧
+      Maschine.I.Schritt E.einrichtung E.system E.katalog hw 2 ready (.kontext handler (), ⟨[], []⟩) returned ∧
       (returned.kerne 0).laeuft = some eintritt ∧ (returned.kerne 0).stapel = (z.kerne 0).stapel ∧
-      returned.status Hv = .beendet (.wert 7) ∧ returned.lokal eintritt = z.lokal eintritt ∧
+      returned.status handler = .beendet (.wert 7) ∧ returned.lokal eintritt = z.lokal eintritt ∧
       returned.rechte = z.rechte ∧ returned.graph = ready.graph := by
-  intro body p E z
+  intro handler body p E z
   let event := Ereignis.interrupt 0 irqV .handler
   let label := aussenEtikett E.einrichtung event
   obtain ⟨graph, append⟩ := Speicher.Zustand.schritt_ohne_lesen
@@ -90,12 +91,12 @@ theorem handler_abschluss_erfuellbar (start : AussenStart) (boot : start.assignm
       .cons (.ohne (Or.inl rfl)) append (.nil _), rfl⟩
   let write : Befehl := .literal 0 7
   let ready := write.nach Hv entered
-  have calculate : E.system.ImplSchritt Hv entered () [Semantik.plan] ready :=
+  have calculate : E.system.ImplSchritt Hv entered () [Ast.Semantik.plan] ready :=
     ⟨write, by
       change kopf p.code (Zustandseintritt z 0 (0, 0) Hv false) Hv = some write
       exact (handler_beginnt_im_rumpf p .x86_64 start 0 (0, 0) Hv false
         (fun h => Kontext.noConfusion h) (pos := 1) rfl).trans rfl, rfl, rfl⟩
-  have writeExec : FuehrtSchrittAus E.einrichtung 1 Hv entered ready Semantik.plan ⟨[], []⟩ ready := by
+  have writeExec : FuehrtSchrittAus E.einrichtung 1 Hv entered ready Ast.Semantik.plan ⟨[], []⟩ ready := by
     exact write.vollzug E.einrichtung 1 Hv entered (Or.inl rfl)
   let finish : Befehl := .faden (.beende 0)
   let plan := finish.plan (ready.lokal Hv) 0
@@ -128,7 +129,7 @@ theorem handler_abschluss_erfuellbar (start : AussenStart) (boot : start.assignm
   have dispatch : (z.kerne 0).laeuft = some eintritt := by
     change (if some 0 = start.assignment 0 then some eintritt else none) = _
     rw [boot, if_pos rfl]
-  refine ⟨entered, ready, returned, ingress, .interrupt rfl deliver, ?_,
+  refine ⟨HV, hwV, entered, ready, returned, ingress, fairV, .interrupt rfl deliver, ?_,
     .kontext rfl ⟨0, rfl, ?_, ?_⟩ calculate writeExec,
     .kontext rfl ⟨0, rfl, ?_, ?_⟩ ⟨finish, finishHead, rule⟩ execute,
     .kontext rfl ⟨0, rfl, ?_, ?_⟩ ⟨finish, finishHead, rule⟩ execute,
