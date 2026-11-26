@@ -127,10 +127,8 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           obtain ⟨vv, hvv, hvne⟩ := hvor y (by omega) hy2
           intro hzy
           apply hvne
-          have heq : Part.some vv = Part.some 0 := by
-            rw [← hvv]
-            exact hzy
-          exact Part.some.injective heq)
+          rw [hvv] at hzy
+          exact hvne (Option.some.inj hzy))
     have hbleibE := laufBleibtVorEnde S rEntry kE rE hrunE hpcE
     have hrunEfull : (Schritt (P ++ S))^[kE] (some (mitPc LR.length rK)) = some (mitPc P.length rE) := by
       have hs := laufMitPc P S [] hvS rEntry kE hbleibE
@@ -143,9 +141,10 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     refine ⟨kLR + 3 + kE, mitPc P.length rE, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rw [hblock]
       exact hrunTotal
-    · rw [hblock]
-      simp only [mitPc, List.length_append]
-      omega
+    · change P.length + rE.pc = (rfindBlk cfBlk ein aus frei freiL).length
+      rw [hpcE]
+      change P.length + S.length = (rfindBlk cfBlk ein aus frei freiL).length
+      rw [hblock, List.length_append]
     · change rE.temp aus = some (natVal v)
       exact hausE
     · intro s hs hsa
@@ -253,8 +252,6 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       rw [hrMidEq]
       dsimp only [rKRef, rLR0]
       rw [updateMiss _ (frei + 0) (frei + 2) _ (by omega)]
-      change rLR.temp (frei + 0) = _
-      rw [hpresLRr (frei + 0) (by omega) (by omega)]
       exact hrLRa
     have hrEntrym1 : rEntry.temp (frei + 1) = some (natVal m) := by
       change rB.temp (frei + 1) = some (natVal m)
@@ -276,10 +273,24 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         (k - jLR - jK) rfl hrEntrya hrEntrym1 hrEntrym2 le_rfl
         (by intro zz hmzz hzzy; omega)
         ⟨hcfEin, hcfAus, hcfUn, hcfNr⟩ hcfV hcfBl hrunS hpcS
+    have haUn : (Nat.unpair n).1 = a := by
+      have heq : Part.some ((Nat.unpair n).1) = Part.some a := by
+        change Part.some ((Nat.unpair n).1) = Part.some a at haEval
+        exact haEval
+      exact Option.some.inj heq
+    have hmUn : (Nat.unpair n).2 = m := by
+      have heq : Part.some ((Nat.unpair n).2) = Part.some m := by
+        change Part.some ((Nat.unpair n).2) = Part.some m at hmEval
+        exact hmEval
+      exact Option.some.inj heq
+    have hnRev : Nat.pair a m = n := by
+      rw [← haUn, ← hmUn]
+      exact Nat.pair_unpair n
     refine ⟨z, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · rw [← hn]
+    · rw [← hnRev]
       exact hEval
-    · change rS.temp aus = some (natVal z)
+    · rw [hEqEnd]
+      change rS.temp aus = some (natVal z)
       exact hausS
     · intro s hs hsa
       rw [hEqEnd]
