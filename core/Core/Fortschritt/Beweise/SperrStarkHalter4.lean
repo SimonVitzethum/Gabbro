@@ -54,13 +54,11 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := haus
+      have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
+      rw [hakt] at hF
       generalize hev : spur.aussen = evs at hF
       have hss : (s.sperren ()).Gibt c ((s.sperren ()).abgeben) := by
-        -- the give plan carries a release step; extract it from the executed action
-        obtain ⟨_, _, _, _, hF', _⟩ := haus
-        have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
-        rw [hakt] at hF'
-        cases hF' with
+        cases hF with
         | sperre hnext _ =>
           cases hnext with
           | geben hg => exact hg
@@ -73,6 +71,7 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := haus
       have hakt : stutterPlan.aktion = .intern := rfl
       rw [hakt] at hF
+      generalize hev : spur.aussen = evs at hF
       cases hF
       rw [hziel]
       exact hpre
