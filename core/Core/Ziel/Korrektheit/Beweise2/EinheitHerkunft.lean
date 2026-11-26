@@ -69,7 +69,7 @@ theorem ideal_spracheinheit_iff (zugriff : ZugriffZielAussage) :
     (∀ E : Spracheinheit, Annahme.Akzeptiert E.val →
       Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
       Maschine.I.Fortschritt E.val.einrichtung E.val.system) ↔ IdealVerlinkteEinheitAussage := by
-  refine ⟨?_, ideal_spracheinheit zugriff⟩
+  refine ⟨?_, fun _ => ideal_spracheinheit zugriff⟩
   intro ideal plan p h akzeptiert
   exact ideal ⟨p.einheit plan.plattform, .verlinkt plan p h⟩ akzeptiert
 
