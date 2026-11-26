@@ -113,14 +113,14 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   geraete_angeboten_transport vergleich offered₁ hfragen hverlauf hantworten hepoche
                 cases impl₂ with
                 | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
-                  obtain ⟨binding, access, required, target, ruleEq⟩ := geraete_rule_form locals d
+                  obtain ⟨binding, access, required, target, ruleEq, hbind⟩ := geraete_rule_binding locals d
                   obtain ⟨_, plan', hplans', rule₂'⟩ := geraete_kontext_regel ruleEq regel₂
                   rcases geraete_rule_faelle rule₂' with hcase | hcase
                   · obtain ⟨owned, idle, _⟩ := hcase
-                    exact (geraete_issue_schliesst_ankunft_aus (d := d) hinv₂ owned idle
+                    exact (geraete_issue_schliesst_ankunft_aus (d := d) (binding := d.binding) hinv₂ (hbind ▸ owned) idle
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                   · obtain ⟨owned, pending, answer, ready, sameQ, _⟩ := hcase
-                    exact (geraete_consume_schliesst_ankunft_aus (d := d) hinv₂ owned pending ready sameQ
+                    exact (geraete_consume_schliesst_ankunft_aus (d := d) (binding := d.binding) hinv₂ (hbind ▸ owned) pending ready sameQ
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                 | interrupt keinAbsturz₂ enters₂ =>
                   obtain ⟨kk, irq, c₂, nmi, _, pend₂, _, _, _, _, _⟩ := enters₂
@@ -128,8 +128,9 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hdel : (ρ₂.hw.angebot t).delivery a.question.endpoint = true := by
                     rw [← offered₁.1]
                     exact offered₂.2.1.1
-                  exact geraete_interrupt_schliesst_antwort_aus gueltig pend₂.2.2.2.2 hdel
+                  exact (geraete_interrupt_schliesst_antwort_aus gueltig pend₂.2.2.2.2 hdel).elim
                 | absturz crash₂ =>
+                  exfalso
                   rw [crash₂.1.2] at hkein₂
                   cases hkein₂
                 | antwort hkein₂' h2 =>

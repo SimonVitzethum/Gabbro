@@ -473,4 +473,18 @@ theorem geraete_rule_faelle {k : Katalog} {binding : Binding k} {access : Regist
   | @consume owned answer pending ready sameQuestion =>
       exact Or.inr ⟨owned, pending, answer, ready, sameQuestion, rfl⟩
 
+/-- The rule's binding is the denotation's declared binding. -/
+theorem geraete_rule_binding (locals : Umgebung scope) (d : Denotation k scope) :
+    ∃ binding access required target,
+      d.rule locals = Rule.machine binding access required target ∧ binding = d.binding := by
+  cases d with
+  | read dest b off => exact ⟨b, .read off, .ready, none, rfl, rfl⟩
+  | fallibleRead dest b off promise handler =>
+    exact ⟨b, .fallibleRead off promise, .ready, none, rfl, rfl⟩
+  | write b off value =>
+    exact ⟨b, .write off (value.wert locals).wert.toNat, .ready, none, rfl, rfl⟩
+  | transition decl =>
+    exact ⟨decl.binding, .write decl.row.offset decl.data, decl.changes.prior,
+      some decl.changes.after, rfl, rfl⟩
+
 end Gabbro.Core.Beobachtung
