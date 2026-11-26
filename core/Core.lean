@@ -222,6 +222,12 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokal
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NILokalKopplung
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.NISichtbar
 public import Core.Ast.Semantik.Runtime.UnitInvarianten
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.Induktion
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.InvariantenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.KlassenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenBein
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.Grenzen
+public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenLauf
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Fragen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Kosten
