@@ -57,13 +57,13 @@ theorem lockStatisch4_schritt {a c z next}
     cases hg with
     | besitzer c r =>
       cases r with
-      | nil => exact ⟨fun _ h => nomatch h, fun _ h => (List.not_mem_nil h).elim⟩
+      | nil => exact ⟨(fun _ h => nomatch h), fun _ h => (List.not_mem_nil h).elim⟩
       | cons d r =>
         exact ⟨fun h he => hz.2 h (List.mem_cons.mpr (Or.inl (Option.some.inj he).symm)),
           fun h hm => hz.2 h (List.mem_cons_of_mem _ hm)⟩
 
 theorem e4_inv_start : inv4 s4_ideal0 := by
-  refine Or.inl ⟨⟨fun _ h => nomatch h, fun _ h => (List.not_mem_nil h).elim⟩,
+  refine Or.inl ⟨⟨(fun _ h => nomatch h), fun _ h => (List.not_mem_nil h).elim⟩,
     fun k => ⟨s4_ideal0_nmi k, s4_ideal0_maske k⟩, ?_⟩
   intro c hc
   rcases hc with rfl | rfl | rfl
@@ -107,26 +107,27 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
     obtain ⟨_, _, hreg⟩ := hreg
     change e4Regel c s w [plan] u at hreg
     obtain ⟨k, _, hrun, _⟩ := ready
-    rcases hreg with ⟨hc, ⟨_, _, hp, rfl⟩ | ⟨_, _, hp, rfl⟩⟩ |
-      ⟨_, _, hp, rfl⟩ | ⟨hp, rfl⟩
+    rcases hreg with ⟨hc, ⟨_, _, hp, hu⟩ | ⟨_, _, hp, hu⟩⟩ |
+      ⟨_, _, hp, hu⟩ | ⟨hp, hu⟩
     all_goals
+      subst u
       obtain rfl := (List.cons.inj hp).1
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := haus
       simp only [ticketPlan, nehmenPlan, wGebenPlan, stutterPlan] at hF
       generalize hev : spur.aussen = evs at hF
-      cases hF with
-      | sperre hnext _ =>
-        have hh : s'.kerne = s.kerne := by rw [hziel]
-        have hs : s'.status = s.status := by rw [hziel]
-        apply e4_inv_lock hi ⟨k, hrun⟩ _ _ hh hs
+      cases hF
+      case sperre hnext _ =>
+        have hh : s'.kerne = s.kerne := by rw [hziel] <;> rfl
+        have hs : s'.status = s.status := by rw [hziel] <;> rfl
+        refine e4_inv_lock hi ⟨k, hrun⟩ ?_ ?_ hh hs
         · rw [hziel]
           simpa only [Function.update_self] using hnext
         · first | exact Or.inl hc | exact Or.inr rfl
-      | intern =>
-        apply e4_inv_frame hi <;> rw [hziel]
+      case intern =>
+        apply e4_inv_frame hi <;> rw [hziel] <;> rfl
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
-    apply e4_inv_frame hi <;> rw [heq]
+    apply e4_inv_frame hi <;> rw [heq] <;> rfl
   | interrupt _ h =>
     obtain ⟨k, irq, c, nmi, _, _, henter, _, _, _, heq⟩ := h
     rcases hi with ⟨_, hv⟩ | ⟨hd, hf⟩
@@ -181,9 +182,11 @@ theorem e4_halter : SperrHalterHalten E_4 := by
   rcases e4_inv_I ρ lauf t.val with ⟨hz, hv⟩ | ⟨_, hf⟩
   · let s := ρ.zeit.zustand t.val
     obtain ⟨hl, hd⟩ := hv.2 h (hz.1 h hown)
+    change (s.sperren ()).besitzer = some h at hown
     have hg : (s.sperren ()).Gibt h ((s.sperren ()).abgeben) := by
       cases hs : s.sperren () with
       | mk own queue =>
+        rw [hs] at hown
         change own = some h at hown
         subst own
         exact .besitzer h queue
