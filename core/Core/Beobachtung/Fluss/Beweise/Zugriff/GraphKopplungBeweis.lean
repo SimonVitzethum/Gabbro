@@ -55,14 +55,14 @@ theorem speicherGraphKopplung_aus_invariante
   have inv1base := inv p plattform (h := h₁) (ρ := ρ₁) vergleich.links predictor t x
   have inv2base := inv p plattform (h := h₂) (ρ := ρ₂) vergleich.rechts predictor t x
   have inv1 : HatQuelle v.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₁ predictor t) :=
-    inv1base v hv
+    inv1base v (by exact hv)
   have inv2 : HatQuelle w.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₂ predictor t) :=
-    inv2base w hw
+    inv2base w (by exact hw)
   have len : (NiedrigeBeob E ρ₁ predictor t).length = (NiedrigeBeob E ρ₂ predictor t).length :=
     kopplung.2.2
   have cov := kopplung.1
   have takeEq : (NiedrigeBeob E ρ₂ predictor t).take (NiedrigeBeob E ρ₁ predictor t).length =
-      NiedrigeBeob E ρ₂ predictor t := List.take_of_length_le (le_of_eq len)
+      NiedrigeBeob E ρ₂ predictor t := List.take_of_length_le (le_of_eq len.symm)
   rw [takeEq] at cov
   have tracesEq : NiedrigeBeob E ρ₁ predictor t = NiedrigeBeob E ρ₂ predictor t :=
     forall2_gleich cov (fun {u v} h => ereignisAequiv_fragment p plattform h)
