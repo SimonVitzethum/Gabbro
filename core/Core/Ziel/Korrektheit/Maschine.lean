@@ -28,6 +28,7 @@ public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Verfeinerung.Formen.Familie
 public import Core.Maschine.Schritte
+public import Core.Katalog.Erfuellbar
 public import Core.Ideal.Komposition
 public import Core.Verfeinerung.Sicherheit
 
@@ -144,5 +145,108 @@ theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) : IdealAkzeptie
   · have klassenrein := Ast.Semantik.fragment_klassenrein Ast.Category.unit t
     exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩,
       fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
+
+/-- A system with no forms at any state: no rule steps, no head, nothing finished, never blocked. -/
+def keinFormenSystem : MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
+  ⟨fun _ => ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩,
+   fun _ _ => none, fun _ _ => False, fun _ _ _ => False⟩
+
+/-- An accepted unit whose forms are absent everywhere. Its start binds one running, dispatched context,
+    its source tables and bounds are empty, and only the system is changed against an elaborated empty unit. -/
+def lueckenEinheit : Ast.Semantik.Einheit :=
+  { einheitVon Katalog.Plattform.x86_64 (⟨[], Ast.UnitBody.done⟩ : Ast.Unit) with
+    system := keinFormenSystem
+    startdaten := fun _ => ⟨fun _ => Gabbro.Core.Ast.Semantik.Rahmen.start ([] : Ast.Scope),
+      fun _ => .laeuft,
+      fun _ => ⟨some (Kontext.faden 0), .nutzer, 0, fun _ => false, 0, false, []⟩,
+      ⟨fun _ => true, fun _ => 0⟩⟩
+    quelltabellen := .leer
+    schranken := .leer
+    etiketten := .leer
+    fluss := .leer
+    domaenen := eineTabelle }
+
+/-- The unit is accepted: no form steps, no generated guard use, no written clause, no bound, no lock section. -/
+theorem lueckenEinheit_akzeptiert : Annahme.Akzeptiert lueckenEinheit := by
+  refine ⟨⟨Katalog.Plattform.katalog_wohlgeformt .x86_64, ?_,
+    ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+  · intro i c s u w plan h
+    exact False.elim h
+  · apply Annahme.aussen_gueltig_aus_kontext
+    intro _ _ _ _ _ _ _ step
+    cases step with
+    | kontext _ _ regel _ =>
+        obtain ⟨i, hi, _⟩ := regel
+        exact nomatch hi
+  · refine ⟨fun _ _ _ => ⟨fun _ _ _ => rfl, fun _ => rfl, fun _ => rfl, rfl, rfl, fun _ => rfl⟩, fun _ => ?_⟩
+    constructor
+    · intro _ _ _ _ _ h
+      cases h.1
+    · intro _ _ _ _ _ _ _ _ _ _ _ h
+      cases h.1
+  · exact Annahme.schrankenLokal_leer rfl rfl rfl
+  · exact Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · exact Annahme.domaenenLokal_ohne_kopf _ eineTabelle_akzeptiert fun _ _ => rfl
+  · intro ρ _
+    exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
+      fun _ _ _ h => (List.not_mem_nil h).elim⟩
+  · refine ⟨fun ρ _ t op args need => False.elim need, fun ρ _ t => ?_,
+      fun _ _ _ _ _ _ hne => (hne rfl).elim⟩
+    intro h
+    obtain ⟨C, hC⟩ := h
+    obtain ⟨hex, hall⟩ := hC
+    obtain ⟨c, hc⟩ := hex
+    obtain ⟨b, hb, _⟩ := hall c hc
+    exact False.elim hb
+
+def lueckenStart : Katalog.AussenStart := ⟨0, fun _ => none, [], fun _ => none, Katalog.AussenSicht.leer⟩
+
+/-- `I` does not progress for the accepted unit: at its running, dispatched start state there is no crash offer,
+    no finished or blocked form, no context rule and no ideal rule, so `FortschrittAm` has no alternative. -/
+theorem lueckenEinheit_nicht_fortschritt :
+    ¬ I.Fortschritt lueckenEinheit.einrichtung lueckenEinheit.system := by
+  intro hf
+  let k := lueckenEinheit.katalog
+  let sicht : Nat → Katalog.AussenVerlauf → Katalog.AussenSicht := fun _ _ => Katalog.AussenSicht.leer
+  let h : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
+  let hw : Katalog.HwLauf := Katalog.Umgebung.referenzLauf k 1 sicht
+  let s := (I.start lueckenEinheit lueckenStart).2
+  let c := Kontext.faden 0
+  have konf : hw.konform k h := by
+    refine ⟨rfl, ?_⟩
+    exact (Katalog.Umgebung.referenz_fair k 1 sicht
+      (Katalog.Plattform.katalog_wohlgeformt .x86_64) (by omega)).gueltig
+  have gut : s.SpeicherGut := by
+    dsimp [s, I.start, Zustand.start]
+    exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
+  have am := hf k h hw 0 s c konf gut rfl ⟨0, rfl⟩
+  rcases am with crash | done | blocked | step | wait
+  · rcases crash with ⟨spur, s', hstep⟩
+    cases hstep with
+    | absturz hab =>
+        have hc : (hw.angebot 0).crash = true := hab.1.2
+        change false = true at hc
+        cases hc
+  · exact done
+  · rcases blocked with ⟨b, hb⟩
+    exact hb
+  · rcases step with ⟨w, spur, s', hstep⟩
+    cases hstep with
+    | kontext _ _ regel _ =>
+        obtain ⟨i, hi, _⟩ := regel
+        exact nomatch hi
+  · rcases wait with ⟨wartet, _⟩
+    obtain ⟨w, plans, u, ischritt⟩ := wartet
+    obtain ⟨i, hi, _⟩ := ischritt
+    exact nomatch hi
+
+/-- The universal accepted-unit determinacy and progress requirement is false: acceptance constrains the unit's
+    authority, clauses and guards, but not whether its forms step or progress. -/
+theorem idealLuecke_widerlegt :
+    ¬ (∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
+      I.Bestimmt E.einrichtung E.system ∧ I.Fortschritt E.einrichtung E.system) := by
+  intro h
+  have good := h lueckenEinheit lueckenEinheit_akzeptiert
+  exact lueckenEinheit_nicht_fortschritt good.2
 
 end Gabbro.Core.Ziel.Korrektheit
