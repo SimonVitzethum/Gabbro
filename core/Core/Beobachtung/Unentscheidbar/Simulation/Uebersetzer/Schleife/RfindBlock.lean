@@ -59,11 +59,12 @@ def rfindKonvergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     rEnd.temp aus = some (natVal y0)
 
 /-- Divergence of the minimisation loop, as a pinned obligation. The premises
-    (including that no candidate yields zero while every candidate is defined)
     stand before the equivalence; the substantive direction is that a zero-free
-    search never dies. Difficulty: hard; proof sketch: induct over the
-    candidates and use `laufStirbtNicht_iff` from `Divergenz` to connect the
-    zero-free search to `LaufStirbtNicht`. -/
+    search never dies. The translated block must be correct for `cf` — without
+    that premise an arbitrary block could jump past the loop end and the claim
+    would be false. Difficulty: hard; proof sketch: induct over the candidates,
+    return to `pc = 0` on every iteration, and use `laufStirbtNicht_iff` from
+    `Divergenz` to connect the zero-free search to `LaufStirbtNicht`. -/
 def rfindDivergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     (a aus frei freiCf freiP : Nat) : Prop :=
   ∀ (m : Nat) (r : Rahmen),
@@ -71,6 +72,9 @@ def rfindDivergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     r.temp (frei + 0) = some (natVal a) →
     r.temp (frei + 1) = some (natVal m) →
     r.temp (frei + 2) = some (natVal m) →
+    BlockKorrekt cfBlk cf (frei + 4) (frei + 6) freiCf →
+    BleibtImBlock cfBlk → VerschiebbaresProgramm cfBlk →
+    frei + 20 ≤ freiCf → frei + 10 ≤ freiP →
     ((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
       (∀ y, m ≤ y → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0)) →
     (((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
