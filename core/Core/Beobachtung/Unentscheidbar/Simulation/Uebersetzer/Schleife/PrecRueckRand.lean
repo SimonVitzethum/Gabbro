@@ -123,9 +123,9 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
             some (b.auswerten rm)
           rw [hb]
         have hleB := hlocal rm b hltm hb
-        have hrunJs : (Schritt (pre ++ mid ++ post))^[Nat.find hQ] (some (mitPc pre.length r0)) = some rJ := by
-          rw [hs0zero]
-          exact hrunJ
+        have hrunJs : (Schritt (pre ++ mid ++ post))^[Nat.succ s1]
+            (some (mitPc pre.length r0)) = some rJ := by
+          simpa only [hs0zero] using hrunJ
         have hstepComp := schrittMitPcBei pre mid post hv rm hltm
         have hJstep : (Schritt (pre ++ mid ++ post))^[Nat.succ s1]
             (some (mitPc pre.length r0)) = some (mitPc pre.length (b.auswerten rm)) := by
@@ -139,7 +139,7 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
     intro s hs
     obtain ⟨rm, hrm, hcomp, hltm⟩ := hP s hs
     exact ⟨rm, hrm, hltm⟩
-  have hagree := laufMitPc pre mid post hv r0 Nat.find hQ hbleib
+  have hagree := laufMitPc pre mid post hv r0 (Nat.find hQ) hbleib
   rw [hrunJ] at hagree
   cases hst : (Schritt mid)^[Nat.find hQ] (some r0) with
   | none =>
