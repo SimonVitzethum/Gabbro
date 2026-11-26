@@ -130,17 +130,16 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   · rcases hreg with ⟨_, _, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
     subst u
-    have hs : statisch4 c := by
-      cases hlockstate : (s.sperren ()).besitzer with
-      | none =>
-        -- the give rule cannot fire on a free lock; this branch is unreachable
-        cases hss_dummy : (s.sperren ()) with | mk b q => rw [hlockstate] at hss_dummy; cases b <;> simp at hss_dummy
-      | some h =>
-        dsimp only [lockStatisch4] at hlock
-        rw [hlockstate] at hlock
-        exact hlock.1
     cases hF with
     | sperre hnextF _ =>
+      have hs : statisch4 c := by
+        cases hnextF with
+        | geben hg =>
+          dsimp only [lockStatisch4] at hlock
+          rw [SperrZustand.Gibt.besitzt hg] at hlock
+          exact hlock.1
+        | ticket => simp at *
+        | nehmen => simp at *
       rw [hziel]
       rcases hcrash with hvor | hnach
       · refine ⟨lockStatisch4_sperr hlock hs hnextF, Or.inl ?_⟩
