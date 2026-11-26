@@ -28,7 +28,8 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       r1.temp (frei + 0) = some (natVal a) ∧
       r1.temp (frei + 1) = some (natVal m0) ∧
       r1.temp (frei + 2) = some (natVal (y + 1)) ∧
-      r1.lokale = r.lokale ∧ r1.rueckgabe = r.rueckgabe ∧ r1.stopp = r.stopp := by
+      r1.lokale = r.lokale ∧ r1.rueckgabe = r.rueckgabe ∧ r1.stopp = r.stopp ∧
+      (∀ s, s < frei → s ≠ aus → r1.temp s = r.temp s) := by
   have h4Lt : frei + 4 < freiCf := hcfBlk.1
   obtain ⟨kp, rp, hrunP, hpcP, h4P, hpresP, hlokP, hrueckP, hstoppP⟩ :=
     paarVorwaerts (frei + 0) (frei + 2) (frei + 4) (frei + 10) r a y
@@ -92,7 +93,7 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   have hrunTail : (Schritt (rfindSchleife cfBlk aus frei))^[6] (some (mitPc 44 rc)) = some r1 := by
     rw [show (6 : Nat) = 3 + 3 by omega, Function.iterate_add_apply, hrunN, hrunR]
   let k := (6 + kcf) + kp
-  refine ⟨k, r1, by omega, ?_, hpc1, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨k, r1, by omega, ?_, hpc1, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · dsimp only [k]
     rw [Function.iterate_add_apply, Function.iterate_add_apply, hrunPAll, hrunCAll, hrunTail]
   · rw [hRpres (frei + 0) (by omega) (by omega)]
@@ -129,6 +130,14 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     rw [hstoppC]
     change rp.stopp = r.stopp
     exact hstoppP
+  · intro s hsl hsaus
+    rw [hRpres s (by omega) (by omega)]
+    rw [hNpres s (by omega)]
+    simp only [mitPc]
+    change rc.temp s = r.temp s
+    rw [hpresC s (by omega) (by omega)]
+    change rp.temp s = r.temp s
+    rw [hpresP s (by omega) (by omega)]
 
 /-- One iteration that exits: the zero result makes the conditional jump to
     the copy segment, which writes the candidate into the output slot. -/
@@ -144,7 +153,9 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     ∃ k rEnd,
       (Schritt (rfindSchleife cfBlk aus frei))^[k] (some r) = some rEnd ∧
       rEnd.pc = (rfindSchleife cfBlk aus frei).length ∧
-      rEnd.temp aus = some (natVal y) := by
+      rEnd.temp aus = some (natVal y) ∧
+      (∀ s, s < frei → s ≠ aus → rEnd.temp s = r.temp s) ∧
+      rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   have h4Lt : frei + 4 < freiCf := hcfBlk.1
   obtain ⟨kp, rp, hrunP, hpcP, h4P, hpresP, hlokP, hrueckP, hstoppP⟩ :=
     paarVorwaerts (frei + 0) (frei + 2) (frei + 4) (frei + 10) r a y
@@ -195,12 +206,39 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     change rp.temp (frei + 2) = _
     rw [hpresP (frei + 2) (by omega) (by omega)]
     exact hy
-  obtain ⟨rE, hrunE, hpcE, hausE⟩ := rfindKopieLauf cfBlk aus frei y rN (by rw [hpcN]) hN2
+  obtain ⟨rE, hrunE, hpcE, hausE, hpresE, hlokE, hrueckE, hstoppE⟩ :=
+    rfindKopieLauf cfBlk aus frei y rN (by rw [hpcN]) hN2
   have hrunTail : (Schritt (rfindSchleife cfBlk aus frei))^[6] (some (mitPc 44 rc)) = some rE := by
     rw [show (6 : Nat) = 3 + 3 by omega, Function.iterate_add_apply, hrunN, hrunE]
   let k := (6 + kcf) + kp
-  refine ⟨k, rE, ?_, hpcE, hausE⟩
-  dsimp only [k]
-  rw [Function.iterate_add_apply, Function.iterate_add_apply, hrunPAll, hrunCAll, hrunTail]
+  refine ⟨k, rE, ?_, hpcE, hausE, ?_, ?_, ?_, ?_⟩
+  · dsimp only [k]
+    rw [Function.iterate_add_apply, Function.iterate_add_apply, hrunPAll, hrunCAll, hrunTail]
+  · intro s hsl hsaus
+    rw [hpresE s hsaus]
+    rw [hNpres s (by omega)]
+    simp only [mitPc]
+    change rc.temp s = r.temp s
+    rw [hpresC s (by omega) (by omega)]
+    change rp.temp s = r.temp s
+    rw [hpresP s (by omega) (by omega)]
+  · rw [hlokE]
+    simp only [mitPc]
+    change rc.lokale = r.lokale
+    rw [hlokC]
+    change rp.lokale = r.lokale
+    exact hlokP
+  · rw [hrueckE]
+    simp only [mitPc]
+    change rc.rueckgabe = r.rueckgabe
+    rw [hrueckC]
+    change rp.rueckgabe = r.rueckgabe
+    exact hrueckP
+  · rw [hstoppE]
+    simp only [mitPc]
+    change rc.stopp = r.stopp
+    rw [hstoppC]
+    change rp.stopp = r.stopp
+    exact hstoppP
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer

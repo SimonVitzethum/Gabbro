@@ -285,7 +285,9 @@ theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     (h2 : r.temp (frei + 2) = some (natVal y)) :
     ∃ rE : Rahmen,
       (Schritt (rfindSchleife cfBlk aus frei))^[3] (some r) = some rE ∧
-      rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y) := by
+      rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y) ∧
+      (∀ s, s ≠ aus → rE.temp s = r.temp s) ∧
+      rE.lokale = r.lokale ∧ rE.rueckgabe = r.rueckgabe ∧ rE.stopp = r.stopp := by
   let blk := rfindSchleife cfBlk aus frei
   let r1 : Rahmen := { r with pc := r.pc + 1, lokale := r.temp (frei + 2) :: r.lokale }
   have e1 : Schritt blk (some r) = some r1 := by
@@ -312,12 +314,22 @@ theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     rw [show (2 : Nat) = 1 + 1 by omega, Function.iterate_add_apply, e1', e2']
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
-  refine ⟨r3, hrun3, ?_, ?_⟩
+  refine ⟨r3, hrun3, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · dsimp only [r3]
     rw [hpc2]
     rw [rfindSchleifeLaenge]
     omega
   · dsimp only [r3, r2]
     rw [updateHit]
+  · intro s hs
+    dsimp only [r3, r2, r1]
+    rw [updateMiss r1.temp s aus (some (natVal y)) hs]
+    rfl
+  · dsimp only [r3, r1]
+    simp only [List.drop_cons]
+  · dsimp only [r3, r2]
+    rfl
+  · dsimp only [r3, r2]
+    rfl
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer

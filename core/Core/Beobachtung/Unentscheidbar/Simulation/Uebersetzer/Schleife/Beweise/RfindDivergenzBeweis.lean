@@ -38,7 +38,7 @@ theorem rfindDivergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           hP.1 (m + t) (by omega)
         have hnz : Nat.Partrec.Code.eval cf (Nat.pair a (m + t)) ≠ Part.some 0 :=
           hP.2 (m + t) (by omega)
-        obtain ⟨k1, r1, hk1pos, hrun1, rpc1, ra1, rm1, ry1, _, _, _⟩ :=
+        obtain ⟨k1, r1, hk1pos, hrun1, rpc1, ra1, rm1, ry1, _, _, _, _⟩ :=
           rfindWeiterIter cfBlk cf a aus frei freiCf m (m + t) rt rpc ra rm ry
             hcfBlk hvBlk hdef hnz
         refine ⟨k1 + K, by omega, r1, ?_, rpc1, ra1, rm1, ?_⟩
