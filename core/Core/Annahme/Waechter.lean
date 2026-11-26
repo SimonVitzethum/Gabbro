@@ -121,7 +121,7 @@ def SperrHalterImplBereitAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
     (ρ : Maschine.Lauf E) (t : Nat) (l : L) (h : Kontext),
-    AbschnittWartefrei E →
+    AbschnittWartefrei E → E.schranken.halten l ≠ none →
     (∃ s, ρ.zeit.zustand t = some s ∧ (s.sperren l).besitzer = some h ∧
       SperrHalterBereit E s l h ∧ s.status h = .laeuft ∧
       (∃ k, (s.kerne k).laeuft = some h) ∧ (ρ.hw.angebot t).crash = false) →
