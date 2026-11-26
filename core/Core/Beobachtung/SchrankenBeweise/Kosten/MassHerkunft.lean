@@ -95,6 +95,8 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
       name ∈ alleFunktionen source ∧
       (((alleFunktionen source).map Subtype.val).Nodup → findeKern source name = some kern) ∧
       kern.mass = some m ∧
+      (∃ earlier params result globals skip calls effects,
+        pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
       (unitBody source).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   induction source generalizing pc with
@@ -145,9 +147,10 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
                 rfl
               refine ⟨name, ⟨⟨_, _, body⟩, some m⟩, m, [header],
                 ((bracedBlock body).code ++ [.rueckVoid]) ++ (unitBody rest).code,
-                List.mem_cons_self, ?_, rfl, ?_, position, zeroSlot⟩
+                List.mem_cons_self, ?_, rfl, ?_, ?_, position, zeroSlot⟩
               · intro _
                 simp only [findeKern, beq_self_eq_true, ite_true]
+              · exact ⟨[], _, _, _, _, _, _, rfl⟩
               · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
         · rw [List.getElem?_append_right (Nat.le_of_not_gt prolog)] at localPC
           exact False.elim (OhneMass.not_at restFree localPC)
@@ -159,8 +162,8 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
     · have outside := Nat.le_of_not_gt inside
       change ((decl first).code ++ (unitBody rest).code)[pc]? = _ at atPC
       rw [List.getElem?_append_right outside] at atPC
-      obtain ⟨name, kern, m, pre, post, mem, found, declared, layout, position, zeroSlot⟩ := ih atPC
-      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, ?_, declared, ?_, ?_, zeroSlot⟩
+      obtain ⟨name, kern, m, pre, post, mem, found, declared, header, layout, position, zeroSlot⟩ := ih atPC
+      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, ?_, declared, ?_, ?_, ?_, zeroSlot⟩
       · cases first <;> first | exact List.mem_cons_of_mem _ mem | exact mem
       · intro unique
         cases first with
@@ -173,6 +176,9 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
             exact False.elim (separated.1 (equal.symm ▸ List.mem_map_of_mem mem))
           · exact found separated.2
         | _ => exact found unique
+      · obtain ⟨earlier, params, result, globals, skip, calls, effects, rfl⟩ := header
+        exact ⟨(decl first).code ++ earlier, params, result, globals, skip, calls, effects,
+          (List.append_assoc _ _ _).symm⟩
       · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
       · simp only [List.length_append]
         omega
@@ -187,14 +193,18 @@ theorem programm_pruefeMass_herkunft {u : Ast.Unit} {pc slot : Nat}
       name ∈ alleFunktionen u.2 ∧
       (((alleFunktionen u.2).map Subtype.val).Nodup → findeKern u.2 name = some kern) ∧
       kern.mass = some m ∧
+      (∃ earlier params result globals skip calls effects,
+        pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
       (programm u).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   change (((unitBody u.2).code ++ [.starte mainName]) ++ [.ende])[pc]? = _ at atPC
   rw [List.append_assoc] at atPC
   by_cases within : pc < (unitBody u.2).code.length
   · rw [List.getElem?_append_left within] at atPC
-    obtain ⟨name, kern, m, pre, post, mem, found, declared, layout, position, zeroSlot⟩ := mass_imRumpf u.2 atPC
-    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, found, declared, ?_, position, zeroSlot⟩
+    obtain ⟨name, kern, m, pre, post, mem, found, declared, header, layout, position, zeroSlot⟩ :=
+      mass_imRumpf u.2 atPC
+    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, found, declared, header, ?_,
+      position, zeroSlot⟩
     simp only [programm, Fragment.anhaengen, Fragment.einzel, layout, List.append_assoc,
       List.singleton_append]
   · rw [List.getElem?_append_right (Nat.le_of_not_gt within)] at atPC

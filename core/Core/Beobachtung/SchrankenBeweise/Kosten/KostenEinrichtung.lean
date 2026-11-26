@@ -41,6 +41,8 @@ theorem kostenKopf_pruefeMass_herkunft (P : Katalog.Plattform) (u : UnitMitSchra
       name ∈ alleFunktionen u.baum.2 ∧
       (((alleFunktionen u.baum.2).map Subtype.val).Nodup → findeKern u.baum.2 name = some kern) ∧
       kern.mass = some m ∧
+      (∃ earlier params result globals skip calls effects,
+        pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
       (programm u.baum).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       (s.lokal c).pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 :=
   programm_pruefeMass_herkunft (u := u.baum) (kopf_position head)
