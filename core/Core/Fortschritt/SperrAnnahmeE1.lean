@@ -62,8 +62,8 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
           rw [hziel] at hmem hepo hant ⊢
           exact hoffen q hmem hepo hant
       · obtain rfl := (List.cons.inj hpeq).1
-        subst hueq
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
+        rw [hueq] at hF
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
         obtain ⟨_, au⟩ := spur
