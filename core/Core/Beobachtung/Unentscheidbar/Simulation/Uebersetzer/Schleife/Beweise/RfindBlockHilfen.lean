@@ -36,10 +36,10 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
       · unfold VerschiebbarVon
         intro j hj
         simp only [rfindNullTest, List.length_cons, List.length_nil] at hj
-        interval_cases j <;>
-          refine ⟨_, rfl, ?_, ?_⟩ <;> simp only [Verschiebbar] <;>
+        interval_cases j <;> refine ⟨_, rfl, by simp [Verschiebbar], ?_⟩ <;>
           intro d hd <;> cases hd
-      · unfold VerschiebbarVon
+      · rw [rfindNullTestLaenge]
+        unfold VerschiebbarVon
         intro j hj
         simp only [rfindRueck, List.length_cons, List.length_nil] at hj
         interval_cases j
@@ -57,7 +57,10 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
             injection hd with hdeq
             subst d
             omega
-    · exact verschiebbarVonLift (44 + cfBlk.length + 3 + 3) (kopie aus (frei + 2))
+    · rw [show 44 + cfBlk.length + (rfindNullTest frei ++ rfindRueck cfBlk frei).length =
+          44 + cfBlk.length + 3 + 3 by
+        simp only [rfindNullTestLaenge, rfindRueckLaenge, List.length_append]]
+      exact verschiebbarVonLift (44 + cfBlk.length + 3 + 3) (kopie aus (frei + 2))
         (verschiebbarKopie aus (frei + 2))
 
 /-- A copy segment stays inside itself: every instruction advances the program
@@ -68,19 +71,19 @@ theorem bleibtImBlockKopie (ziel quelle : Nat) : BleibtImBlock (kopie ziel quell
   rw [kopieLaenge] at hlt ⊢
   have hcases : r.pc = 0 ∨ r.pc = 1 ∨ r.pc = 2 := by omega
   rcases hcases with h0 | h1 | h2
-  · subst h0
+  · rw [h0]
     simp only [kopie, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
     simp only [Befehl.auswerten, Rahmen.schreibe]
     omega
-  · subst h1
+  · rw [h1]
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
     simp only [Befehl.auswerten, Rahmen.schreibe]
     omega
-  · subst h2
+  · rw [h2]
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_succ,
       List.getElem?_cons_zero] at hget
     injection hget with hb
