@@ -476,10 +476,9 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       have hpresS' : rS.temp s = rP0.temp s := by
         rw [hSstate]
         exact hpresSRef s (by
-        rw [hpcS]
-        dsimp only [S]
-        rw [precSchleifeLaenge]
-        omega) hneAus
+          dsimp only [S]
+          rw [precSchleifeLaenge]
+          omega) hneAus
       rw [hpresS']
       change rP.temp s = r.temp s
       rw [hPendEq]
@@ -494,11 +493,14 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       exact hpresLRr s (by omega) (by omega) (by omega)
     · rw [hEqEnd]
       change rS.lokale = r.lokale
-      exact hlokS.trans (hlokCr.trans hlokLRr)
+      rw [hSstate]
+      exact hlokSRef.trans (hlokCr.trans hlokLRr)
     · rw [hEqEnd]
       change rS.rueckgabe = r.rueckgabe
-      exact hrueckS.trans (hrueckCr.trans hrueckLRr)
+      rw [hSstate]
+      exact hrueckSRef.trans (hrueckCr.trans hrueckLRr)
     · rw [hEqEnd]
       change rS.stopp = r.stopp
-      exact hstoppS.trans (hstoppCr.trans hstoppLRr)
+      rw [hSstate]
+      exact hstoppSRef.trans (hstoppCr.trans hstoppLRr)
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
