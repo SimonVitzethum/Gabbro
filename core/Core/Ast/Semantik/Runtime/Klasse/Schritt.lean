@@ -351,6 +351,20 @@ theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Z
     | error _e =>
       refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
 
+/-- A consume step keeps the whole booking (only the acting frame, status and counter move). -/
+theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung = s.buchung := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
     machine decides whether the action itself runs: a start of a thread that does not rest, a join of a
