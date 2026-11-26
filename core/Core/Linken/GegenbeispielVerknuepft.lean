@@ -132,7 +132,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
     (hEqR : Zustand.regionLive (ρ.zeit.zustand t) = Zustand.regionLive sPre)
     (hHead : kopf (verknuepfteFragmente planAB).code sPre eintritt = some b)
-    (hPriv : b.Privat)
+    (hPriv : b.klasse = .lokal ∨ b.klasse = .ruf)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
     (hFrPre : sPre.fragen = []) :
@@ -156,8 +156,8 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩)
       (b.maschinennach eintritt (ρ.zeit.zustand t) (b.nach eintritt (ρ.zeit.zustand t))) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug E_linked.einrichtung _ _ _ hPriv)
+      ⟨b, headT, (b.ideal_privat (hPriv.elim Or.inl (Or.inr ∘ Or.inl)) eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
+      (b.vollzug E_linked.einrichtung _ _ _ (hPriv.elim Or.inl (Or.inr ∘ Or.inl)))
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
@@ -182,11 +182,11 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           rfl
         subst b'
         obtain ⟨same, after⟩ :=
-          (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
+          (b.ideal_privat (hPriv.elim Or.inl (Or.inr ∘ Or.inl)) eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
         obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
-        rcases b.plan_privat_aktion hPriv ((ρ.zeit.zustand t).lokal eintritt) with hL|⟨v1,a1,hL⟩|⟨g1,hL⟩|⟨v2,k2,hL⟩|⟨l3,k3,p3,hL⟩
+        rcases b.plan_privat_aktion (hPriv.elim Or.inl (Or.inr ∘ Or.inl)) ((ρ.zeit.zustand t).lokal eintritt) with hL|⟨v1,a1,hL⟩|⟨g1,hL⟩|⟨v2,k2,hL⟩|⟨l3,k3,p3,hL⟩
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := hL
           rw [hR] at fuehrt
           generalize hau : spur0.2 = au at fuehrt
@@ -208,72 +208,37 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           generalize hau : spur0.2 = au at fuehrt
           cases fuehrt with
           | maskiere _ _ =>
-          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
-          · rw [hstate]
-            simp only [Befehl.nach, hEqL, hEqR]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqS]
-          · rw [hstate]
-            trace_state
-            simp only [Befehl.nach]
-            funext k
-            by_cases hk : (((ρ.zeit.zustand t).kerne k).laeuft = some eintritt)
-            · rw [if_pos hk]
-              simp [hEqK]
-            · rw [if_neg hk]
-              simp [hEqK]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqF, hFrPre]
-          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
-              ← Befehl.nach_regionLive]
+          have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .prioritaet g1 := hL
           rw [hR] at fuehrt
           generalize hau : spur0.2 = au at fuehrt
           cases fuehrt with
           | prioritaet _ =>
-          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
-          · rw [hstate]
-            simp only [Befehl.nach, hEqL, hEqR]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqS]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqK]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqF, hFrPre]
-          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
-              ← Befehl.nach_regionLive]
+          have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .sende v2 k2 := hL
           rw [hR] at fuehrt
           generalize hau : spur0.2 = au at fuehrt
           cases fuehrt with
           | sende _ _ =>
-          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
-          · rw [hstate]
-            simp only [Befehl.nach, hEqL, hEqR]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqS]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqK]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqF, hFrPre]
-          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
-              ← Befehl.nach_regionLive]
+          have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .leite l3 k3 p3 := hL
           rw [hR] at fuehrt
           generalize hau : spur0.2 = au at fuehrt
           cases fuehrt with
           | leite _ _ _ =>
-          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
-          · rw [hstate]
-            simp only [Befehl.nach, hEqL, hEqR]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqS]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqK]
-          · rw [hstate]
-            simp only [Befehl.nach, hEqF, hFrPre]
-          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
-              ← Befehl.nach_regionLive]
+          have hI : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := by
+            rcases hPriv with h|h <;> simp [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h, Semantik.plan]
+          rw [hI] at hL
+          cases hL
       · exfalso
         obtain ⟨b', head', _⟩ := regel
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
