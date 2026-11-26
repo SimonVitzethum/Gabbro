@@ -9,6 +9,36 @@ namespace Gabbro.Core.Maschine.I
 
 open Gabbro.Core.Annahme Katalog
 
+open Hosted in
+/-- The run accounting covers a real arrival after the question is issued, with
+    the same question instance and reply in the matched ideal answer book. -/
+theorem antwortabgleich_erfuellbar :
+    ∃ (ρ : Maschine.Lauf Hosted.einheit) (η : Lauf Hosted.einheit)
+      (k : Maschine.Schnitt Hosted.einheit ρ) (a : AntwortEreignis),
+      Maschine.Laeufe Hosted.einheit (umgebung []) ρ ∧ Laeufe Hosted.einheit η ∧
+      Sim Hosted.einheit ρ η ∧ Antwortabgleich ρ η ∧
+      (η.zeit.zustand (Zeitlauf.schnittBild ρ.zeit η.zeit k).val).antworten = [a] := by
+  obtain ⟨s, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
+  obtain ⟨ρ, _, _, run, _, _, _, _, _, _, ev0, ev1, ev2, _⟩ := konkreter_lauf zul []
+  have basis : SimBasisPflichten Hosted.einheit := by
+    apply SimBasisPflichten.aus_gleichen_regeln rfl (fun _ _ _ _ => rfl)
+      (fun _ _ _ _ _ _ step => step)
+    intro _ _ _ _ p _ step
+    rcases step.2 with ⟨plans, _, _⟩ | ⟨plans, _, _⟩
+    · cases (List.cons.inj plans).1
+      exact ⟨fun _ mem => (List.not_mem_nil mem).elim, fun _ mem _ => (List.not_mem_nil mem).elim⟩
+    · cases (List.cons.inj plans).1
+      exact ⟨fun _ mem => (List.not_mem_nil mem).elim, fun _ mem _ => (List.not_mem_nil mem).elim⟩
+  have forms : ∀ f, RegelSimulation Hosted.einheit f :=
+    fun _ => ⟨RegelSimSchritt.aus_gleicher_regel rfl (fun _ _ _ _ _ step => step), RegelStotterSchranke.null rfl⟩
+  obtain ⟨η, valid, sim, answers⟩ := sim_im_lauf_mit_antwortabgleich (basis.mit_formen forms) run
+  let k : Maschine.Schnitt Hosted.einheit ρ := ⟨3, Or.inr ⟨2, _, rfl, ev2⟩⟩
+  obtain ⟨_, _, _, book, _, _, _⟩ := answers k
+  refine ⟨ρ, η, k, angekommen s [], run, valid, sim, answers, book.trans ?_⟩
+  change Zeitlauf.praefix (fun n => (ρ.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) 3 = _
+  rw [Zeitlauf.praefix, Zeitlauf.praefix, Zeitlauf.praefix, ev0, ev1, ev2]
+  rfl
+
 /- The joint witness for an accepted unit with its simulation obligations and a concrete
    run is removed: the hosted unit that carried it is not accepted under the MK-17
    isolation row (its `frage` rule breaks every channel-free plan), and no replacement

@@ -88,6 +88,91 @@ theorem Laufabgleich.beobachtung (h : Laufabgleich ρ η)
   rw [gleich]
   exact (η.zeit.praefix_letzterSchnitt beob (fun t no => by simp only [beob, no, Option.elim]) k.val).symm
 
+/-- Extract the complete typed arrivals carried by a step's catalogue trace. -/
+def Antwortspur (spur : SchrittSpur Ort Wert) : List AntwortEreignis :=
+  spur.aussen.filterMap fun
+    | .antwort a => some a
+    | _ => none
+
+private theorem aktions_antwortbuch {e : Einrichtung L Ort Wert Raum Lok Grund Bedingung}
+    {s u v : Zustand L Ort Wert Raum Lok Grund} {t c akt locks outside}
+    (frame : Zustandsrahmen s u) (action : FuehrtAus e t c s u akt locks outside v) :
+    v.antworten = s.antworten ++ Antwortspur (Ort := Ort) (Wert := Wert) ⟨[], outside⟩ := by
+  cases action <;> exact frame.antworten.trans (List.append_nil _).symm
+
+/-- The concrete answer book is exactly the ordered arrival trace at every cut
+    from an empty book. In particular, consuming a reply leaves this trace intact. -/
+theorem antwortbuch_im_lauf
+    (init : ∃ z, ρ.zeit.zustand 0 = some z ∧ z.antworten = []) (t : Nat) :
+    ∃ z, ρ.zeit.zustand t = some z ∧ z.antworten =
+      Zeitlauf.praefix (fun n => (ρ.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) t := by
+  induction t with
+  | zero => exact init
+  | succ t ih =>
+    obtain ⟨s, loaded, book⟩ := ih
+    have tick := ρ.zeit.takt t
+    rw [loaded] at tick
+    cases tick with
+    | wartet mark same _ =>
+      exact ⟨s, same, by simpa only [Zeitlauf.praefix, mark, Option.elim, List.append_nil] using book⟩
+    | schritt mark transition =>
+      cases after : ρ.zeit.zustand (t + 1) with
+      | none =>
+        rw [after] at transition
+        cases transition
+      | some s' =>
+        refine ⟨s', rfl, ?_⟩
+        rw [Zeitlauf.praefix, ← book, mark]
+        rw [after] at transition
+        cases transition with
+        | schritt step =>
+          cases step with
+          | kontext _ _ _ execute =>
+            obtain ⟨frame, _, _, _, action, _, state⟩ := execute
+            have accounted := aktions_antwortbuch frame action
+            rw [state]
+            exact accounted
+          | antwort _ arrives =>
+            obtain ⟨trace, book, _⟩ := arrives.ankunft E.einrichtung
+            rw [book]
+            simp only [Option.elim, Function.comp_apply, Antwortspur, trace, List.filterMap_cons,
+              List.filterMap_nil]
+          | interrupt _ enters =>
+            obtain ⟨_, _, _, _, _, _, _, _, trace, _, state⟩ := enters
+            rw [state]
+            simp only [Option.elim, Function.comp_apply, Antwortspur, trace, List.filterMap_cons,
+              List.filterMap_nil, List.append_nil]
+            rfl
+          | absturz crash =>
+            rw [crash.genau.1, crash.genau.2]
+            exact (List.append_nil _).symm
+
+/-- Both traces account for the same arrival book at the matched cut.
+    Consumption and crash discards are tracked separately from arrival. -/
+def Antwortabgleich (ρ : Maschine.Lauf E) (η : Lauf E) : Prop :=
+  ∀ k : Maschine.Schnitt E ρ,
+    let j := Zeitlauf.schnittBild ρ.zeit η.zeit k
+    let ankunft := Zeitlauf.praefix (fun n => (ρ.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) k.val
+    ∃ s, ρ.zeit.zustand k.val = some s ∧ s.antworten = ankunft ∧
+      (η.zeit.zustand j.val).antworten = ankunft ∧
+      Zeitlauf.praefix (fun n => (η.zeit.spur n).elim [] (Antwortspur ∘ Prod.snd)) j.val = ankunft ∧
+      s.verbraucht = (η.zeit.zustand j.val).verbraucht ∧
+      s.verworfen = (η.zeit.zustand j.val).verworfen
+
+theorem Laufabgleich.antwortabgleich (matched : Laufabgleich ρ η) (valid : Laeufe E η) :
+    Antwortabgleich ρ η := by
+  obtain ⟨startState, loaded, related⟩ := matched.zustand 0
+  have empty : startState.antworten = [] := by
+    rw [related.1.aussen.antworten, valid.2.2.2.1]
+    rfl
+  intro k
+  obtain ⟨s, state, book⟩ := antwortbuch_im_lauf ⟨startState, loaded, empty⟩ k.val
+  obtain ⟨z, atCut, outside⟩ := matched.aussen_am_schnitt k
+  have same := Option.some.inj (atCut.symm.trans state)
+  subst z
+  exact ⟨s, state, book, outside.antworten.symm.trans book,
+    (matched.beobachtung Antwortspur rfl k).symm, outside.verbraucht, outside.verworfen⟩
+
 /-- The crash cut is matched at the same tick, with the same persistence event,
     and the recovery continuations start in one and the same state. -/
 theorem Laufabgleich.absturz (h : Laufabgleich ρ η) {t : Nat}

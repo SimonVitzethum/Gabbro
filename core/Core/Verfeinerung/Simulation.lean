@@ -81,10 +81,16 @@ theorem Laufabgleich.sim (matched : Laufabgleich ρ η) (valid : Laeufe E η)
     rw [← shared] at order
     exact order
 
-theorem sim_im_lauf (pflicht : SimPflichten E) (run : Maschine.Laeufe E h ρ) :
-    ∃ η : Lauf E, Laeufe E η ∧ Sim E ρ η := by
+/-- The ideal run also accounts for each typed outside arrival at its matched cut. -/
+theorem sim_im_lauf_mit_antwortabgleich (pflicht : SimPflichten E) (run : Maschine.Laeufe E h ρ) :
+    ∃ η : Lauf E, Laeufe E η ∧ Sim E ρ η ∧ Antwortabgleich ρ η := by
   obtain ⟨η, valid, matched, checked, _⟩ := laufabgleich pflicht.abgleich run
   exact ⟨η, valid, matched.sim valid (pflicht.abgleich.schranke h ρ η run matched checked)
-    (pflicht.autoritaet h ρ run) pflicht.fortsetzung⟩
+    (pflicht.autoritaet h ρ run) pflicht.fortsetzung, matched.antwortabgleich valid⟩
+
+theorem sim_im_lauf (pflicht : SimPflichten E) (run : Maschine.Laeufe E h ρ) :
+    ∃ η : Lauf E, Laeufe E η ∧ Sim E ρ η := by
+  obtain ⟨η, valid, sim, _⟩ := sim_im_lauf_mit_antwortabgleich pflicht run
+  exact ⟨η, valid, sim⟩
 
 end Gabbro.Core.Maschine.I
