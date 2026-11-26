@@ -186,7 +186,7 @@ theorem zugriffSchrittExistiert_nichtTrivial :
       List.filter_nil, List.map_nil, List.nil_append, List.append_nil]
     exact folge
   · cases folge with
-    | cons _ _ _ => simp only [List.append_eq_nil, and_false, reduceCtorEq, not_false_eq_true]
+    | cons _ _ _ => exact List.append_ne_nil_of_right_ne_nil _ (List.cons_ne_nil _ _)
 
 /-- The step of a reading access head, once the function from the value read to the event kind and the value written
     is supplied. The memory extension is built first and gives the value; the plan is then instantiated at that value. -/
