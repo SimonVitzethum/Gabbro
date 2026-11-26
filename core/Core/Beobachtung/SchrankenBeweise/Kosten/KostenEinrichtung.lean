@@ -239,7 +239,7 @@ theorem whileBounded_kostenEinrichtung_am {u : Ast.Unit} {lo hi : Int}
     [.zurueckSprung (test.code.length + inner.code.length + 1)] ++ post.code
   have layout : (programm u).code = pre.code ++ (expr 0 bound).code ++ (setup :: tail) := by
     simpa only [stmt, Fragment.anhaengen, Fragment.einzel, setup, tail, inner, test,
-      List.append_assoc, List.singleton_append, List.cons_append] using code
+      List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] using code
   obtain ⟨r, trace, operand⟩ :=
     expr_ergebnis_typ_am 0 bound env entry typed active pre.code (setup :: tail) position
       (layout ▸ checked)
@@ -296,7 +296,7 @@ theorem forRange_kostenEinrichtung_am {u : Ast.Unit} {low lowHi highLo high : In
       (setup :: tail) middle (layoutUpper ▸ checked.after lowTrace.walk)
   rw [← layoutUpper] at highTrace
   have atSetup : r.pc = pre.code.length + ((expr 0 lower).code.length + (expr 1 upper).code.length) := by
-    rw [highTrace.position, earlierCode, List.length_append, Nat.add_assoc]
+    simpa only [earlierCode, List.length_append, Nat.add_assoc] using highTrace.position
   have lowRetained := (highTrace.lower 0 (Nat.zero_lt_succ _)).trans lowValue
   refine ⟨r, lowTrace.walk.trans highTrace.walk, ?_,
     forRange_kostenEinrichtung name ordinary lower upper static handler body pre post r table atSetup
