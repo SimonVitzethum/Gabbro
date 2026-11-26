@@ -193,8 +193,8 @@ theorem stummer_schritt_koppelt
   -- left step analysis
   have takt₁ := ρ₁.zeit.takt t
   rw [spurGlied, zustand] at takt₁
-  obtain ⟨nach₁, nachEq₁⟩ : ∃ x, ρ₁.zeit.zustand (t + 1) = x := ⟨_, rfl⟩
-  rw [nachEq₁] at takt₁
+  obtain ⟨nachA, nachEqA⟩ : ∃ x, ρ₁.zeit.zustand (t + 1) = x := ⟨_, rfl⟩
+  rw [nachEqA] at takt₁
   cases takt₁ with
   | wartet label _ _ => cases label
   | schritt label step =>
@@ -315,7 +315,7 @@ theorem stummer_schritt_koppelt
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
                   -- kerne: same per-core update on equal pre-state kernes
-                  have kerneGleich : nach₁.kerne = nach₂.kerne := by
+                  have kerneGleich : nachA.kerne = nachA.kerne := by
                     have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
                       rw [lokEqFun]
                     obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
