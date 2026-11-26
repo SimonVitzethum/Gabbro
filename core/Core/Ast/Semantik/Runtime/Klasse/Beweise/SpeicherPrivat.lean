@@ -161,8 +161,14 @@ theorem klassenSpeicherbein_privat (k : Wirkungsklasse)
     obtain ⟨same, after⟩ := implIdeal
     subst zwischen
     have planEq : plan = Semantik.plan := (List.cons.inj same).1
+    have hbuchung : (Schrittform.verbraucheNach ⟨.verbrauche, o, ue⟩ c vor).buchung =
+        vor.buchung :=
+      Schrittform.verbraucheNach_buchung _ _ _
+    have hrechte : (Schrittform.verbraucheNach ⟨.verbrauche, o, ue⟩ c vor).rechte =
+        vor.rechte :=
+      Schrittform.verbraucheNach_rechte _ _ _
     obtain ⟨form, buchung, rechte⟩ :=
-      intern_spur E (t := t) (c := c) (vor := vor) aus rfl rfl planEq
+      intern_spur E (t := t) (c := c) (vor := vor) aus hbuchung hrechte planEq
     exact privat_fertig E (hw := hw) (t := t) (c := c) buchung rechte (Or.inl form)
   · obtain ⟨kF, o, ue⟩ := F
     change kF = .zaun m at hkF

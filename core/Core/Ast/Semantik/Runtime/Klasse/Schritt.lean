@@ -20,6 +20,7 @@ module
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
 public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
+public import Core.Maschine.Aussen
 
 @[expose] public section
 
@@ -41,7 +42,8 @@ def Zustand.regionLive (s : Zustand) (slot : Nat) : Bool :=
     (match s.leihen slot with | .eigen => true | .verliehen _device => false)
 
 /-- **What a step names, read from its frame**: the cell of an access, the value it writes, the lock of a
-    lock action, the question it asks. A class reads the fields it needs and ignores the others. -/
+    lock action, the question it asks, and the named frame slot an outside answer is bound at
+    (`verbrauche`). A class reads the fields it needs and ignores the others. -/
 structure Operand where
   ort : Zelle
   wert : Int
@@ -49,9 +51,10 @@ structure Operand where
   frage : Option Frage
   aenderung : Aenderung
   faden : Fadenoperand
+  ziel : Nat
 
 /-- The operand of a step that names nothing (the frame-only classes). -/
-def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner⟩
+def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner, 0⟩
 
 /-- The plan of a step that records no memory event and no question and carries the given protocol action. -/
 def planMit (a : Aktion Nat PUnit) : Plan := ⟨a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
@@ -241,6 +244,127 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .verbrauche
   | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => F.nach c s 0
 
+/-- **The frame writes the success bit of an outside answer into its named slot.**
+    A successful answer binds `true` at `ziel`; an error answer advances without writing
+    (the error ends the context at the state level, see `verbraucheNach`). -/
+def verbraucheSchreibe (ziel : Nat) (r : Rahmen) (a : Antwort) : Rahmen :=
+  match a.result with
+  | Except.ok _v => r.schreibe ziel (some ⟨.bool, true⟩)
+  | Except.error _e => r.weiter
+
+/-- The consume write keeps the continuation stack. -/
+theorem verbraucheSchreibe_fortsetzungen (ziel : Nat) (r : Rahmen) (a : Antwort) :
+    (verbraucheSchreibe ziel r a).fortsetzungen = r.fortsetzungen := by
+  cases h : a.result with
+  | ok _v => simp only [verbraucheSchreibe, h, Rahmen.schreibe]
+  | error _e => simp only [verbraucheSchreibe, h, Rahmen.weiter]
+
+/-- **The state after a consume step** (MK-06, value binding). The next arrived answer of the
+    acting context is taken: its success bit is bound at the operand slot, and an error answer
+    ends the context with a reason exit while writing nothing. The consumption counter moves in
+    both cases. Without an arrived answer the step is the private transfer (totality for
+    progress). Only the acting context changes. -/
+def Schrittform.verbraucheNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
+  match s.naechsteAntwort c with
+  | none => F.nach c s 0
+  | some a =>
+    let s1 := s.verbrauche c
+    let ziel := (F.operand (s.lokal c)).ziel
+    match a.reply.result with
+    | Except.ok _v =>
+      { s1 with lokal := Function.update s1.lokal c (verbraucheSchreibe ziel (s1.lokal c) a.reply) }
+    | Except.error _e =>
+      { s1 with
+        lokal := Function.update s1.lokal c (s1.lokal c).weiter,
+        status := Function.update s1.status c (.beendet (.grund PUnit.unit)) }
+
+/-- A consume step leaves every other context's frame alone. -/
+theorem Schrittform.verbraucheNach_andere (F : Schrittform) (c : Kontext) (s : Zustand)
+    (d : Kontext) (hd : d ≠ c) : (F.verbraucheNach c s).lokal d = s.lokal d := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach, Function.update_of_ne hd]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
+
+/-- A consume step keeps the authority ledger. -/
+theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).rechte = s.rechte := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the booking extents. -/
+theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung.umfang = s.buchung.umfang := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the questions, the answers and the epoch. -/
+theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).fragen = s.fragen ∧
+      (F.verbraucheNach c s).antworten = s.antworten ∧
+      (F.verbraucheNach c s).epoche = s.epoche := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    refine ⟨?_, ?_, ?_⟩ <;> simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the outside part of the ledger. -/
+theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung.aussengriff = s.buchung.aussengriff ∧
+      (F.verbraucheNach c s).buchung.geraet = s.buchung.geraet := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    refine ⟨?_, ?_⟩ <;> simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the whole booking (only the acting frame, status and counter move). -/
+theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung = s.buchung := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
     machine decides whether the action itself runs: a start of a thread that does not rest, a join of a
@@ -251,14 +375,15 @@ def Schrittform.faedenschritt (F : Schrittform) (c : Kontext) (s : Zustand) (pla
   (F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [F.plan (s.lokal c) 0] ∧ u = F.faedenNach c s)
 
 /-- **The ideal step of a form, from its class.** A private or interrupt-control class has one private
-    plan and its frame transfer; an access class has the step above; a lifecycle class has the
+    plan and its frame transfer; the consume class has the private plan and the answer-binding
+    transfer `verbraucheNach`; an access class has the step above; a lifecycle class has the
     lifecycle step. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   match F.klasse with
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
-  | .verbrauche => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .verbrauche => plans = [Semantik.plan] ∧ u = F.verbraucheNach c s
   | .maskiere => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .prioritaet => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .sendeUnterbrechung => plans = [Semantik.plan] ∧ u = F.nach c s 0
@@ -282,8 +407,8 @@ def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
     context holds a handle: the access is refused, nothing is read or written. -/
 def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) (a : Aenderung) : Operand :=
   match wert with
-  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner⟩
-  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner⟩
+  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner, 0⟩
+  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner, 0⟩
 
 /-- **The operand of an access instruction at a frame**, read from the frame it steps. A fence names
     nothing. -/
@@ -305,11 +430,15 @@ def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
     | none => r.zugriffOperand region index none .tausche
   | .zaun .. => Operand.keiner
 
-/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
+/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing.
+    A `verbrauche` names its answer slot `ziel`; a `frage` names nothing yet (its question wiring is
+    follow-up work once the catalogue handle slots are bound). -/
 def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   match b with
   | .zugriff form => form.operand r
   | .faden form => { Operand.keiner with faden := form.operand r }
+  | .aussen (.verbrauche ziel) => { Operand.keiner with ziel := ziel }
+  | .aussen (.frage ..) => Operand.keiner
   | .rufe .. | .starte .. => Operand.keiner
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
@@ -321,7 +450,7 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
-  | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
   | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
