@@ -203,7 +203,7 @@ theorem precPaarPaarWert (aus frei y i a : Nat) (r rEnd : Rahmen) (k : Nat)
   have hr1_0q : r1_0.temp (frei + 4) = some (natVal (Nat.pair y i)) := hr1q
   have hmit1 : mitPc (precPaarEins aus frei).length r1_0 = r1 := by
     show { r1 with pc := (precPaarEins aus frei).length + 0 } = r1
-    rw [show (precPaarEins aus frei).length + 0 = r1.pc by rw [hpc1]]
+    rw [show (precPaarEins aus frei).length + 0 = r1.pc by rw [hpc1, Nat.add_zero]]
   have hpcEnd2 : rEnd.pc = (precPaarEins aus frei).length + (precPaarZwei aus frei).length := by
     simpa only [List.length_append] using hpcEnd'
   have hkS' : (Schritt (precPaarEins aus frei ++ precPaarZwei aus frei))^[k - j2]
@@ -290,7 +290,7 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   let r2_0 : Rahmen := { r2 with pc := 0 }
   have hmit2 : mitPc P.length r2_0 = r2 := by
     show { r2 with pc := P.length + 0 } = r2
-    rw [show P.length + 0 = r2.pc by rw [hpc2]]
+    rw [show P.length + 0 = r2.pc by rw [hpc2, Nat.add_zero]]
   have hkS' : (Schritt (P ++ cgBlk))^[k - j1]
       (some (mitPc P.length r2_0)) = some rEnd := by
     rw [hmit2]
