@@ -25,7 +25,7 @@ private theorem pruefeMass_einrichtung {u : Ast.Unit} {name : Identifier}
     simpa only [FunktionsKern.massIntervall, declared, Option.map_some] using interval
   cases endpoints
   have exactRead : some (⟨m.lo, m.hi, value⟩ : Ganzzahl) = some a := by
-    simpa only [Rahmen.zahl, operand, alsGanzzahl] using read
+    simpa only [Rahmen.zahl, operand, Option.bind, alsGanzzahl] using read
   cases exactRead
   exact ⟨le_rfl, le_rfl⟩
 
@@ -63,7 +63,7 @@ theorem measurePrologue_kostenEinrichtung {u : Ast.Unit} {name : Identifier}
     exact good
   have running := trace.aktiv active
   exact ⟨r, trace, lookup, install, trace.walk.schritt ⟨_, running.1, running.2, lookup, rfl⟩,
-    atWrite.auswerten install.gueltig _⟩
+    KostenGrenzen.auswerten atWrite install.gueltig _⟩
 
 private theorem loop_left {a b : Fragment} {pc : Nat} {limit : SchleifenGrenze}
     (atTest : (pc, limit) ∈ a.schleifen) : (pc, limit) ∈ (a.anhaengen b).schleifen :=
@@ -110,7 +110,7 @@ theorem whileBounded_kostenEinrichtung {u : Ast.Unit} {lo hi : Int}
   have row := loop_relocated table localRow
   intro a read
   have same : some (⟨lo, hi, value⟩ : Ganzzahl) = some a := by
-    simpa only [Rahmen.zahl, operand, alsGanzzahl] using read
+    simpa only [Rahmen.zahl, operand, Option.bind, alsGanzzahl] using read
   cases same
   refine ⟨limit, ?_, Nat.le_refl _⟩
   rw [position]
@@ -133,12 +133,12 @@ theorem forRange_kostenEinrichtung {u : Ast.Unit} {low lowHi highLo high : Int}
     (upperOperand : r.temp 1 = some ⟨.int highLo high, stop⟩) :
     KostenEinrichtung u
       (.forAnfang 0 1 (rangeBinding name low high).type ((bracedBlock body).code.length + 4)
-        (body.rangeUses name).1 ((body.rangeUses name).2 && handler.isNone)) r := by
+        (BracedBlock.rangeUses name body).1 ((BracedBlock.rangeUses name body).2 && handler.isNone)) r := by
   let limit := SchleifenGrenze.forRange lower upper
   have localRow :
       ((expr 0 lower).code.length + (expr 1 upper).code.length + 1, limit) ∈
         (stmt (.forRange name ordinary lower upper static handler body)).schleifen := by
-    cases uses : body.rangeUses name with
+    cases uses : BracedBlock.rangeUses name body with
     | mk shadows writes =>
       simp only [stmt, uses]
       apply loop_left
@@ -154,9 +154,9 @@ theorem forRange_kostenEinrichtung {u : Ast.Unit} {low lowHi highLo high : Int}
   have row := loop_relocated table localRow
   intro a b readA readB _
   have sameA : some (⟨low, lowHi, start⟩ : Ganzzahl) = some a := by
-    simpa only [Rahmen.zahl, lowerOperand, alsGanzzahl] using readA
+    simpa only [Rahmen.zahl, lowerOperand, Option.bind, alsGanzzahl] using readA
   have sameB : some (⟨highLo, high, stop⟩ : Ganzzahl) = some b := by
-    simpa only [Rahmen.zahl, upperOperand, alsGanzzahl] using readB
+    simpa only [Rahmen.zahl, upperOperand, Option.bind, alsGanzzahl] using readB
   cases sameA
   cases sameB
   refine ⟨limit, high, ?_, Nat.le_refl _, rfl, le_rfl⟩
