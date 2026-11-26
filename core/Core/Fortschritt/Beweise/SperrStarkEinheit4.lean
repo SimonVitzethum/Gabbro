@@ -119,21 +119,21 @@ theorem e4_sec : AbschnittWartefrei E_4 :=
 theorem s4_0_graph_gut : s4_0.graph.graph.Konsistent ∧ s4_0.graph.graph.Vollstaendig :=
   ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
 
-theorem e4_impl_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
+theorem e4_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hs : statisch4 c)
     (hn : SperrSchritt .nehmen c (s.sperren ()) next) :
     E_4.system.ImplSchritt c s () [nehmenPlan] s := by
   refine ⟨(), rfl, ?_⟩
   exact Or.inl ⟨hs, Or.inr ⟨next, hn, rfl, rfl⟩⟩
 
-theorem e4_impl_ticket {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
+theorem e4_ticket {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hs : statisch4 c)
     (hn : SperrSchritt .ticket c (s.sperren ()) next) :
     E_4.system.ImplSchritt c s () [ticketPlan] (toggleUpdate c s) := by
   refine ⟨(), rfl, ?_⟩
   exact Or.inl ⟨hs, Or.inl ⟨next, hn, rfl, rfl⟩⟩
 
-theorem e4_impl_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
+theorem e4_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hg : (s.sperren ()).Gibt c next) :
     E_4.system.ImplSchritt c s () [wGebenPlan] s := by
   refine ⟨(), rfl, ?_⟩

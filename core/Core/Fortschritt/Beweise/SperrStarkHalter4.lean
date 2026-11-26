@@ -251,6 +251,10 @@ theorem e4_frame (s : Zustand Unit Unit Unit Unit Bool Unit) :
     Zustandsrahmen s s :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
+theorem e4_toggle_frame (s : Zustand Unit Unit Unit Unit Bool Unit) (c : Kontext) :
+    Zustandsrahmen s (toggleUpdate c s) :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 /-- The ideal run has a real owner and executes its release from the canonical empty lock. -/
 theorem e4_ideal_halter_erfuellbar :
     ∃ ρ : I.Lauf E_4, I.Laeufe E_4 ρ ∧
@@ -277,7 +281,7 @@ theorem e4_ideal_halter_erfuellbar :
   have hg : (i2.sperren ()).Gibt A (i3.sperren ()) := .besitzer A []
   have htAus : FuehrtSchrittAus E_4.einrichtung 0 A i0 (toggleUpdate A i0)
       ticketPlan ⟨[], []⟩ i1 :=
-    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) ht (.nil _)
+    e4_sperrAus rfl rfl rfl (e4_toggle_frame i0 A) ht (.nil _)
   have hnAus : FuehrtSchrittAus E_4.einrichtung 1 A i1 i1 nehmenPlan ⟨es2, []⟩ i2 :=
     e4_sperrAus rfl rfl rfl (e4_frame i1) (.nehmen hn) hg2
   have hgAus : FuehrtSchrittAus E_4.einrichtung 2 A i2 i2 wGebenPlan ⟨es3, []⟩ i3 :=
@@ -296,13 +300,13 @@ theorem e4_ideal_halter_erfuellbar :
     match t with
     | 0 =>
       exact .kontext (c := A) (hw1_crash 0) ⟨0, hw1_opp0 0, rfl, rfl⟩
-        (e4_impl_ticket statisch4_A ht) htAus
+        (e4_ticket statisch4_A ht) htAus
     | 1 =>
       exact .kontext (c := A) (hw1_crash 1) ⟨0, hw1_opp0 1, rfl, rfl⟩
-        (e4_impl_nehmen statisch4_A (.nehmen hn)) hnAus
+        (e4_nehmen statisch4_A (.nehmen hn)) hnAus
     | 2 =>
       exact .kontext (c := A) (hw1_crash 2) ⟨0, hw1_opp0 2, rfl, rfl⟩
-        (e4_impl_geben hg) hgAus
+        (e4_geben hg) hgAus
     | t + 3 =>
       exact .kontext (c := A) (hw1_crash _) ⟨0, hw1_opp0 _, rfl, rfl⟩
         ⟨(), rfl, Or.inr (Or.inr ⟨rfl, rfl⟩)⟩

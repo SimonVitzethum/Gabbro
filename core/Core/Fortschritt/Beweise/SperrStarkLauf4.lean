@@ -17,9 +17,9 @@ open Gabbro.Core.Beobachtung
 
 def hw4 : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 3 sicht0
 
-def h4 : Umgebung := Umgebung.referenz Plattform.x86_64.katalog 3 sicht0
+def umgebung4 : Umgebung := Umgebung.referenz Plattform.x86_64.katalog 3 sicht0
 
-theorem fair4 : FairLaeufe E_4.katalog h4 hw4 :=
+theorem fair4 : FairLaeufe E_4.katalog umgebung4 hw4 :=
   Umgebung.referenz_fair _ _ _ Plattform.x86_64.katalog_wohlgeformt (by decide)
 
 theorem hw4_crash (t : Nat) : (hw4.angebot t).crash = false := rfl
@@ -41,27 +41,27 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     sperren := Function.update s0.sperren () ⟨none, [A]⟩ }
   have aus1 : FuehrtSchrittAus E_4.einrichtung 0 A s0 (toggleUpdate A s0) ticketPlan
       ⟨[], []⟩ s1 :=
-    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h1 (.nil _)
+    e4_sperrAus rfl rfl rfl (e4_toggle_frame s0 A) h1 (.nil _)
   have h2 : SperrSchritt .ticket B (s1.sperren ()) ⟨none, [A, B]⟩ := .ticket (fun h => nomatch h) (by decide)
   let s2 := { toggleUpdate B s1 with
     sperren := Function.update s1.sperren () ⟨none, [A, B]⟩ }
   have aus2 : FuehrtSchrittAus E_4.einrichtung 1 B s1 (toggleUpdate B s1) ticketPlan
       ⟨[], []⟩ s2 :=
-    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h2 (.nil _)
+    e4_sperrAus rfl rfl rfl (e4_toggle_frame s1 B) h2 (.nil _)
   have h3 : SperrSchritt .ticket C4 (s2.sperren ()) ⟨none, [A, B, C4]⟩ := .ticket (fun h => nomatch h) (by decide)
   let s3 := { toggleUpdate C4 s2 with
     sperren := Function.update s2.sperren () ⟨none, [A, B, C4]⟩ }
   have aus3 : FuehrtSchrittAus E_4.einrichtung 2 C4 s2 (toggleUpdate C4 s2) ticketPlan
       ⟨[], []⟩ s3 :=
-    e4_sperrAus rfl rfl rfl (by exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩) h3 (.nil _)
-  have h4 : SperrSchritt .nehmen A (s3.sperren ()) ⟨some A, [B, C4]⟩ := .nehmen (.frei A [B, C4])
+    e4_sperrAus rfl rfl rfl (e4_toggle_frame s2 C4) h3 (.nil _)
+  have nehmen4 : SperrSchritt .nehmen A (s3.sperren ()) ⟨some A, [B, C4]⟩ := .nehmen (.frei A [B, C4])
   obtain ⟨es4, g4, mem4⟩ := e4_sperrSpeicher s4_0_graph_gut.1 s4_0_graph_gut.2 A .rmw
   have good4 := mem4.viele.gut s4_0_graph_gut.1 s4_0_graph_gut.2
   let s4 := { s3 with
     sperren := Function.update s3.sperren () ⟨some A, [B, C4]⟩, graph := g4 }
   have aus4 : FuehrtSchrittAus E_4.einrichtung 3 A s3 (s3) nehmenPlan
       ⟨es4, []⟩ s4 :=
-    e4_sperrAus rfl rfl rfl (e4_frame s3) h4 mem4
+    e4_sperrAus rfl rfl rfl (e4_frame s3) nehmen4 mem4
   have h7 : SperrSchritt .geben A (s4.sperren ()) ⟨some B, [C4]⟩ := .geben (.besitzer A [B, C4])
   obtain ⟨es7, g7, mem7⟩ := e4_sperrSpeicher good4.1 good4.2 A .rmw
   have good7 := mem7.viele.gut good4.1 good4.2
@@ -118,29 +118,29 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     match t with
     | 0 =>
       exact .kontext (c := A) (hw4_crash 0) ⟨0, hw4_opp 0, rfl, rfl⟩
-        (e4_impl_ticket statisch4_A h1) aus1
+        (e4_ticket statisch4_A h1) aus1
     | 1 =>
       exact .kontext (c := B) (hw4_crash 1) ⟨1, hw4_opp 1, rfl, rfl⟩
-        (e4_impl_ticket statisch4_B h2) aus2
+        (e4_ticket statisch4_B h2) aus2
     | 2 =>
       exact .kontext (c := C4) (hw4_crash 2) ⟨2, hw4_opp 2, rfl, rfl⟩
-        (e4_impl_ticket statisch4_C h3) aus3
+        (e4_ticket statisch4_C h3) aus3
     | 3 =>
       exact .kontext (c := A) (hw4_crash 3) ⟨0, hw4_opp 3, rfl, rfl⟩
-        (e4_impl_nehmen statisch4_A h4) aus4
+        (e4_nehmen statisch4_A nehmen4) aus4
     | 4 =>
       exact e4_implStutter 4 B s4 ⟨1, hw4_opp 4, rfl, rfl⟩
     | 5 =>
       exact e4_implStutter 5 C4 s4 ⟨2, hw4_opp 5, rfl, rfl⟩
     | 6 =>
       exact .kontext (c := A) (hw4_crash 6) ⟨0, hw4_opp 6, rfl, rfl⟩
-        (e4_impl_geben (.besitzer A [B, C4])) aus7
+        (e4_geben (.besitzer A [B, C4])) aus7
     | 7 =>
       exact .kontext (c := B) (hw4_crash 7) ⟨1, hw4_opp 7, rfl, rfl⟩
-        (e4_impl_geben (.besitzer B [C4])) aus8
+        (e4_geben (.besitzer B [C4])) aus8
     | 8 =>
       exact .kontext (c := C4) (hw4_crash 8) ⟨2, hw4_opp 8, rfl, rfl⟩
-        (e4_impl_geben (.besitzer C4 [])) aus9
+        (e4_geben (.besitzer C4 [])) aus9
     | t + 9 => exact e4_implStutter (t + 9) (tail (t + 9)) s9 (tailReady _)
   let ρ : Maschine.Lauf E_4 := ⟨start, hw4, ⟨fun t => some (z t), fun t => some (spur t),
     fun t => .schritt rfl (.schritt (step t))⟩⟩
@@ -150,36 +150,28 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
         ((z (r + 1)).sperren ()).besitzer ≠ some c := by
     revert own
     match b with
-    | 0 => intro own; cases own
-    | 1 => intro own; cases own
-    | 2 => intro own; cases own
-    | 3 => intro own; cases own
-    | 4 =>
+    | 0 | 1 | 2 | 3 =>
+      intro own
+      cases own
+    | 4 | 5 | 6 =>
       intro own
       change some A = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
-    | 5 =>
-      intro own
-      change some A = some c at own
-      obtain rfl := Option.some.inj own
-      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
-    | 6 =>
-      intro own
-      change some A = some c at own
-      obtain rfl := Option.some.inj own
-      exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
+      exact ⟨6, by decide, by decide, .besitzer A [B, C4],
+        by change some B ≠ some A; decide⟩
     | 7 =>
       intro own
       change some B = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨7, by decide, by decide, .besitzer B [C4], by decide⟩
+      exact ⟨7, by decide, by decide, .besitzer B [C4], by change some C4 ≠ some B; decide⟩
     | 8 =>
       intro own
       change some C4 = some c at own
       obtain rfl := Option.some.inj own
-      exact ⟨8, by decide, by decide, .besitzer C4 [], by decide⟩
-    | _ + 9 => intro own; cases own
+      exact ⟨8, by decide, by decide, .besitzer C4 [], by change none ≠ some C4; decide⟩
+    | _ + 9 =>
+      intro own
+      cases own
   have state (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
       (eq : ρ.zeit.zustand t = some s) : z t = s := Option.some.inj eq
   have halteschranke : HalteSchranken E_4 ρ := by
@@ -196,7 +188,7 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     obtain ⟨s', hs', ho'⟩ := live (r + 1) (by omega) (by omega)
     rw [← state (r + 1) s' hs'] at ho'
     exact hchange ho'
-  refine ⟨E_4, Gabbro.Core.Fortschritt.h4, ρ, C4, 5, 4, akzeptiert_E_4,
+  refine ⟨E_4, umgebung4, ρ, C4, 5, 4, akzeptiert_E_4,
     ⟨fair4.hardware, fair4.konform, hstart, rfl⟩, fair4, halteschranke, e4halten,
     ⟨s4, rfl, ⟨A, rfl, by decide⟩, rfl⟩, ?_, ?_, ?_⟩
   · intro s hs
