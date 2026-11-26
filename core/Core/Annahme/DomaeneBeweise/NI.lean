@@ -21,11 +21,10 @@ open Gabbro.Core.Ziel.Korrektheit
 
 /-- **The domain NI connection over elaborated units**: the accepted elaborated unit is
     noninterferent by the pinned NI leg; the channel premise over the unit's own table
-    is carried unused. Since accesses reach the source, the NI leg rests on the open access-fragment
-    duty `ZugriffNIFragmentAussage`; this connection is conditional on it until that duty is proved. -/
-theorem domaenenNI_elaboriert (P : Katalog.Plattform) (zugriff : ZugriffNIFragmentAussage) :
+    is carried unused. Accesses in the source are covered by the proved access-fragment leg `zugriffNIFragment`. -/
+theorem domaenenNI_elaboriert (P : Katalog.Plattform) :
     DomaenenNIAussage P := by
   intro t hakk _
-  exact niAkzeptiert P zugriff t hakk
+  exact niAkzeptiert P t hakk
 
 end Gabbro.Core.Annahme

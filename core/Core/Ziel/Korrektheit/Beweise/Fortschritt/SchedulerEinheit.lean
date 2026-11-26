@@ -1,7 +1,7 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise/Fortschritt/SchedulerEinheit.lean
   Subject:   THE SCHEDULER LEG FOR ELABORATED UNITS — the two run premises deliver the
-             selection duties for frame-only units, and the pinned progress statement.
+             selection duties for every unit, and the pinned progress statement.
 
   On an open suffix no live context is ever displaced (`einheitVon_keine_verdraengung`,
   via the return premise), so the dispatch core is constant (`einheitVon_dispatch_konstant_neu`).
@@ -11,15 +11,14 @@
   opportunity), and an open, enabled context is offered again past every cut. Lock
   acquisition as a second activation form is vacuous for elaborated units
   (`einheitVon_kein_sperre`); the system-wide duty is vacuous for the blocking class.
-  The duties are built for frame-only fragments (`Rein`), where the template step composes
-  (`einheit_fortschrittsfelder_rein`): for fragments with access instructions
-  `RegelKomponierbar` is false (only the memory-accepted step composes), so the access
-  case keeps the scheduler premise (`SchedulerFortschrittVoraussetzung`, from origin/dev's
-  `Beweise/FortschrittAkzeptiert.lean`, preserved here after the move). With the two
-  owner-approved run premises plus memory liveness and the access premise, the pinned
-  `FortschrittAkzeptiertAussage` closes (`fortschritt_akzeptiert`); its statement is
-  otherwise unchanged. A fair run without preemption satisfies both run premises
-  (`einheitVon_fair_lauf_erfuellbar`, from `fairerZeit`).
+  The duties are built for every fragment, frame-only or with accesses: the head-based
+  composability field of `FortschrittsPflichten` is supplied by `einheit_fortschrittsfelder`
+  (`komponierbar_koepfe`), which holds for an access head because the step the memory model
+  offers composes. The two owner-approved run premises plus memory liveness close the pinned
+  `FortschrittAkzeptiertAussage` (`fortschritt_akzeptiert`); its statement is unchanged.
+  The scheduler selection premise itself is proved here (`schedulerFortschrittVoraussetzung`),
+  so no free scheduler parameter remains. A fair run without preemption satisfies both run
+  premises (`einheitVon_fair_lauf_erfuellbar`, from `fairerZeit`).
 -/
 module
 
@@ -36,15 +35,14 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-/-- The selection duties hold for a frame-only elaborated unit under the two run premises: take the
-    run's own context steps as the selection. Offering follows from the step's physical
-    opportunity, choice is immediate, and an open, enabled context is served infinitely often
-    by scheduler fairness on its constant dispatch core. `Rein` is needed for the
-    `RegelKomponierbar` field (the template step composes); memory liveness for the ready step
-    of an access head is unused in this branch but required by `einheitVon_bereit_vollzug`. -/
-theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
-    (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein)
-    (existiert : ZugriffSchrittExistiertAussage)
+/-- The selection duties hold for every elaborated unit under the two run premises: take the run's
+    own context steps as the selection. Offering follows from the step's physical opportunity,
+    choice is immediate, and an open, enabled context is served infinitely often by scheduler
+    fairness on its constant dispatch core. The four form-side fields come from
+    `einheit_fortschrittsfelder`: memory liveness gives a composing step at every head, including
+    an access head (`komponierbar_koepfe`), and a ready context is neither finished nor blocked. -/
+theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussage)
+    (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
     (sf : Maschine.SchedulerFair (einheitVon P t) ρ)
@@ -54,7 +52,7 @@ theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
     ∃ nutzbar, Maschine.I.FortschrittsPflichten
       (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl)
       ρ η nutzbar := by
-  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder_rein P t rein
+  obtain ⟨fertig, regeln, komponierbar, eindeutig⟩ := einheit_fortschrittsfelder existiert P t
   refine ⟨(fun t c => ∃ w spur, ρ.zeit.spur t = some (.kontext c w, spur)),
     fertig, regeln, komponierbar, eindeutig, ?_, ?_, ?_, ?_⟩
   · intro t' c slot
@@ -120,17 +118,19 @@ theorem einheitVon_scheduler_pflichten (P : Katalog.Plattform) (t : Ast.Unit)
   · intro _
     trivial
 
-/-- THE MISSING SCHEDULER PREMISE (from origin/dev's `Beweise/FortschrittAkzeptiert.lean`,
-    preserved here after the move to `Beweise/Fortschritt/`). On every fair run of every accepted
-    elaborated unit, the matched ideal run admits a selection predicate `nutzbar` for which the
-    four dispatch and selection duties hold: `angebot`, `wahl`, `individuell` and `systemweit`
-    (the system-wide duty is vacuous for `blockierend`). For frame-only fragments this is discharged
-    by `einheitVon_scheduler_pflichten`; for fragments with access instructions it stays open
-    (the served tick's read must be memory-accepted, beyond scheduler fairness). -/
-def SchedulerFortschrittVoraussetzung : Prop :=
+/-- THE SELECTION PREMISE OF PROGRESS, NOW A THEOREM. On every fair, scheduler-fair run without
+    preemption of every accepted elaborated unit, the matched ideal run admits a selection
+    predicate `nutzbar` for which the four dispatch and selection duties hold: `angebot`, `wahl`,
+    `individuell` and `systemweit` (the system-wide duty is vacuous for `blockierend`). The two run
+    premises are the same as those of `FortschrittAkzeptiertAussage`; without them a fair run may
+    starve a live context, so they are load-bearing. The four form-side fields, including
+    composability at an access head, come from `einheit_fortschrittsfelder`. -/
+def SchedulerFortschrittVoraussetzungAussage : Prop :=
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ → Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      Maschine.SchedulerFair (einheitVon P t) ρ →
+      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ →
       ∀ η : Maschine.I.Lauf (einheitVon P t),
         Maschine.I.Laeufe (einheitVon P t) η →
         Maschine.I.Laufabgleich ρ η →
@@ -139,34 +139,30 @@ def SchedulerFortschrittVoraussetzung : Prop :=
           (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl)
           ρ η nutzbar
 
-/-- The pinned progress statement, closed under the two run premises plus memory liveness and the
-    access scheduler premise: for a frame-only fragment the selection duties follow from scheduler
-    fairness and preemption return (`einheitVon_scheduler_pflichten`), for a fragment with access
-    instructions from the premise; `sim_ziel_fortschritt_im_lauf` consumes them directly. The
-    statement is otherwise unchanged. -/
-theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage)
-    (scheduler : SchedulerFortschrittVoraussetzung) :
+/-- The selection premise holds for every elaborated unit, frame-only or with accesses: the run's
+    own context steps are the selection and the two run premises discharge `individuell`. -/
+theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAussage) :
+    SchedulerFortschrittVoraussetzungAussage := by
+  intro P t _ H ρ lauf _ sf ret η valid matched environment
+  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+
+/-- The pinned progress statement, closed under the two run premises plus memory liveness: the
+    selection duties follow from scheduler fairness and preemption return for every fragment
+    (`einheitVon_scheduler_pflichten`); `sim_ziel_fortschritt_im_lauf` consumes them directly.
+    The statement is unchanged. -/
+theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
     FortschrittAkzeptiertAussage := by
-  intro P t akzeptiert H ρ lauf fair sf ret
+  intro P t _ H ρ lauf fair sf ret
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
     (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
-  rcases Ast.Semantik.Fragment.klassenrein_rein_oder
-      (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) with rein | _
-  · obtain ⟨η, valid, sim, _, rest⟩ :=
-      Maschine.I.sim_ziel_fortschritt_im_lauf
-        (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
-        pflicht lauf
-        (fun η valid matched environment fairness =>
-          einheitVon_scheduler_pflichten P t rein existiert lauf sf ret valid matched environment)
-    exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
-  · obtain ⟨η, valid, sim, _, rest⟩ :=
-      Maschine.I.sim_ziel_fortschritt_im_lauf
-        (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
-        pflicht lauf
-        (fun η valid matched environment fairness =>
-          scheduler P t akzeptiert H ρ lauf fairness η valid matched environment)
-    exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
+  obtain ⟨η, valid, sim, _, rest⟩ :=
+    Maschine.I.sim_ziel_fortschritt_im_lauf
+      (klasse := (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl))
+      pflicht lauf
+      (fun η valid matched environment fairness =>
+        einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment)
+  exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
 
 /-- Both run premises hold jointly for an accepted elaborated unit: the catalogue is
     well-formed by acceptance, the entry image is valid on every platform, and the fair

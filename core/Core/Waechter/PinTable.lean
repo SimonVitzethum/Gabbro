@@ -338,7 +338,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.durchlaufKostenAussage, 17279854325906232918),
   (`Gabbro.Core.Ziel.Review.Slice.DurchstichKleinAussage, 7613600038138960230),
   (`Gabbro.Core.Ast.Semantik.FadenAussagen, 14693927445275653028),
-  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 10913018111114545660),
+  (`Gabbro.Core.Ast.Semantik.FadenBefehlAussage, 11607446584451707624),
   (`Gabbro.Core.Beobachtung.DurchlaufEinheitAussage, 9571493495420503672),
   (`Gabbro.Core.Ast.Semantik.InvariantenSicherheitAussage, 338867636558435804),
   (`Gabbro.Core.Ast.Semantik.KlassenSperrwortbeinAussage, 7493897534745737720),
@@ -403,8 +403,10 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffIdealBestimmtAussage, 2644829311587586954),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffNIFragmentAussage, 7858762338163909109),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffSchrittExistiertAussage, 12011956342942153024),
+  (`Gabbro.Core.Ziel.Korrektheit.SchedulerFortschrittVoraussetzungAussage, 14635417704699386862),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 17866836081802873869),
   (`Gabbro.Core.Beobachtung.SpeicherGraphKopplungAussage, 5122222790422226156),
+  (`Gabbro.Core.Beobachtung.SpeicherGraphInvariantAussage, 14948003621617868869),
   (`Gabbro.Core.Ast.Semantik.TabellenAussagen, 6489623228406276377),
   (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253),
   (`Gabbro.Core.Katalog.AuswahlFair, 4706462524412336189),
@@ -416,8 +418,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precRumpfRueckAussage, 17094476976889742883),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precSchleifeRueckAussage, 13044116986245465722),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 17945051885790618584),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 16949391721795130390),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 15065692479669933639),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 6132789267391028435)]
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 15266179548767744066),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 5385424585100888287),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 10956785015232498392)]
 
 end Gabbro.Core.Waechter
