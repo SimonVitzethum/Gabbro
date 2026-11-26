@@ -82,71 +82,68 @@ theorem handler_abschluss_erfuellbar (start : AussenStart) (boot : start.assignm
   obtain ⟨graph, append⟩ := Speicher.Zustand.schritt_ohne_lesen
     (Z := z.graph) Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
     .aussen label (fun h => nomatch h)
-  let entered := { Zustandseintritt z 0 (0, 0) Hv false with graph := graph }
+  let entered := { Zustandseintritt z 0 (0, 0) handler false with graph := graph }
   let ingress : SchrittSpur Zelle Int := ⟨[(.aussen, label)], [event]⟩
   have deliver : UnterbrechungsSchritt E.einrichtung hwV 0 (0, 0) z ingress entered :=
-    ⟨0, irqV, Hv, false, rfl,
+    ⟨0, irqV, handler, false, rfl,
       ⟨Nat.le_refl _, Nat.le_refl _, pendingV0, List.not_mem_nil, auswahlV0⟩,
       NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl _), rfl, rfl,
       .cons (.ohne (Or.inl rfl)) append (.nil _), rfl⟩
   let write : Befehl := .literal 0 7
-  let ready := write.nach Hv entered
-  have calculate : E.system.ImplSchritt Hv entered () [Ast.Semantik.plan] ready :=
+  let ready := write.nach handler entered
+  have calculate : E.system.ImplSchritt handler entered () [Ast.Semantik.plan] ready :=
     ⟨write, by
-      change kopf p.code (Zustandseintritt z 0 (0, 0) Hv false) Hv = some write
-      exact (handler_beginnt_im_rumpf p .x86_64 start 0 (0, 0) Hv false
+      change kopf p.code (Zustandseintritt z 0 (0, 0) handler false) handler = some write
+      exact (handler_beginnt_im_rumpf p .x86_64 start 0 (0, 0) handler false
         (fun h => Kontext.noConfusion h) (pos := 1) rfl).trans rfl, rfl, rfl⟩
-  have writeExec : FuehrtSchrittAus E.einrichtung 1 Hv entered ready Ast.Semantik.plan ⟨[], []⟩ ready := by
-    exact write.vollzug E.einrichtung 1 Hv entered (Or.inl rfl)
+  have writeExec : FuehrtSchrittAus E.einrichtung 1 handler entered ready Ast.Semantik.plan ⟨[], []⟩ ready := by
+    exact write.vollzug E.einrichtung 1 handler entered (Or.inl rfl)
   let finish : Befehl := .faden (.beende 0)
-  let plan := finish.plan (ready.lokal Hv) 0
-  let u := finish.form.faedenNach Hv ready
-  have finishHead : E.system.kopf ready Hv = some finish := by
-    exact kopf_laufend (code := p.code) (s := ready) (c := Hv)
+  let plan := finish.plan (ready.lokal handler) 0
+  let u := finish.form.faedenNach handler ready
+  have finishHead : E.system.kopf ready handler = some finish := by
+    exact kopf_laufend (code := p.code) (s := ready) (c := handler)
       (by simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self])
       (by simp only [ready, Befehl.nach, Function.update_self]; rfl)
       (by simp only [ready, Befehl.nach, Function.update_self]; rfl) |>.trans (by
         simp only [ready, Befehl.nach, Function.update_self]
         rfl)
-  have rule : finish.ideal Hv ready () [plan] u := by
+  have rule : finish.ideal handler ready () [plan] u := by
     change (_ ∨ (_ = true ∧ _ ∧ _))
     exact Or.inr ⟨by simp only [ready, Befehl.nach, Function.update_self]; rfl, rfl, rfl⟩
-  let returned := Abschlussrueckkehr ready u Hv
-  have ended : u.status Hv = .beendet (.wert 7) := by
+  let returned := Abschlussrueckkehr ready u handler
+  have ended : u.status handler = .beendet (.wert 7) := by
     simp only [u, Schrittform.faedenNach, finish, Befehl.form, Befehl.klasse, Fadenform.klasse,
       ready, Befehl.nach, Function.update_self]
     rfl
   have frame : Zustandsrahmen ready u :=
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  have execute : FuehrtSchrittAus E.einrichtung 2 Hv ready u plan ⟨[], []⟩ returned :=
+  have execute : FuehrtSchrittAus E.einrichtung 2 handler ready u plan ⟨[], []⟩ returned :=
     ⟨frame, fun _ h => (List.not_mem_nil h).elim, [], returned, FuehrtAus.beende ended, .nil _, rfl⟩
-  have active : KehrtZurueck ready Hv 0 := .handler
-    (by simp only [ready, Befehl.nach, entered, Zustandseintritt, KernZustand.unterbrechen,
-      Function.update_self])
-    (by simp only [ready, Befehl.nach, entered, Zustandseintritt, KernZustand.unterbrechen,
-      Function.update_self, List.cons_ne_nil])
+  have enteredDispatch : (entered.kerne 0).laeuft = some handler := by
+    simp only [entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
+  have enteredLive : entered.status handler = .laeuft := by
+    simp only [entered, Zustandseintritt, Function.update_self]
+  have readyOnCore : KannSchreiten hwV 2 handler ready := ⟨0, rfl, enteredDispatch, enteredLive⟩
+  have active : KehrtZurueck ready handler 0 := .handler enteredDispatch (by
+    simp only [ready, Befehl.nach, entered, Zustandseintritt, KernZustand.unterbrechen,
+      Function.update_self]
+    exact fun h => nomatch h)
   have restored : returned = Zustandsrueckkehr u 0 := active.abschluss frame.kerne
   have dispatch : (z.kerne 0).laeuft = some eintritt := by
     change (if some 0 = start.assignment 0 then some eintritt else none) = _
     rw [boot, if_pos rfl]
-  refine ⟨HV, hwV, entered, ready, returned, ingress, fairV, .interrupt rfl deliver, ?_,
-    .kontext rfl ⟨0, rfl, ?_, ?_⟩ calculate writeExec,
-    .kontext rfl ⟨0, rfl, ?_, ?_⟩ ⟨finish, finishHead, rule⟩ execute,
-    .kontext rfl ⟨0, rfl, ?_, ?_⟩ ⟨finish, finishHead, rule⟩ execute,
+  refine ⟨HV, hwV, entered, ready, returned, ingress, fairV, .interrupt rfl deliver, enteredDispatch,
+    .kontext rfl ⟨0, rfl, enteredDispatch, enteredLive⟩ calculate writeExec,
+    .kontext rfl readyOnCore ⟨finish, finishHead, rule⟩ execute,
+    .kontext rfl readyOnCore ⟨finish, finishHead, rule⟩ execute,
     ?_, ?_, ended, ?_, rfl, rfl⟩
-  · simp only [entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
-  · simp only [entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
-  · simp only [entered, Zustandseintritt, Function.update_self]
-  · simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
-  · simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self]
-  · simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
-  · simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self]
   · rw [restored]
-    exact (rueckkehr_setzt_fort z 0 (0, 0) Hv false).1.trans dispatch
+    exact (rueckkehr_setzt_fort z 0 (0, 0) handler false).1.trans dispatch
   · rw [restored]
-    exact (rueckkehr_setzt_fort z 0 (0, 0) Hv false).2
-  · change (Function.update ready.lokal Hv _ eintritt) = z.lokal eintritt
-    have different : eintritt ≠ Hv := fun h => Kontext.noConfusion h
+    exact (rueckkehr_setzt_fort z 0 (0, 0) handler false).2
+  · change (Function.update ready.lokal handler _ eintritt) = z.lokal eintritt
+    have different : eintritt ≠ handler := fun h => Kontext.noConfusion h
     rw [Function.update_of_ne different]
     exact write.nach_lokal_anderer different entered
 
