@@ -235,8 +235,10 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hkS' : (Schritt (P ++ S))^[k - jP] (some (mitPc P.length rP0)) = some rEnd := by
       rw [hmitP]
       exact hkS
+    have hpcEndPS : rEnd.pc = P.length + S.length := by
+      rw [hpcEnd, List.length_append]
     obtain ⟨rS, hrunS, hpcS, hEqEnd⟩ :=
-      rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEnd
+      rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEndPS
     let Q := (L ++ R) ++ cfBlk
     have hlenQ : 0 < Q.length := by
       dsimp only [Q, L, R]
