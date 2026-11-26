@@ -77,7 +77,7 @@ theorem KehrtZurueck.abschluss {s u : Zustand L Ort Wert Raum Lok Grund} {c k}
     Abschlussrueckkehr s u c = Zustandsrueckkehr u k := by
   cases aktiv with
   | handler aktiv frame | nmi aktiv frame =>
-    simp only [Abschlussrueckkehr, if_pos ⟨aktiv, frame⟩, Zustandsrueckkehr, rahmen]
+    simp only [Abschlussrueckkehr, if_pos (And.intro aktiv frame), Zustandsrueckkehr, rahmen]
 
 theorem rueckkehr_setzt_fort (s : Zustand L Ort Wert Raum Lok Grund) (k : Kern)
     (id : Nat × Nat) (c : Kontext) (nmi : Bool) :
