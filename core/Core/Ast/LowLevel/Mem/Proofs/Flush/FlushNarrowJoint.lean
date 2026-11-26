@@ -3,6 +3,7 @@ module
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
 public import Core.Ast.LowLevel.Mem.Proofs.Tlb.Stufung
+import Core.Ast.LowLevel.Mem.Proofs.Flush.FlushJoint
 
 @[expose] public section
 
@@ -440,5 +441,28 @@ theorem flushNarrowJoint : FlushNarrowJointAussage := by
       entryContext narrowToken narrowedSpaceN narrowHfind narrowHspace (by rfl) narrowF5eq).2.1
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
   · exact ⟨narrowOp, narrowHead4, ⟨narrowF5, narrowF5eq, rfl, rfl⟩⟩
+
+/-- The admitted narrowing prefix used by `flushNarrowJoint` reaches an actual completion under
+    a reference hardware opportunity. Both machines return `protected` and consume the same token. -/
+theorem memFlushVerengung_erfuellbar :
+    ∃ (k : Katalog) (code : List MemInstruction) (env : Katalog.Umgebung) (start : AussenStart)
+      (hw : HwLauf) (t : Nat) (s : MemState) (next : MemFrame) (name : Identifier)
+      (token : Zuruecknahme),
+      let E := memProgram k code
+      let label : SchrittWahl PUnit × SchrittSpur Nat UInt8 := (.kontext entryContext (), ⟨[], []⟩)
+      FairLaeufe k env hw ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
+      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s entryContext = some (.flushSpace name) ∧
+      token ∈ (s.lokal entryContext).verengt ∧ token ∉ next.verengt ∧ next.result = some .«protected» ∧
+      ImplSchritt E.einrichtung E.system k hw t s label (next.advance entryContext s) ∧
+      I.Schritt E.einrichtung E.system k hw t s label (next.advance entryContext s) := by
+  let hw := Umgebung.referenzLauf Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
+  refine ⟨_, narrowCode, narrowEnv, narrowStart, hw, 8, narrowS4, narrowF5, narrowName, narrowToken,
+    Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide),
+    narrowZul, memProgramAkzeptiertN _, narrowReach, narrowHead4, ?_, ?_, narrowF5protected,
+    memFlushAbschluss rfl ⟨0, rfl, rfl, narrowS4status⟩ narrowHead4 narrowF5eq⟩
+  · rw [narrowS4verengt]
+    exact List.mem_singleton.mpr rfl
+  · rw [narrowF5verengt]
+    exact List.not_mem_nil
 
 end Gabbro.Core.Ast.LowLevel

@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.LowLevel.Mem.Registry
 public import Core.Ast.LowLevel.Mem.Proofs.NewSpace
+import Core.Ast.LowLevel.Mem.Proofs.Activate.ActivateObligations
 
 @[expose] public section
 
@@ -389,5 +390,38 @@ theorem flushJointAussage : FlushJointAussage := by
   · simpa only [flushPrefEq, flushE, flushS0] using flushReach
   · exact ⟨flushOp, flushHead4, ⟨flushF5, flushF5eq, rfl, rfl⟩⟩
   · exact ⟨flushOp, flushHead4, ⟨flushF5, flushF5eq, rfl, rfl⟩⟩
+
+/-- At an offered context cut the checked Mem rule gives the same actual transition on both
+    machines. The completion's authority update is in the successor frame, with an empty label. -/
+theorem memFlushAbschluss {k : Katalog} {code : List MemInstruction} {hw : HwLauf} {t : Nat}
+    {s : MemState} {next : MemFrame} {name : Identifier}
+    (normal : (hw.angebot t).crash = false) (ready : KannSchreiten hw t entryContext s)
+    (head : (memProgram k code).system.kopf s entryContext = some (.flushSpace name))
+    (eval : (MemInstruction.flushSpace name).evaluate k.plattform.ziel s entryContext = some next) :
+    let E := memProgram k code
+    let label : SchrittWahl PUnit × SchrittSpur Nat UInt8 := (.kontext entryContext (), ⟨[], []⟩)
+    ImplSchritt E.einrichtung E.system k hw t s label (next.advance entryContext s) ∧
+    I.Schritt E.einrichtung E.system k hw t s label (next.advance entryContext s) := by
+  have execute := MemInstruction.activateVollzug k.plattform.ziel (.flushSpace name) next t entryContext s
+  exact ⟨.kontext normal ready ⟨_, head, ⟨next, eval, rfl, rfl⟩⟩ execute,
+    .kontext normal ready ⟨_, head, ⟨next, eval, rfl, rfl⟩⟩ execute⟩
+
+/-- The admitted revocation prefix used by `flushJointAussage` reaches an actual frame release
+    step under a reference hardware opportunity, with the same successor and label in both machines. -/
+theorem memFlushFreigabe_erfuellbar :
+    ∃ (k : Katalog) (code : List MemInstruction) (env : Katalog.Umgebung) (start : AussenStart)
+      (hw : HwLauf) (t : Nat) (s : MemState) (next : MemFrame) (name : Identifier),
+      let E := memProgram k code
+      let label : SchrittWahl PUnit × SchrittSpur Nat UInt8 := (.kontext entryContext (), ⟨[], []⟩)
+      FairLaeufe k env hw ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
+      E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s entryContext = some (.flushSpace name) ∧
+      (∃ frames, next.result = some (.frames frames)) ∧
+      ImplSchritt E.einrichtung E.system k hw t s label (next.advance entryContext s) ∧
+      I.Schritt E.einrichtung E.system k hw t s label (next.advance entryContext s) := by
+  let hw := Umgebung.referenzLauf Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
+  exact ⟨_, flushCode, flushEnv, flushStart, hw, 8, flushS4, flushF5, flushName,
+    Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide),
+    flushZul, memProgramAkzeptiert _, flushReach, flushHead4, ⟨_, rfl⟩,
+    memFlushAbschluss rfl ⟨0, rfl, rfl, flushS4status⟩ flushHead4 flushF5eq⟩
 
 end Gabbro.Core.Ast.LowLevel
