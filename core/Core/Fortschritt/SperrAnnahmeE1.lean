@@ -49,8 +49,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au at hF
-        clear hau
+        obtain ⟨_, au⟩ := spur
         cases hF
         case sperre _ _ =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
@@ -65,8 +64,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au at hF
-        clear hau
+        obtain ⟨_, au⟩ := spur
         cases hF
         case intern =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
@@ -151,8 +149,7 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au at hF
-        clear hau
+        obtain ⟨_, au⟩ := spur
         cases hF
         case sperre hF' _ =>
           cases hF' with
@@ -165,8 +162,7 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
-        generalize hau : spur.aussen = au at hF
-        clear hau
+        obtain ⟨_, au⟩ := spur
         cases hF
         case intern =>
           rw [heq]
