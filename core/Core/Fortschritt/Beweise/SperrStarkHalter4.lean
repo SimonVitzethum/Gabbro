@@ -61,9 +61,7 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         cases hF with
         | sperre hnext _ =>
           cases hnext with
-          | geben hg => exact hg
-          | ticket => simp at *
-          | nehmen => simp at *
+          | geben hg => cases hg; rfl
       rw [SperrZustand.Gibt.besitzt hss] at hpre
       cases hpre
     · obtain rfl := (List.cons.inj hpeq).1
