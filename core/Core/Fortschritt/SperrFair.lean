@@ -2,28 +2,26 @@
   File:      Core/Fortschritt/SperrFair.lean
   Subject:   THE FAIR WAITING BOUND, ASSEMBLED (PERFECT-MODEL §3.7, step M8, Teil 2b).
 
-  `sperr_warte_schranke_bis` (proved): the waiting bound of `SperrSchranke` with the UNSCOPED
-  run premises replaced by what the machine actually guarantees — the scoped persistence and
-  monotonicity of `SperrErhalt` (until first ownership, crash-free, duplicate-free), keeping
-  `hgibt` as the one remaining run hypothesis. The induction splits on first acquisition:
-  whoever owns first discharges the bound with an empty cost list; otherwise the scoped lemmas
-  apply on the acquisition-free prefix.
+  `sperr_warte_schranke_bis` (proved): the waiting bound with the unscoped run premises
+  replaced by the scoped machine guarantees (`SperrErhalt`), keeping `hgibt` as the one
+  remaining run hypothesis.
 
-  Meaning change (MK-11, strengthening only): both progress statements now carry the two
-  run premises `SchedulerFair E ρ` and `VerdraengungKehrtZurueck E ρ` plus an explicit
-  admissibility premise `Laeufe E hU ρ`. Everything else is unchanged. Without the scheduler
-  premise the release conclusion is not forced (`halte_gibt_nicht_ab`, the holder never runs).
+  Meaning change (non-vacuous restatement, strengthening only): both progress statements
+  bind fairness to the ONE environment of the run
+  (`Laeufe E hU ρ ∧ FairLaeufe E.katalog hU ρ.hw`); the old `∀ h'` form was unsatisfiable
+  and is deleted. Both carry `SchedulerFair E ρ`, `VerdraengungKehrtZurueck E ρ`, the impl
+  bridge (ideal `geben` also fires on the implementation side) and the opportunity
+  alignment (the holder meets opportunities on its dispatch core). Without the bridge
+  (`E_wait`) or alignment (migrating holder), the release is not forced.
 
-  What this design leaves for Hy4 (pinned below, with proof sketches):
-  * `SperrFreigabeAussage`: `hgibt` from holder eligibility + `HalteSchranken` + hardware
-    fairness + scheduler fairness (the eligible holder offers `geben` permanently and is
-    therefore stepped). `SperrHalterHalten` in `Core.Annahme.Waechter` keeps holders live,
-    dispatched and geben-offering until hand-off. The `w_*` chain fixes the handover shape.
-  * `SperrWarteFairAussage`: the target sentence — `SperrFreigabeAussage` discharges the `hgibt`
-    premise of `sperr_warte_schranke_bis` (fuel `i`).
+  Design state (proved in `SperrFairBeweis`, witnesses in `SperrErfuellbar`):
+  * `SperrFreigabeAussage`: `hgibt` from eligibility + `HalteSchranken` + single-env
+    fairness + scheduler fairness + bridge + alignment.
+  * `SperrWarteFairAussage`: the target sentence — `SperrFreigabeAussage` discharges the
+    `hgibt` premise of `sperr_warte_schranke_bis` (fuel `i`).
   * `StarkeWarteLaufAussage`: joint satisfiability with a real holder in front (position
-    `1`, genuine handover) under `Akzeptiert` — the `E_2` witness data are fixed here, the
-    run lifting is pinned.
+    `1`, genuine handover) under `Akzeptiert` — pinned for Hy4; the `E_2` rule from
+    `SperrE2` carries the ticket/take/release steps the witness trace needs.
 -/
 module
 
@@ -404,21 +402,14 @@ theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {
     intro hcontra
     nomatch hcontra
 
-/-- RELEASE, RESTATED (MK-05, Option A): the release stays a voluntary step of the holder.
-    The proved legs live in `Core.Fortschritt.SperrFreigabe` (`besitzwechsel_ist_gibt`,
-    `sperr_freigabe_bedingt`, `faire_umgebung_nicht_eindeutig`).
-    The checker carries the holder's eligibility (`SperrHalterBereit`, from `Akzeptiert`
-    through `SperrHalterHalten`: live, dispatched, `geben`-offering until hand-off) and the
-    wait-free section (`AbschnittWartefrei`: while holding, no wait on a not-yet-enabled
-    condition); the run carries the hold bound (`HalteSchranken`) and hardware fairness
-    (`FairLaeufe`, hardware only — no scheduler). The proved legs are
-    `besitzwechsel_ist_gibt` (a crash-free ownership break is the holder's release) and
-    `sperr_freigabe_bedingt` (the holder's own steps while holding release within
-    `H + 1`). What they do NOT supply is the scheduling: that the holder is actually
-    stepped. That progress premise — an `I`-`Laufabgleich` with starvation freedom, which
-    fires the continuously offered `geben` step — is the missing step, out of scope for
-    MK-05. `SperrGegenbeispiel.halte_gibt_nicht_ab` (the holder that never runs) stays the
-    negative leg: bounds plus fairness alone do not imply release. -/
+/-- RELEASE, RESTATED (MK-11, non-vacuous): the release stays a voluntary step of the
+    holder. Fairness is bound to the ONE environment of the run; the old `∀ h'` form was
+    unsatisfiable (`faire_umgebung_nicht_eindeutig`) and is deleted. Two run premises close
+    the scheduling gap, both load-bearing: the impl bridge (ideal `geben` also fires on
+    the implementation side — `E_wait` refutes the bridge without it) and the opportunity
+    alignment (hardware fairness alone does not step a migrating holder).
+    `halte_gibt_nicht_ab` stays the negative leg, `sperr_freigabe_ohne_abschnitt_widerlegt`
+    the non-triviality leg for the section row. -/
 def SperrFreigabeAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
@@ -426,8 +417,15 @@ def SperrFreigabeAussage : Prop :=
     (∀ t s', b ≤ t → ρ.zeit.zustand t = some s' → (s'.sperren l).besitzer = some h →
       SperrHalterBereit E s' l h) →
     HalteSchranken E ρ → E.schranken.halten l = some H → AbschnittWartefrei E →
-    (∀ h', Laeufe E h' ρ → FairLaeufe E.katalog h' ρ.hw) →
-    Laeufe E hU ρ → SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
+    Laeufe E hU ρ → FairLaeufe E.katalog hU ρ.hw →
+    SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
+    (∀ t s w plan u, b ≤ t → ρ.zeit.zustand t = some s →
+      E.system.ISchritt h s w [plan] u → plan.aktion = .sperre l .geben →
+      (s.sperren l).besitzer = some h →
+      ∃ u', E.system.ImplSchritt h s w [plan] u' ∧
+        ∃ spur s', FuehrtSchrittAus E.einrichtung t h s u' plan spur s') →
+    (∀ n, b ≤ n → ∃ t, n ≤ t ∧ ∃ k, ρ.hw.gelegenheit t k ∧
+      ∃ s, ρ.zeit.zustand t = some s ∧ (s.kerne k).laeuft = some h) →
     ρ.zeit.zustand b = some s → (s.sperren l).besitzer = some h →
     (∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
     ∃ r, b ≤ r ∧
@@ -435,22 +433,29 @@ def SperrFreigabeAussage : Prop :=
         (s₁.sperren l).Gibt h (s₂.sperren l)) ∧
       Kontextkosten ρ h b (r + 1 - b) ≤ H + 1
 
-/-- THE TARGET SENTENCE of M8 Teil 2b, pinned for Hy4: every accepted unit with held bounds
-    gives a waiter queued at `i` the lock within `(i + 1) * (H + 1)` owner steps under fair
-    hardware — no run premises besides acceptance, hardware fairness and the bounds.
-    Difficulty: mittel. Proof sketch: `sperr_freigabe_bedingt` discharges the `hgibt` premise of
-    `sperr_warte_schranke_bis` (fuel `i`) once the holder's own steps are supplied — that
-    scheduling step (holder-ready plus wait-free section plus hardware fairness through an
-    `I`-`Laufabgleich` with starvation freedom) is the missing premise named at
-    `SperrFreigabeAussage`; the scoped persistence and monotonicity are
-    already machine theorems (`bleibt_bis_besitz`, `mono_bis_besitz`, `nodup_bleibt`). -/
+/-- THE TARGET SENTENCE of M8 Teil 2b: every accepted unit with held bounds gives a waiter
+    queued at `i` the lock within `(i + 1) * (H + 1)` owner steps under fair hardware.
+    Acceptance supplies the section row; readiness, impl bridge and opportunity alignment
+    enter as explicit run premises (no `Laufabgleich` run premise: the bridge is
+    state-local). Proof: `SperrFreigabeAussage` discharges the `hgibt` premise of
+    `sperr_warte_schranke_bis` (fuel `i`). -/
 def SperrWarteFairAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
     (hU : Umgebung) (l : L) (c : Kontext) (i H a : Nat),
     Akzeptiert E → HalteSchranken E ρ → E.schranken.halten l = some H →
-    (∀ h', Laeufe E h' ρ → FairLaeufe E.katalog h' ρ.hw) →
-    Laeufe E hU ρ → SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
+    Laeufe E hU ρ → FairLaeufe E.katalog hU ρ.hw →
+    SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
+    (∀ h t s', a ≤ t → ρ.zeit.zustand t = some s' → (s'.sperren l).besitzer = some h →
+      SperrHalterBereit E s' l h) →
+    (∀ h t s w plan u, a ≤ t → ρ.zeit.zustand t = some s →
+      E.system.ISchritt h s w [plan] u → plan.aktion = .sperre l .geben →
+      (s.sperren l).besitzer = some h →
+      ∃ u', E.system.ImplSchritt h s w [plan] u' ∧
+        ∃ spur s', FuehrtSchrittAus E.einrichtung t h s u' plan spur s') →
+    (∀ h b, a ≤ b → (∃ s, ρ.zeit.zustand b = some s ∧ (s.sperren l).besitzer = some h) →
+      ∀ n, b ≤ n → ∃ t, n ≤ t ∧ ∃ k, ρ.hw.gelegenheit t k ∧
+        ∃ s, ρ.zeit.zustand t = some s ∧ (s.kerne k).laeuft = some h) →
     (∃ s, ρ.zeit.zustand a = some s ∧ (s.sperren l).schlange[i]? = some c) →
     (∀ s, ρ.zeit.zustand a = some s → (s.sperren l).schlange.Nodup) →
     (∀ k, a ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →

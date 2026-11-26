@@ -107,6 +107,31 @@ def SperrHalterHalten [DecidableEq L]
     ∀ (l : L) (h : Kontext), ((ρ.zeit.zustand t.val).sperren l).besitzer = some h →
       SperrHalterBereit E (ρ.zeit.zustand t.val) l h
 
+/-- **The impl bridge for lock holders (M8 Fortschrittsbein)**: the per-cut form of the
+    missing scheduling step. From the wait-free section row and the state facts of a live,
+    dispatched holder that owns its lock on a crash-free cut — its checker eligibility
+    (`SperrHalterBereit`, hence an ideal `geben` step) — plus the impl agreement (every such
+    ideal `geben` offer also fires on the implementation side with its protocol execution),
+    follows the implementation step with its execution that `SchedulerFair` needs.
+    The agreement premise is load-bearing: `E_wait` satisfies all state facts with a live,
+    dispatched, release-offering holder, yet its implementation side stays silent, so no
+    `ImplSchritt` exists there (`sperrHalterImplBereit_nichtTrivial`). -/
+def SperrHalterImplBereitAussage : Prop :=
+  ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (ρ : Maschine.Lauf E) (t : Nat) (l : L) (h : Kontext),
+    AbschnittWartefrei E →
+    (∃ s, ρ.zeit.zustand t = some s ∧ (s.sperren l).besitzer = some h ∧
+      SperrHalterBereit E s l h ∧ s.status h = .laeuft ∧
+      (∃ k, (s.kerne k).laeuft = some h) ∧ (ρ.hw.angebot t).crash = false) →
+    (∀ s w plan u, ρ.zeit.zustand t = some s →
+      E.system.ISchritt h s w [plan] u → plan.aktion = .sperre l .geben →
+      (s.sperren l).besitzer = some h →
+      ∃ u', E.system.ImplSchritt h s w [plan] u' ∧
+        ∃ spur s', FuehrtSchrittAus E.einrichtung t h s u' plan spur s') →
+    ∃ s w plan u spur s', ρ.zeit.zustand t = some s ∧
+      E.system.ImplSchritt h s w [plan] u ∧ FuehrtSchrittAus E.einrichtung t h s u plan spur s'
+
 /-- **`WaechterHalten E`: every generated guard holds on every `I` run, no reachable `I`
     cut — maximal cuts included — contains an internal deadlock or a closed waiting set, and
     every lock held under a declared hold bound stays eligible until hand-off
