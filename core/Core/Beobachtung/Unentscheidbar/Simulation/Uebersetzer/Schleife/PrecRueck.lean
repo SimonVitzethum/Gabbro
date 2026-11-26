@@ -91,11 +91,9 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     dsimp only [paar1]
     exact bleibtImBlockPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
   have hk' : (Schritt (paar1 ++ (paar2 ++ cgBlk)))^[k] (some r) = some rEnd := by
-    rw [← List.append_assoc]
-    simpa only [precRumpf, paar1, paar2] using hk
+    simpa only [precRumpf, paar1, paar2, List.append_assoc] using hk
   have hpcEnd' : rEnd.pc = (paar1 ++ (paar2 ++ cgBlk)).length := by
-    rw [← List.append_assoc]
-    simpa only [precRumpf, paar1, paar2] using hpcEnd
+    simpa only [precRumpf, paar1, paar2, List.append_assoc] using hpcEnd
   obtain ⟨j1, r1, hj1k, hrunC1, hrun1, hpc1⟩ :=
     randAusEndePrefix paar1 (paar2 ++ cgBlk) hlocal1 hlen1 hlenRest r k rEnd hpc hk' hpcEnd'
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
