@@ -82,11 +82,21 @@ theorem e2_sched : SchedulerFair E_2 ρ_2 := by
   intro a c hready _hopp n _
   by_cases hcA : c = A
   · subst hcA
-    obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := ⟨n + n % 2, by omega, by omega⟩
+    obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := by
+      rcases Nat.mod_two_eq_zero_or_one n with h | h
+      · exact ⟨n, Nat.le_refl _, h⟩
+      · refine ⟨n + 1, Nat.le_succ _, ?_⟩
+        rw [Nat.add_mod, h]
+        decide
     exact ⟨t, ht1, spur2_step_A ht2⟩
   · by_cases hcB : c = B
     · subst hcB
-      obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 1 := ⟨n + 1 - n % 2, by omega, by omega⟩
+      obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 1 := by
+        rcases Nat.mod_two_eq_zero_or_one n with h | h
+        · refine ⟨n + 1, Nat.le_succ _, ?_⟩
+          rw [Nat.add_mod, h]
+          decide
+        · exact ⟨n, Nat.le_refl _, h⟩
       exact ⟨t, ht1, spur2_step_B ht2⟩
     · obtain ⟨s, hzs, ⟨k, hdisp⟩, _, _, _⟩ := hready a (Nat.le_refl a)
       have hss : s = zs2 a := Option.some.inj (hzs.symm.trans rfl)
@@ -113,7 +123,12 @@ theorem e2_ret : VerdraengungKehrtZurueck E_2 ρ_2 := by
 theorem e2_hausricht : ∀ n, 0 ≤ n → ∃ t, n ≤ t ∧ ∃ k, ρ_2.hw.gelegenheit t k ∧
     ∃ s, ρ_2.zeit.zustand t = some s ∧ (s.kerne k).laeuft = some A := by
   intro n _
-  obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := ⟨n + n % 2, by omega, by omega⟩
+  obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := by
+    rcases Nat.mod_two_eq_zero_or_one n with h | h
+    · exact ⟨n, Nat.le_refl _, h⟩
+    · refine ⟨n + 1, Nat.le_succ _, ?_⟩
+      rw [Nat.add_mod, h]
+      decide
   refine ⟨t, ht1, 0, hw2_opp0 ht2, _, rfl, ?_⟩
   cases t with
   | zero => exact s2_0_kerne0

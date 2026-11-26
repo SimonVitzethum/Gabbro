@@ -298,21 +298,18 @@ theorem e1_ret : VerdraengungKehrtZurueck E_1 ρ_1 := by
 /-- Every even cut steps `A`. -/
 theorem spurw_step_A {t : Nat} (h : t % 2 = 0) :
     ∃ w spur, spurw t = some (.kontext A w, spur) := by
-  by_cases ht0 : t = 0
-  · subst ht0
-    exact ⟨(), _, spurw0⟩
-  · have h2 : 2 ≤ t := by omega
-    have heq : t - 2 + 2 = t := Nat.sub_add_cancel h2
-    rw [← heq]
-    exact ⟨(), _, spurw_ge2 _ (by rw [heq]; exact h)⟩
+  cases t with
+  | zero => exact ⟨(), _, spurw0⟩
+  | succ t =>
+    cases t with
+    | zero => exact absurd h (by decide)
+    | succ n => exact ⟨(), _, spurw_ge2 n h⟩
 
 /-- Every odd cut steps `B`. -/
 theorem spurw_step_B {t : Nat} (h : t % 2 = 1) :
     ∃ w spur, spurw t = some (.kontext B w, spur) := by
-  have hpos : 0 < t := by omega
-  have hge : 1 ≤ t := hpos
   cases t with
-  | zero => exact absurd hpos (by decide)
+  | zero => exact absurd h (by decide)
   | succ t =>
     cases t with
     | zero => exact ⟨(), _, spurw1⟩
@@ -325,11 +322,21 @@ theorem e1_sched : SchedulerFair E_1 ρ_1 := by
   intro a c hready _hopp n _
   by_cases hcA : c = A
   · subst hcA
-    obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := ⟨n + n % 2, by omega, by omega⟩
+    obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := by
+      rcases Nat.mod_two_eq_zero_or_one n with h | h
+      · exact ⟨n, Nat.le_refl _, h⟩
+      · refine ⟨n + 1, Nat.le_succ _, ?_⟩
+        rw [Nat.add_mod, h]
+        decide
     exact ⟨t, ht1, spurw_step_A ht2⟩
   · by_cases hcB : c = B
     · subst hcB
-      obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 1 := ⟨n + 1 - n % 2, by omega, by omega⟩
+      obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 1 := by
+        rcases Nat.mod_two_eq_zero_or_one n with h | h
+        · refine ⟨n + 1, Nat.le_succ _, ?_⟩
+          rw [Nat.add_mod, h]
+          decide
+        · exact ⟨n, Nat.le_refl _, h⟩
       exact ⟨t, ht1, spurw_step_B ht2⟩
     · obtain ⟨s, hzs, ⟨k, hdisp⟩, _, _, _⟩ := hready a (Nat.le_refl a)
       have hss := ρ_1_zustand a s hzs
