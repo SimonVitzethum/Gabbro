@@ -45,10 +45,14 @@ private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.l
     KostenGrenzen.uebertrag (ok c) install s.regionLive
   have child : g.RahmenGut { (b.form.operand (s.lokal c)).faden.anfang with fortsetzungen := [] } := by
     cases b <;> try exact g.start []
+    case zugriff z => cases z <;> exact g.start []
+    case aussen z => cases z <;> exact g.start []
     case faden z =>
       cases z <;> exact g.start []
   unfold Schrittform.faedenNach
+  dsimp only
   split
+  all_goals try exact nach_gut ok install 0
   · apply update_rahmen (update_rahmen ok (transfer _)) child
   · exact update_rahmen ok (transfer _)
   · split
@@ -56,7 +60,6 @@ private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.l
     · exact update_rahmen ok (ok c)
     · exact ok
     · exact ok
-  · exact nach_gut ok install 0
 
 private theorem ideal_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lokal c))
     (step : b.ideal c s w plans u) : g.ZustandGut u := by
@@ -94,9 +97,11 @@ theorem KostenGrenzen.startdaten (g : KostenGrenzen) (scope : Scope)
 
 /-- At every observed cut, all active and saved frames obey the cost limits if the
     three installing instructions have valid operands and site metadata. -/
-theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) {ρ : Lauf (p.einheit P)} {h : Umgebung}
-    (run : Laeufe (p.einheit P) h ρ)
-    (installs : ∀ r b, g.RahmenGut r → r.Aktiv → p.code[r.pc]? = some b → g.Einrichtung b r)
+theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.Schrankendaten Nat Rahmen)
+    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Annahme.Umgebung}
+    (run : Laeufe { p.einheit P with schranken := bounds } h ρ)
+    (installs : ∀ t s c b, ρ.zeit.zustand t = some s → g.ZustandGut s →
+      (s.lokal c).Aktiv → p.code[(s.lokal c).pc]? = some b → g.Einrichtung b (s.lokal c))
     (t : Nat) (cut : ρ.zeit.zustand t = some s) : g.ZustandGut s := by
   induction t generalizing s with
   | zero =>
@@ -129,7 +134,7 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) {ρ : Lauf (p.einheit 
           | kontext _ _ rule effect =>
             obtain ⟨b, head, instruction⟩ := rule
             obtain ⟨active, lookup⟩ := kopf_position head
-            have good := ideal_gut ok (installs _ _ (ok _) active lookup) instruction
+            have good := ideal_gut ok (installs t _ _ _ before ok active lookup) instruction
             obtain ⟨_, _, _, _, protocol, _, rfl⟩ := effect
             cases protocol <;> exact good
           | antwort _ answer =>
