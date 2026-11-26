@@ -20,7 +20,8 @@
   * progress (no hang + class progress): HYPOTHESIS `FortschrittAkzeptiertAussage` —
     the     scheduler premise `SchedulerFortschrittVoraussetzung` is open, and the
     composability leg needs `Rein` (else `ZugriffKomponierbarAussage` — now proved as
-    `zugriffKomponierbar`, but not yet wired into `einheit_fortschrittsfelder`). GAP F.
+    `zugriffKomponierbar`, but not yet wired into `einheit_fortschrittsfelder`). The slice
+    passes the two run premises (`SchedulerFair`, `VerdraengungKehrtZurueck`) through. GAP F.
   * the wait-free section row: PROVED from acceptance (`Akzeptiert` contains
     `AbschnittWartefrei`); vacuous in content while no lock instruction exists (M2).
   * the class duties and the memory/atomic kernel statements: PROVED,
@@ -85,6 +86,8 @@ def DurchstichKleinAussage (P : Katalog.Plattform) : Prop :=
       ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ →
       Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      Maschine.SchedulerFair (einheitVon P t) ρ →
+      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ →
       ∃ η : Maschine.I.Lauf (einheitVon P t),
         Maschine.I.Laeufe (einheitVon P t) η ∧ Maschine.I.Sim (einheitVon P t) ρ η ∧
         (∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c) ∧
@@ -108,8 +111,8 @@ theorem ziel_klein (P : Katalog.Plattform) : DurchstichKleinAussage P := by
     exact niAkzeptiert_rein P t rein hacc
   · intro schranken H ρ lauf
     exact schranken t hacc H ρ lauf
-  · intro fortschritt H ρ lauf fair
-    exact fortschritt P t hacc H ρ lauf fair
+  · intro fortschritt H ρ lauf fair sf ret
+    exact fortschritt P t hacc H ρ lauf fair sf ret
   · exact hacc.1.2.2.2.2.2.1
   · exact klassenAussagen
   · exact atomAussagen

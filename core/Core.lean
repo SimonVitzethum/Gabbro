@@ -35,6 +35,8 @@ public import Core.Fortschritt.SperrHilfen
 public import Core.Fortschritt.SperrSchranke
 public import Core.Fortschritt.Beispiele
 public import Core.Fortschritt.Verhungern
+public import Core.Fortschritt.Verdraengung
+public import Core.Fortschritt.VerdraengungLauf
 public import Core.Fortschritt.Sackgasse
 public import Core.Fortschritt.WarteBeispiel
 public import Core.Fortschritt.WarteBundle
@@ -245,6 +247,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Aussagen
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Beweise
+public import Core.Ast.Semantik.Runtime.Unterbrechung.BeweiseFair
 public import Core.Ast.Semantik.Runtime.Klasse.Stapel.Satz
 public import Core.Ast.Semantik.Runtime.Atom.Aussagen
 public import Core.Ast.Semantik.Runtime.Atom.Beine
@@ -299,7 +302,11 @@ public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
-public import Core.Ziel.Korrektheit.Beweise.FortschrittAkzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.Akzeptiert
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitDispatch
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.VerdraengungKonstanz
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
 public import Core.Ziel.Korrektheit.Beweise.BildGueltig
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
 public import Core.Ziel.Korrektheit.SicherheitAusTeilen

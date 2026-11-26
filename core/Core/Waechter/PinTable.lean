@@ -400,6 +400,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 9938942200593495941),
   (`Gabbro.Core.Beobachtung.SpeicherGraphKopplungAussage, 7976613592290919256),
   (`Gabbro.Core.Ast.Semantik.TabellenAussagen, 6489623228406276377),
-  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253)]
+  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253),
+  (`Gabbro.Core.Katalog.AuswahlFair, 4706462524412336189)]
 
 end Gabbro.Core.Waechter
