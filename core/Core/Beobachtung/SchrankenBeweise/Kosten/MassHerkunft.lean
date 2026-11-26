@@ -1,7 +1,7 @@
 module
 
 public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
-import Core.Ast.Program.Control
+public import Core.Ast.Program.Control
 
 public section
 
