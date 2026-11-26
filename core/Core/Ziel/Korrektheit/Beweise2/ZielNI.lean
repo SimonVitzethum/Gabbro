@@ -80,6 +80,7 @@ theorem zielNI_keine_geheime_quellfrage (P : Katalog.Plattform) (B : FormBeleg) 
     ¬ ∃ (a : (R₀ P B).Text) (E : (R₀ P B).Einheit) (q : Katalog.Frage),
       (R₀ P B).Bezeichnet a E ∧ Beobachtung.oeffentlich (E.etiketten.frage q) = false := by
   rintro ⟨a, E, q, quelle, geheim⟩
-  exact Bool.true_ne_false ((zielNI_bezeichnet_frage_oeffentlich P B quelle q).symm.trans geheim)
+  rw [zielNI_bezeichnet_frage_oeffentlich P B quelle q] at geheim
+  cases geheim
 
 end Gabbro.Core.Ziel.Korrektheit
