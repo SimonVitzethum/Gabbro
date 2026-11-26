@@ -123,6 +123,9 @@ theorem accessCode_keine_invarianten (form : Access before after) :
     simp only [accessCode, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen, Quellklauseln.leer,
       expr_keine_invarianten, List.nil_append, List.append_nil]
 
+private theorem Fragment.anhaengen_invariant (a b : Fragment) :
+    (a.anhaengen b).klauseln.invariant = a.klauseln.invariant ++ b.klauseln.invariant := rfl
+
 theorem stmt_keine_invarianten (tree : Stmt result before after) :
     (stmt tree).klauseln.invariant = [] := by
   refine @Stmt.rec result
@@ -134,7 +137,7 @@ theorem stmt_keine_invarianten (tree : Stmt result before after) :
   all_goals
     intros
     simp_all only [stmt, block, bracedBlock, variantArms, callCode, MatchCode.prepend, Bool.false_eq_true,
-      ↓reduceIte, Fragment.leer, Fragment.anhaengen, Fragment.einzel, Quellklauseln.anhaengen,
+      ↓reduceIte, Fragment.leer, Fragment.anhaengen_invariant, Fragment.einzel, Quellklauseln.anhaengen,
       Quellklauseln.leer, expr_keine_invarianten, accessCode_keine_invarianten, argsCode_keine_invarianten,
       optionCode_keine_invarianten, List.nil_append]
 
