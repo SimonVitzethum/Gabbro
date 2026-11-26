@@ -43,7 +43,9 @@ theorem forall2_gleich {α : Type} {a b : List α} {r : α → α → Prop}
 def SpeicherGraphBeobachtungsInvarianteAussage : Prop :=
   ∀ (p : Fragment) (plattform : Plattform) {h : Umgebung} {ρ : Lauf (p.einheit plattform)},
     Laeufe (p.einheit plattform) h ρ → ∀ (predictor : Praediktor) (t : Nat) (x : Ast.Semantik.Zelle),
-      ∀ s, ρ.zeit.zustand t = some s →
+      match ρ.zeit.zustand t with
+      | none => True
+      | some s =>
         HatQuelle s.graph x ↔
           SchreibSeitAbsturz x (NiedrigeBeob (p.einheit plattform) ρ predictor t)
 
@@ -54,10 +56,10 @@ theorem speicherGraphKopplung_aus_invariante
   let E := p.einheit plattform
   have inv1base := inv p plattform (h := h₁) (ρ := ρ₁) vergleich.links predictor t x
   have inv2base := inv p plattform (h := h₂) (ρ := ρ₂) vergleich.rechts predictor t x
-  have inv1 : HatQuelle v.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₁ predictor t) :=
-    inv1base v (by exact hv)
-  have inv2 : HatQuelle w.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₂ predictor t) :=
-    inv2base w (by exact hw)
+  rw [hv] at inv1base
+  rw [hw] at inv2base
+  have inv1 : HatQuelle v.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₁ predictor t) := inv1base
+  have inv2 : HatQuelle w.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₂ predictor t) := inv2base
   have len : (NiedrigeBeob E ρ₁ predictor t).length = (NiedrigeBeob E ρ₂ predictor t).length :=
     kopplung.2.2
   have cov := kopplung.1
