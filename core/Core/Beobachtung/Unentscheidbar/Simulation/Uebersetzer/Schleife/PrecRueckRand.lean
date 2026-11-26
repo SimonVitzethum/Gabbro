@@ -156,4 +156,22 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
       · dsimp only [K] at hEqJ
         exact hEqJ
 
+/-- Same boundary as `randAusEndePrefix`, but the suffix may be empty. For an
+    empty suffix the run's end is already the boundary. -/
+theorem randAusEndeOder (blkA blkB : List Befehl) (hlocal : BleibtImBlock blkA)
+    (hlenA : 0 < blkA.length) (r : Rahmen) (k : Nat) (r' : Rahmen) (hrpc : r.pc = 0)
+    (hk : (Schritt (blkA ++ blkB))^[k] (some r) = some r')
+    (hpcEnd : r'.pc = (blkA ++ blkB).length) :
+    ∃ j rA, j ≤ k ∧ (Schritt (blkA ++ blkB))^[j] (some r) = some rA ∧
+      (Schritt blkA)^[j] (some r) = some rA ∧ rA.pc = blkA.length := by
+  by_cases hlenB : 0 < blkB.length
+  · exact randAusEndePrefix blkA blkB hlocal hlenA hlenB r k r' hrpc hk hpcEnd
+  · have hnil : blkB = [] := by
+      apply List.eq_nil_of_length_eq_zero
+      exact Nat.eq_zero_of_not_pos hlenB
+    subst blkB
+    refine ⟨k, r', le_rfl, hk, ?_, ?_⟩
+    · simpa only [List.append_nil] using hk
+    · simpa only [List.append_nil] using hpcEnd
+
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
