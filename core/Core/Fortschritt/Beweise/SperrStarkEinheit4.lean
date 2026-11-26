@@ -186,10 +186,10 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
   | kontext normal bereit regel aus =>
     obtain ⟨i, _, hideal⟩ := regel
     cases i
-    change e4RegelIdeal c s w [_] _ at hideal
+    rename_i plan u
+    change e4RegelIdeal c s w [plan] u at hideal
     rcases hideal with ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
       have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
       rw [hakt] at hF
@@ -204,7 +204,6 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
         rw [hziel, hueq] at hmem hepo hant ⊢
         exact hoffen q hmem hepo hant
     · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
       have hakt : stutterPlan.aktion = .intern := rfl
       rw [hakt] at hF
