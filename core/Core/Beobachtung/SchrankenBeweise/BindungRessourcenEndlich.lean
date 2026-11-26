@@ -19,7 +19,8 @@ public import Core.Beobachtung.SchrankenBeweise.Bindung
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Schranken
 public import Core.Ziel.Korrektheit.Pruefer
-import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
+import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
+import Core.Beobachtung.Fluss.Fragment
 
 @[expose] public section
 
@@ -117,8 +118,16 @@ theorem bindungSpeicher_quelllauf (P : Plattform) (u : UnitMitSchranken)
     (lauf : Laeufe (einheitVon P u.baum) H ρ) :
     ∀ t s, ρ.zeit.zustand t = some s → (LebendeZellen s).encard ≤ n := by
   let E := einheitMitSchranken P u
-  let gebunden : Lauf E := ⟨ρ.start, ρ.hw, ρ.zeit⟩
-  have gebundenerLauf : Laeufe E H gebunden := lauf
+  have folge {hw t vor spur nach} :
+      Lauffolge (einheitVon P u.baum) hw t vor spur nach ↔ Lauffolge E hw t vor spur nach := by
+    constructor <;> intro schritt <;> cases schritt with
+    | schritt step => exact .schritt step
+  let gebunden : Lauf E := ⟨ρ.start, ρ.hw, ⟨ρ.zeit.zustand, ρ.zeit.spur, fun t => by
+    cases ρ.zeit.takt t with
+    | schritt label step => exact .schritt label (folge.mp step)
+    | wartet label gleich ruhe =>
+      exact .wartet label gleich (fun spur nach step => ruhe spur nach (folge.mpr step))⟩⟩
+  have gebundenerLauf : Laeufe E H gebunden := ⟨lauf.1, lauf.2.1, lauf.2.2.1, lauf.2.2.2⟩
   have pflichten : RessourcenPflichten E :=
     ⟨bindungRessourcenStart P u, bindungRessourcenRegel_ohneStapel P u offen,
       bindungRessourcenProtokoll_endlich P u⟩
@@ -134,25 +143,10 @@ theorem bindungSpeicher_quelllauf_erfuellbar :
       Annahme.Akzeptiert (einheitVon P u.baum) ∧ Laeufe (einheitVon P u.baum) H ρ ∧
       (∃ s, ρ.zeit.zustand 0 = some s) ∧
       ∀ t s, ρ.zeit.zustand t = some s → (LebendeZellen s).encard ≤ 0 := by
-  let P := Plattform.x86_64
-  let u : UnitMitSchranken := ⟨trivialUnit, { speicher := some 0 }⟩
-  have akzeptiert : Annahme.Akzeptiert (einheitVon P u.baum) := by
-    unfold einheitVon elaborieren
-    apply Fragment.akzeptiert_ohne_bedarf
-    · rfl
-    · intro b present
-      change b ∈ ([Befehl.starte mainName, Befehl.ende] : List Befehl) at present
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-      rcases present with rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
-    · intro b present frame
-      change b ∈ ([Befehl.starte mainName, Befehl.ende] : List Befehl) at present
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-      rcases present with rfl | rfl <;> rfl
-  obtain ⟨H, start, hw, zul, _, fair, z, geladen, _⟩ := trivial_start_bereit
-  obtain ⟨ρ, lauf, startEq, _⟩ := fairer_lauf (einheitVon P u.baum) zul fair
-  refine ⟨P, u, H, ρ, rfl, rfl, akzeptiert, lauf, ⟨z, ?_⟩,
+  obtain ⟨P, t, H, ρ, akzeptiert, lauf⟩ := VerfeinerungAkzeptiertAussage.erfuellbar
+  let u : UnitMitSchranken := ⟨t, { speicher := some 0 }⟩
+  have geladen := fragment_geladen (fragment .unit t) P lauf.1 lauf.2.2.1
+  exact ⟨P, u, H, ρ, rfl, rfl, akzeptiert, lauf, ⟨_, lauf.2.2.2.trans geladen⟩,
     bindungSpeicher_quelllauf P u rfl rfl lauf⟩
-  rw [lauf.2.2.2, startEq]
-  exact geladen
 
 end Gabbro.Core.Beobachtung
