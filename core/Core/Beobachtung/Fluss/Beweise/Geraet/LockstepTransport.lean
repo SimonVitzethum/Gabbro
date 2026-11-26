@@ -391,4 +391,60 @@ theorem geraete_interrupt_schliesst_kontext_aus
   rw [hres.2.1] at geleg
   cases geleg
 
+/-- At a state with the single-run device invariant, at most one answer can be offered at a
+    cut: an offered answer matches the unique unmatched question, and the policy fixes its reply. -/
+theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
+    {s : State} {kat : Katalog.Katalog} {run : HwLauf} {t : Nat}
+    {a a' : AntwortEreignis}
+    (inv : GeraeteInvariantAussage binding s)
+    (offered : s.AntwortAngeboten kat run t a)
+    (offered' : s.AntwortAngeboten kat run t a') : a = a' := by
+  obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
+  obtain ⟨hcut, herlaubt, henthaelt, hfrage, hfrisch⟩ := offered
+  obtain ⟨hcut', herlaubt', henthaelt', hfrage', hfrisch'⟩ := offered'
+  obtain ⟨q0, hq0mem, hq0cut, hzu0⟩ := hfrage
+  obtain ⟨q1, hq1mem, hq1cut, hzu1⟩ := hfrage'
+  have hwiderlege (halle : ∀ q ∈ s.fragen, s.epoche ≤ q.cut → ∃ e ∈ s.antworten, e.zu q) : False := by
+    obtain ⟨e, hemem, hzue⟩ := halle q0 hq0mem hq0cut
+    exact hfrisch e hemem (hzue.2.2.1.symm.trans hzu0.2.2.1)
+  by_cases hB : s.buchung.geraet = (startBuchung binding.object binding.handle).geraet
+  · obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hB
+    by_cases hp : (s.lokal entryContext).pending = none
+    · exact (hwiderlege (hidle hp)).elim
+    · cases hbusy hp with
+      | inl hbb => exact (hwiderlege hbb.2.2.2).elim
+      | inr hub =>
+        obtain ⟨hnm, hverb, hex⟩ := hub
+        have htake : s.fragen.take (s.antworten.length + 1) = s.fragen := by
+          rw [← hnm]
+          exact List.take_length _
+        have hfa := geraete_antwort_erklaert_letzte_frage hnm hrange hfwd hq0mem hzu0 hfrisch
+        have hfa' := geraete_antwort_erklaert_letzte_frage hnm hrange hfwd hq1mem hzu1 hfrisch'
+        rw [htake] at hfa hfa'
+        have hn : s.antworten.length < s.fragen.length := by rw [hnm]; omega
+        have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]) (by simpa only [hnm])
+        have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]) (by simpa only [hnm])
+        have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]⟩ = a := by
+          simp only [List.getElem_append_right]
+        have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]⟩ = a' := by
+          simp only [List.getElem_append_right]
+        rw [hgeta] at hzua
+        rw [hgeta'] at hzua'
+        have hqeq : s.fragen.get ⟨s.antworten.length, by simpa only [hnm]⟩ = s.fragen.get ⟨s.antworten.length, by simpa only [hnm]⟩ := rfl
+        have hinst : a.questionInstance = a'.questionInstance :=
+          hzua.2.2.1.symm.trans hzua'.2.2.1
+        have hctx : a.context = a'.context :=
+          hzua.2.1.symm.trans (congrArg (fun q : FrageEreignis => q.context) hqeq).trans hzua'.2.1
+        have hquest : a.question = a'.question := by
+          exact hzua.2.2.2.symm.trans ((congrArg (fun q : FrageEreignis => q.question) hqeq).trans hzua'.2.2.2)
+        have hreply : a.reply = a'.reply := by
+          have hpol := herlaubt.2
+          have hpol' := herlaubt'.2
+          rw [hcut, hcut', hquest] at hpol hpol'
+          exact Option.some.inj (hpol.symm.trans hpol')
+        exact ⟨hcut.trans hcut'.symm, hctx, hinst, hquest, hreply⟩
+  · obtain ⟨hbuch, hpending, hcutalt⟩ := hpost hB
+    have hqalt := hcutalt q0 hq0mem
+    omega
+
 end Gabbro.Core.Beobachtung
