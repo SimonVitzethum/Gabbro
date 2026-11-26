@@ -118,10 +118,10 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   obtain ⟨_, plan', hplans', rule₂'⟩ := geraete_kontext_regel ruleEq regel₂
                   rcases geraete_rule_faelle rule₂' with hcase | hcase
                   · obtain ⟨owned, idle, _⟩ := hcase
-                    exact (geraete_issue_schliesst_ankunft_aus (d := d) hinv₂ owned idle
+                    exact (geraete_issue_schliesst_ankunft_aus (d := d) (target := target) hinv₂ owned idle
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                   · obtain ⟨owned, pending, answer, ready, _, _⟩ := hcase
-                    exact (geraete_consume_schliesst_ankunft_aus (d := d) hinv₂ owned pending ready
+                    exact (geraete_consume_schliesst_ankunft_aus (d := d) (target := target) hinv₂ owned pending ready
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                 | interrupt keinAbsturz₂ enters₂ =>
                   obtain ⟨kk, irq, c₂, nmi, _, pend₂, _, _, _, _, _⟩ := enters₂
@@ -135,8 +135,11 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   rw [crash₂.1.2] at hkein₂
                   cases hkein₂
                 | antwort hkein₂' h2 =>
-                  obtain ⟨a', offered₂', spurEq₂', append₂, stateEq₂⟩ := h2
-                  have aeq : a' = a := geraete_antwort_eindeutig (d := d) hinv₂ offered₂' offered₂
+                  have offered₂' := h2.1
+                  have spurEq₂' := h2.2.1
+                  have append₂ := h2.2.2.1
+                  have stateEq₂ := h2.2.2.2
+                  have aeq := geraete_antwort_eindeutig (d := d) hinv₂ offered₂' offered₂
                   have hbeob₁ := geraete_antwort_beob_tick (predictor := predictor) hlabel hz₁ hn₁ h1typ
                   have hbeob₂ : schrittBeob ρ₂ predictor t = aussenBeob (d.unit locals) (.antwort a) := by
                     rw [← aeq]
