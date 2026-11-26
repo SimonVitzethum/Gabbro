@@ -162,8 +162,6 @@ theorem precEndeZweiSchritte (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahm
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
       some (natVal (y + 1))
     rw [updateHit]
-    congr 1
-    exact packAddSucc y
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 3) =
       some (natVal 1)
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 2))]
@@ -185,6 +183,7 @@ theorem precEndeRueckSchritt (cgBlk : List Befehl) (aus frei : Nat) (rE2 : Rahme
   change Schritt (precSchleife cgBlk aus frei) (some rE2) = some { rE2 with pc := 0 }
   simp only [Schritt, g, Befehl.auswerten]
   rw [hrE2pc]
+  rw [Nat.sub_self]
 
 /-- The last three instructions of the loop increment the counter and jump back
     to its first instruction. -/
