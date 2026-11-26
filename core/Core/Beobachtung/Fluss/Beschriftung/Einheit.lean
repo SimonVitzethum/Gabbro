@@ -55,10 +55,8 @@ theorem Fragment.beschriftet_fluss_lokal (p : Fragment) (platform : Plattform) (
         (f.ideal_privat (rein f (kopf_mem (code := p.code) rechts.1)) c v₂ w₂ [p₂] u₂).1 rechts.2
       rw [(List.cons.inj transfer₁.1).1, (List.cons.inj transfer₂.1).1, transfer₁.2, transfer₂.2]
       obtain ⟨lokale, ende, initial, rechte, leihen, antwort⟩ := gleich
-      have hplan : f.plan (v₁.lokal c) 0 = f.plan (v₂.lokal c) 0 := by
-        have hlok : v₁.lokal = v₂.lokal :=
-          funext fun d => lokale d ⟨0, Nat.zero_lt_succ _⟩ rfl
-        rw [hlok]
+      have hplan : f.plan (v₁.lokal c) 0 = f.plan (v₂.lokal c) 0 :=
+        f.plan_privat_unabhaengig (rein f (kopf_mem (code := p.code) links.1)) _ _ _
       refine ⟨⟨?_, ende, initial, rechte, leihen, antwort⟩, by rw [hplan], rfl⟩
       have region : Zustand.regionLive v₁ = Zustand.regionLive v₂ := by
         funext slot
