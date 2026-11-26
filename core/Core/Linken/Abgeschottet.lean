@@ -95,10 +95,18 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
     | kontext _ _ rule execute =>
       obtain ⟨b, head, transfer⟩ := rule
       have head' : kopf (verknuepfteFragmente plan).code s c = some b := head
-      obtain ⟨rfl, rfl⟩ := b.vollzug_genau (h := Or.inl rfl) (w := w) transfer execute
-        (hpriv b (kopf_mem head'))
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+      obtain ⟨rfl, _, _, hfragen, hantworten, _, _, _, _, hbuchung, _, _, _, hepoch, _, _⟩ := b.vollzug_genau_privat (hpriv b (kopf_mem head')) (w := w) transfer execute
+      obtain ⟨_, hnach⟩ := (b.impl_privat (hpriv b (kopf_mem head')) c s w _ _).1 transfer
+      have hb : next.buchung = s.buchung := by simp only [hbuchung, hnach, Befehl.nach]
+      refine ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [], ?_, fun _ mem => (List.not_mem_nil mem).elim⟩, ?_⟩
+      · rw [hb]
+        exact (List.append_nil _).symm
+      · intro h
+        have e1 : next.fragen = s.fragen := by simp only [hfragen, hnach, Befehl.nach]
+        have e2 : next.antworten = s.antworten := by simp only [hantworten, hnach, Befehl.nach]
+        have e3 : next.epoche = s.epoche := by simp only [hepoch, hnach, Befehl.nach]
+        simp only [OffeneGriffeEigen, e1, e2, e3, hb, AussengriffeEigen] at h ⊢
+        exact h
   · intro run conforms
     change (∀ pred ∈ (verknuepfteFragmente plan).klauseln.voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (verknuepfteFragmente plan).klauseln.invariant, _) ∧
