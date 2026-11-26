@@ -106,7 +106,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
               | schritt impl₂ =>
                 have hinv₂ : GeraeteInvariantAussage d.binding s₂ :=
                   geraete_lauf_invariante vergleich.rechts t hz₂
-                obtain ⟨hfragen, hverlauf, hantworten, _, _⟩ :=
+                obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
                   geraeteKopplung_ledger hkopp hz₁ hz₂
                 have hepoche := ((geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂).2.1
                 have offered₂ : s₂.AntwortAngeboten (d.unit locals).katalog ρ₂.hw t a :=
@@ -146,7 +146,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     exact geraete_antwort_beob_tick (predictor := predictor)
                       (by simpa using lab₂) hz₂ hn₂ h2
                   have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
-                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
                     let L₁ := NiedrigeBeob (d.unit locals) ρ₁ predictor t
                     let L₂ := NiedrigeBeob (d.unit locals) ρ₂ predictor t
@@ -210,7 +209,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     unfold AntwortSicht
                     rw [hn1naechste, hn2naechste]
                     simp only [Zustand.naechsteAntwort, Zustand.angekommen, Zustand.antwort,
-                      hantworten, aeq]
+                      hantworten, hverbraucht, hverworfen, aeq]
                   refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · intro v w hv hw
                     subst v
