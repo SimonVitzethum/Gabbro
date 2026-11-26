@@ -63,15 +63,17 @@ private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
       g.Felder k.zaehler k.obergrenzen k.funktion k.mass := ok.2
   unfold Rahmen.ruf
   cases bind <;> simp only [Id.run]
+  cases bind <;> simp only [Id.run]
+  all_goals repeat' first | exact ok | split
   all_goals
-    repeat' first
-    | exact ok
-    | refine ⟨⟨fun _ _ h => by cases h, fun _ _ h => by cases h, fun _ h => by cases h⟩, ?_⟩
-      intro k mem
+    refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+    · intro _ _ h; cases h
+    · intro _ _ h; cases h
+    · intro _ h; cases h
+    · intro k mem
       rcases List.mem_cons.mp mem with rfl | tail
       · exact ok.1
       · exact saved k tail
-    | split
 
 private theorem KostenGrenzen.eintrittArgumente {entry : Rahmen} {types : List (Ty .value)}
     (ok : g.RahmenGut r) (prepared : r.eintrittArgumente types = some entry) :
