@@ -135,7 +135,8 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         randAusEndeMitRef (rfindPaar frei) (cfBlk ++ rfindRest cfBlk aus frei) hlenRest
           r kp rp hpc hrunP hpcPaarEnde schr rEnd hrunComp hpcEndComp
       have htail : (Schritt (rfindSchleife cfBlk aus frei))^[schr - kp] (some rp) = some rEnd := by
-        rw [show schr = kp + (schr - kp) by omega, Function.iterate_add_apply, hrunPAll] at hrun
+        rw [show schr = (schr - kp) + kp by omega] at hrun
+        rw [Function.iterate_add_apply, hrunPAll] at hrun
         exact hrun
       let rp0 : Rahmen := { rp with pc := 0 }
       have hmit : mitPc (rfindPaar frei).length rp0 = rp := by
