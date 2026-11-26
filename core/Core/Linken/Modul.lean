@@ -32,7 +32,7 @@ structure Modul where
 def Modul.fragment (m : Modul) : Fragment :=
   match m.inhalt with
   | .roh p => p
-  | .quelle category tree => fragment category tree
+  | .quelle category tree => Semantik.fragment category tree
   | .bibliothek tree => (unitBody tree.2).anhaengen (.einzel .ende)
   | .mitInvarianten u => programmMitInvarianten u
 
@@ -227,7 +227,7 @@ def kontrollflussAbgeschottet (plan : Bauplan) : Bool :=
 def annahmenKompatibel (plan : Bauplan) : Bool :=
   plan.module.all fun m => klauselnLeer m.fragment
 
-/-- The declarative link check: names unique, imports resolved, entry and edges valid,
+/-- The declarative link check: source origin, names unique, imports resolved, entry and edges valid,
     defined functions unique, every call resolved with a fitting signature, every export
     defined, no module carries written clauses, and control flow is sealed: no
     fall-through out of a non-final module, every static jump target inside its own
