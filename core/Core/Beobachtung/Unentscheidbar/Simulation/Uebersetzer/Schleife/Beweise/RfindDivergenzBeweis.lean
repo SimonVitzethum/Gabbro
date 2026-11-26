@@ -1,6 +1,6 @@
 module
 
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIterationRun
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindIterationRun
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
 
 @[expose] public section
@@ -31,7 +31,7 @@ theorem rfindDivergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       intro t
       induction t with
       | zero =>
-        refine ⟨0, by omega, r, by simp, hpc, ha, hm, hy⟩
+        refine ⟨0, by omega, r, by simp only [Function.iterate_zero_apply], hpc, ha, hm, hy⟩
       | succ t ih =>
         obtain ⟨K, hKge, rt, hrun, rpc, ra, rm, ry⟩ := ih
         have hdef : ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a (m + t)) = Part.some v :=

@@ -237,10 +237,10 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeStark
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindSchleifeLage
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindSchleifeLage
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindExit
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIteration
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIterationRun
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindIteration
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindIterationRun
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindDivergenzBeweis
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindKonvergenzBeweis
 public import Core.Beobachtung.SchrankenBeweise.Leicht
