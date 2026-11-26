@@ -57,9 +57,11 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
   have hlenI : 0 < I.length := by
     dsimp only [I]
     simp only [List.length_cons, List.length_nil]
+    omega
   have hlenS : 0 < S.length := by
     dsimp only [S]
     rw [precSchleifeLaenge]
+    omega
   have hprecBlk : precBlk cfBlk cgBlk ein aus frei freiL freiCf = P ++ S := by
     dsimp only [P, S, I, L, R]
     rw [precBlk]
@@ -90,7 +92,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
         n r hpc hr a k ha hk
     let rLR0 : Rahmen := { rLR with pc := 0 }
-    have hrLR0a : rLR0.temp (frei + 0) = Part.some (natVal a) := hrLRa
+    have hrLR0a : rLR0.temp (frei + 0) = some (natVal a) := hrLRa
     obtain ⟨kC, rC, hrunC, hpcC, hrCaus, hpresC, hlokC, hrueckC, hstoppC⟩ :=
       (hcfNr a rLR0 rfl hrLR0a).1 v0 hcfEval
     have hbleibC := laufBleibtVorEnde cfBlk rLR0 kC rC hrunC hpcC
@@ -119,16 +121,17 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         simp only [List.length_cons, List.length_nil]))
     have eI : (Schritt (((L ++ R) ++ cfBlk) ++ I))^[1] (some rCcomp) =
         some (rCcomp.schreibe (frei + 2) (some (natVal 0))) := by
-      simpa only [Rahmen.schreibe] using
+      simpa only [Rahmen.schreibe, Function.iterate_one] using
         (schrittLiteral (((L ++ R) ++ cfBlk) ++ I) rCcomp rCcomp.pc (frei + 2) 0 rfl hgetI)
     let rI := rCcomp.schreibe (frei + 2) (some (natVal 0))
     have hrunI : (Schritt P)^[kC + 1] (some rLR) = some rI := by
       dsimp only [P]
-      rw [Function.iterate_add_apply, hcompC, eI]
+      rw [show kC + 1 = 1 + kC by omega, Function.iterate_add_apply, hcompC, eI]
     have hpI : rI.pc = P.length := by
-      dsimp only [rI, P, I]
-      simp only [Rahmen.schreibe, mitPc, List.length_append, List.length_cons, List.length_nil]
+      simp only [rI, rCcomp, P, I, Rahmen.schreibe, mitPc, List.length_append,
+        List.length_cons, List.length_nil]
       rw [hpcC]
+      omega
     have hrunFullI : (Schritt (P ++ S))^[kC + 1] (some rLR) = some rI :=
       laufImAnhang P S rLR (kC + 1) rI hrunI hpI
     let rI0 : Rahmen := { rI with pc := 0 }
