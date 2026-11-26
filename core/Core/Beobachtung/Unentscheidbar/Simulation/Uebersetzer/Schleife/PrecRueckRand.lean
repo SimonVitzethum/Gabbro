@@ -61,7 +61,6 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
     refine ⟨t, rEnd, le_rfl, hk, ?_⟩
     rw [hpcEnd]
     omega
-  let Nat.find hQ := Nat.find hQ
   rcases Nat.find_spec hQ with ⟨rJ, hs0t, hrunJ, hgeJ⟩
   have hkle : ∀ s, s < Nat.find hQ → ∀ rs,
       (Schritt (pre ++ mid ++ post))^[s] (some (mitPc pre.length r0)) = some rs → rs.pc < K := by
