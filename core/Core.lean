@@ -225,6 +225,8 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueck
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindSchleifeLage
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindFalsch
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
