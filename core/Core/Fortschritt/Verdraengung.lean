@@ -111,11 +111,8 @@ theorem gueltigV (i : Nat) :
       cases hc
     · intro c hc
       have hc0 : c = 0 := by
-        cases c with
-        | zero => rfl
-        | succ n =>
-          simp only [decide_eq_true_eq] at hc
-          exact absurd hc (Nat.succ_ne_zero n)
+        simp only [angebotV, decide_eq_true_eq] at hc
+        exact hc
       subst hc0
       exact Nat.zero_lt_succ 0
     · intro sig hmem
@@ -142,11 +139,8 @@ theorem gueltigV (i : Nat) :
       exact Nat.zero_lt_succ 0
     · intro c hc
       have hc0 : c = 0 := by
-        cases c with
-        | zero => rfl
-        | succ n =>
-          simp only [decide_eq_true_eq] at hc
-          exact absurd hc (Nat.succ_ne_zero n)
+        simp only [angebotV, decide_eq_true_eq] at hc
+        exact hc
       subst hc0
       exact Nat.zero_lt_succ 0
     · intro sig hmem
@@ -154,10 +148,10 @@ theorem gueltigV (i : Nat) :
       rw [hmem]
       exact ⟨by rw [HV1]; exact Nat.zero_lt_succ 0, hsupV⟩
     · intro e he
-      simpa only [decide_eq_true_eq] using he
+      simpa only [angebotV, decide_eq_true_eq] using he
     · intro h
       rcases h with h | h
-      · simpa only [decide_eq_true_eq] using h
+      · simpa only [angebotV, decide_eq_true_eq] using h
       · cases h
 
 /-- The witness history is fair. -/
