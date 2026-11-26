@@ -39,8 +39,32 @@ theorem bezeichnet_spracheinheit_iff (P : Katalog.Plattform) (a : Text.RawText) 
   · rintro ⟨E, h⟩
     exact ⟨⟨E, bezeichnet_herkunft h⟩, h⟩
 
-/-- Retagging existing runs with their whole-unit origin preserves acceptance, implementation and ideal run
-    membership, and the simulation relation at the same runs. Both tags use the same underlying unit. -/
+/-- Changing the tag of either kind of run preserves the dependent run payload. An existing tagged run has
+    a tag in the construction image exactly when its machine unit has a whole-unit origin. -/
+def spracheinheit_tag (F : Ast.Semantik.Einheit → Type) :
+    (Σ E : Spracheinheit, F E.val) ≃ { r : Σ E : Ast.Semantik.Einheit, F E // EinheitHerkunft r.1 } where
+  toFun := fun ⟨E, r⟩ => ⟨⟨E.val, r⟩, E.property⟩
+  invFun := fun ⟨⟨E, r⟩, h⟩ => ⟨⟨E, h⟩, r⟩
+  left_inv := by
+    rintro ⟨⟨E, h⟩, r⟩
+    rfl
+  right_inv := by
+    rintro ⟨⟨E, r⟩, h⟩
+    rfl
+
+/-- The dispatch convention is shared by all three whole-unit constructions. -/
+theorem herkunft_fertig_ohne_kopf {E : Ast.Semantik.Einheit} (h : EinheitHerkunft E)
+    (s : Ast.Semantik.Zustand) (c : Maschine.Kontext) (kopf : E.system.kopf s c = none) :
+    E.system.fertig s c := by
+  cases h <;> exact kopf
+
+/-- The accepted counterexample with an injected rule table is outside the construction image. -/
+theorem lueckenEinheit_ohne_herkunft : ¬ EinheitHerkunft lueckenEinheit := by
+  intro h
+  exact herkunft_fertig_ohne_kopf h (Maschine.I.start lueckenEinheit lueckenStart).2 (.faden 0) rfl
+
+/-- On the construction image the existing frame relations reduce to the same acceptance, run membership
+    and simulation at every run with those tags. -/
 theorem spracheinheit_lauftransport (P : Katalog.Plattform) (B : FormBeleg) (E : Spracheinheit)
     (H : Katalog.Umgebung) (ρ : Maschine.Lauf E.val) (ι : Maschine.I.Lauf E.val) :
     ((R₀ P B).Akzeptiert E.val ↔ Annahme.Akzeptiert E.val) ∧
@@ -86,5 +110,15 @@ theorem ideal_spracheinheit (zugriff : ZugriffZielAussage) (link : IdealVerlinkt
   | quelle P t => exact ideal_akzeptierte_einheit zugriff P t
   | mitInvarianten P u => exact ideal_quelleinheit zugriff _ P (Or.inl ⟨u, rfl⟩)
   | verlinkt plan p h => exact link plan p h akzeptiert
+
+/-- With the access-class proofs, the linked case is precisely what remains of the universal ideal leg.
+    The converse uses the inclusion of every successful link, regardless of its classes. -/
+theorem ideal_spracheinheit_iff (zugriff : ZugriffZielAussage) :
+    (∀ E : Spracheinheit, Annahme.Akzeptiert E.val →
+      Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
+      Maschine.I.Fortschritt E.val.einrichtung E.val.system) ↔ IdealVerlinkteEinheitAussage := by
+  refine ⟨?_, ideal_spracheinheit zugriff⟩
+  intro ideal plan p h akzeptiert
+  exact ideal ⟨p.einheit plan.plattform, .verlinkt plan p h⟩ akzeptiert
 
 end Gabbro.Core.Ziel.Korrektheit
