@@ -158,8 +158,8 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                     obtain ⟨binding, access, required, target, ruleEq, hbind⟩ :=
                       geraete_rule_binding locals d
                     obtain ⟨_, plan', hplans', rule₂⟩ := geraete_kontext_regel ruleEq regel₂
-                    have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] _ := by
-                      simpa only [hplans'] using regel₂
+                    have regel₂' := regel₂
+                    rw [hplans'] at regel₂'
                     have keinAbsturz₁ : (ρ₁.hw.angebot t).crash = false := by
                       rw [hang]
                       exact keinAbsturz₂
