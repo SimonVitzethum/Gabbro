@@ -81,15 +81,10 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
   let I := [(.literal (frei + 2) 0 : Befehl)]
   let S := precSchleife cgBlk aus frei
   let P := ((precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL) ++ cfBlk) ++ I
-  have hL : BleibtImBlock (precBlkLinks ein frei freiL) := by
-    rw [precBlkLinksGleich ein frei freiL]
-    exact precBlkLinksBleibt ein frei freiL
-  have hR : BleibtImBlock (precBlkRechts ein frei freiL) := by
-    rw [precBlkRechtsGleich ein frei freiL]
-    exact precBlkRechtsBleibt ein frei freiL
-  have hvR : VerschiebbaresProgramm (precBlkRechts ein frei freiL) := by
-    rw [precBlkRechtsGleich ein frei freiL]
-    exact precBlkRechtsVerschiebbar ein frei freiL
+  have hL : BleibtImBlock (precBlkLinks ein frei freiL) := precBlkLinksBleibt ein frei freiL
+  have hR : BleibtImBlock (precBlkRechts ein frei freiL) := precBlkRechtsBleibt ein frei freiL
+  have hvR : VerschiebbaresProgramm (precBlkRechts ein frei freiL) :=
+    precBlkRechtsVerschiebbar ein frei freiL
   have hI : BleibtImBlock I := by
     dsimp only [I]
     exact bleibtImBlockPrecInit frei
@@ -315,8 +310,12 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hrunQ' : (Schritt (precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL ++ cfBlk))^[jI] (some r) = some rQ := by
       change (Schritt Q)^[jI] (some r) = some rQ
       exact hrunQ
+    have hlenLR : 0 < (precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL).length := by
+      rw [List.length_append, precBlkLinksLaenge, precBlkRechtsLaenge]
+      omega
     obtain ⟨jC, rLR, hjCk, hrunCcomp, hrunLR, hpcLR⟩ :=
-      randAusEndePrefix (precBlkLinks ein frei freiL) (precBlkRechts ein frei freiL) hL hlenL hlenR r jI rQ hpc hrunQ' hpcQ_LR'
+      randAusEndeOder (precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL) cfBlk
+        hLR hlenLR r jI rQ hpc hrunQ' hpcQ_LR'
     obtain ⟨a, kk, haeval, hkeval, hrLRa0, hrLRk0, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
       zweiEingaengeRueck (precBlkLinks ein frei freiL) (precBlkRechts ein frei freiL) .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
         (precBlkLinksKorrekt ein frei freiL (by omega) (by omega) (by omega))
