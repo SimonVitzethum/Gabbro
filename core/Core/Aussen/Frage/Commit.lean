@@ -79,4 +79,20 @@ theorem Antwort.commitGueltig_nicht_leer (p : Plattform) (q : Frage) (a : Antwor
     exact (by simpa only [leer, List.not_mem_nil] using frisch t mem)
   | inr stabil => exact ninstabil (stabil t mem)
 
+/-- **Validity at commit of an atomic answer is decided by its own guard.** The answer-level
+    evidence of `commitGueltig` and the snapshot-level `GueltigBeiCommit` coincide at the answer's
+    commit: the fresh branch is the same-snapshot check, the stability branch is shared. This is the
+    non-IRQ same-event case; it does not claim that an earlier answer stays valid after the
+    outside changed. -/
+theorem Antwort.commitGueltig_atomar_iff {p : Plattform} {s : AussenSicht} {q : Frage} {a : Antwort}
+    (antwort : atomar p s q = .antwort a) (erfolg : a.result.isOk = true) :
+    Antwort.commitGueltig p q a ↔ GueltigBeiCommit p s q := by
+  constructor
+  · intro g
+    cases g with
+    | inl _ => exact atomar_gueltig antwort erfolg
+    | inr stab => exact GueltigBeiCommit.stabil stab
+  · intro _g
+    exact Antwort.commitGueltig_von_atomar antwort erfolg
+
 end Gabbro.Core.Katalog
