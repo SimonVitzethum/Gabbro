@@ -36,22 +36,21 @@ theorem forall2_gleich {α : Type} {a b : List α} {r : α → α → Prop}
   | nil => rfl
   | cons head tail ih => rw [heq head, ih]
 
-/-- The single-run invariant that closes the graph coupling. Difficulty: schwer. The crash case must
-     reset the observed write set; a plain prefix reading is false because a restart rebuilds the graph
-     while the low trace keeps its whole history. The graph-side step is `hatQuelle_nach_viele`; the
-     observation-side step needs the low trace's write events to come only from `spur.speicher`. -/
-def SpeicherGraphBeobachtungsInvarianteAussage : Prop :=
-  ∀ (p : Fragment) (plattform : Plattform) {h : Umgebung} {ρ : Lauf (p.einheit plattform)},
-    Laeufe (p.einheit plattform) h ρ → ∀ (predictor : Praediktor) (t : Nat) (x : Ast.Semantik.Zelle),
-      match ρ.zeit.zustand t with
-      | none => True
-      | some s =>
-        HatQuelle s.graph x ↔
-          SchreibSeitAbsturz x (NiedrigeBeob (p.einheit plattform) ρ predictor t)
-
-/-- The graph coupling follows from the invariant and the prefix equality already carried by `Kopplung`. -/
+/-- The graph coupling follows from one single-run invariant and the prefix equality already carried
+     by `Kopplung`. The invariant is left as a hypothesis: for a public cell, `HatQuelle` of the graph
+     at a cut equals a public write of that cell observed after the last crash boundary. Difficulty:
+     schwer. The crash case resets the graph but not the low trace, so a plain prefix reading is false;
+     the graph-side step is `hatQuelle_nach_viele`, the observation-side step needs the low trace's
+     write events to come only from `spur.speicher`. -/
 theorem speicherGraphKopplung_aus_invariante
-    (inv : SpeicherGraphBeobachtungsInvarianteAussage) : SpeicherGraphKopplungAussage := by
+    (inv : ∀ (p : Fragment) (plattform : Plattform) {h : Umgebung} {ρ : Lauf (p.einheit plattform)},
+      Laeufe (p.einheit plattform) h ρ → ∀ (predictor : Praediktor) (t : Nat) (x : Ast.Semantik.Zelle),
+        match ρ.zeit.zustand t with
+        | none => True
+        | some s =>
+          HatQuelle s.graph x ↔
+            SchreibSeitAbsturz x (NiedrigeBeob (p.einheit plattform) ρ predictor t)) :
+    SpeicherGraphKopplungAussage := by
   intro p plattform h₁ h₂ ρ₁ ρ₂ vergleich predictor t kopplung v w hv hw x hpub
   let E := p.einheit plattform
   have inv1base := inv p plattform (h := h₁) (ρ := ρ₁) vergleich.links predictor t x
