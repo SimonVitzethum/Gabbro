@@ -128,4 +128,9 @@ theorem NeustartVerwirft_nichtTrivial :
       ⟨entryContext, 0, daten, fun _ _ => 0, id⟩
     exact ⟨w, entryContext, Option.some_ne_none q⟩
 
+/-- The pinned crash statement, closed by the declared-clearing preservation lemma. -/
+theorem geraeteAbsturzInvariant : GeraeteAbsturzInvariantAussage (k := k) := by
+  intro _ _ _ _ _ leer inv cut
+  exact geraete_absturz_invariant_mit_neustart leer inv cut
+
 end Gabbro.Core.Beobachtung
