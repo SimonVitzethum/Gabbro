@@ -74,16 +74,8 @@ def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
   (∃ next, SperrSchritt .geben c (s.sperren ()) next ∧ es = [wGebenPlan] ∧ u = s) ∨
   (es = [stutterPlan] ∧ u = s)
 
-/-- The ideal rule has no acquisition: every ideal cut starts free and stays free. The
-    implementation rule below carries the ticket/take/hand-off steps of the witness run. -/
-def e4RegelIdeal (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
-    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
-    Prop :=
-  (∃ next, SperrSchritt .geben c (s.sperren ()) next ∧ es = [wGebenPlan] ∧ u = s) ∨
-  (es = [stutterPlan] ∧ u = s)
-
 def e4System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-  ⟨fun _ => ⟨e4Regel, e4RegelIdeal⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+  ⟨fun _ => ⟨e4Regel, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
 /-- The implementation loader returns a free lock with tickets for A and B: no holder is seeded,
     and the holder of the run arises only by an admitted take. All vectors are masked and an NMI
@@ -171,9 +163,9 @@ theorem e4_impl_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
 theorem e4_regel_lokal (i : Unit) : RegelLokal E_4 i := by
   intro c s u w plan h
   cases i
-  change e4RegelIdeal c s w [plan] u at h
-  have hrule : e4RegelIdeal c s w [plan] u := h
-  rcases hrule with ⟨_, _, hpeq, _⟩ | ⟨hpeq, _⟩
+  change e4Regel c s w [plan] u at h
+  have hrule : e4Regel c s w [plan] u := h
+  rcases hrule with ⟨_, ⟨_, _, hpeq, _⟩ | ⟨_, _, hpeq, _⟩⟩ | ⟨_, _, hpeq, _⟩ | ⟨hpeq, _⟩
   all_goals
     obtain rfl := (List.cons.inj hpeq).1
     exact ⟨fun x hx => (List.not_mem_nil hx).elim,
@@ -187,35 +179,21 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
     obtain ⟨i, _, hideal⟩ := regel
     cases i
     rename_i ustate plan _
-    change e4RegelIdeal c s w [plan] ustate at hideal
-    rcases hideal with ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
-    · obtain rfl := (List.cons.inj hpeq).1
+    change e4Regel c s w [plan] ustate at hideal
+    rcases hideal with ⟨_, ⟨_, _, hpeq, rfl⟩ | ⟨_, _, hpeq, rfl⟩⟩ |
+      ⟨_, _, hpeq, rfl⟩ | ⟨hpeq, rfl⟩
+    all_goals
+      obtain rfl := (List.cons.inj hpeq).1
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
-      have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
-      rw [hakt] at hF
+      simp only [ticketPlan, nehmenPlan, wGebenPlan, stutterPlan] at hF
       obtain ⟨_, au⟩ := spur
       cases hF
-      case sperre _ _ =>
-        have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-          rw [hziel, hueq]
-        refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
-          ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
-          fun hoffen q hmem hepo hant => ?_⟩
-        rw [hziel, hueq] at hmem hepo hant ⊢
-        exact hoffen q hmem hepo hant
-    · obtain rfl := (List.cons.inj hpeq).1
-      obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
-      have hakt : stutterPlan.aktion = .intern := rfl
-      rw [hakt] at hF
-      obtain ⟨_, au⟩ := spur
-      cases hF
-      case intern =>
-        have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-          rw [hziel, hueq]
-        refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
-          ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
-          fun hoffen q hmem hepo hant => ?_⟩
-        rw [hziel, hueq] at hmem hepo hant ⊢
+      refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
+        ⟨[], ?_, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
+        fun hoffen q hmem hepo hant => ?_⟩
+      · rw [hziel, List.append_nil]
+        rfl
+      · rw [hziel] at hmem hepo hant ⊢
         exact hoffen q hmem hepo hant
 
 theorem e4_fluss : FlussLokal E_4 := by
@@ -227,9 +205,10 @@ theorem e4_fluss : FlussLokal E_4 := by
     | unit =>
       refine ⟨?_, fun low => (Bool.false_ne_true (e1Hoch_verborgen.symm.trans low)).elim⟩
       intro c v w p u step
-      have hideal : e4RegelIdeal c v w [p] u := step.2
+      have hideal : e4Regel c v w [p] u := step.2
       refine ⟨⟨rfl, fun _ _ _ mem => (List.not_mem_nil mem).elim⟩, fun _ => ?_⟩
-      rcases hideal with ⟨_, _, hpeq, rfl⟩ | ⟨hpeq, rfl⟩
+      rcases hideal with ⟨_, ⟨_, _, hpeq, rfl⟩ | ⟨_, _, hpeq, rfl⟩⟩ |
+        ⟨_, _, hpeq, rfl⟩ | ⟨hpeq, rfl⟩
       all_goals
         obtain rfl := (List.cons.inj hpeq).1
         exact ⟨⟨fun c p h => (Bool.false_ne_true (e1Hoch_verborgen.symm.trans h)).elim,
