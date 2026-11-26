@@ -25,7 +25,7 @@ theorem fragment_ni_form_erfuellbar (f : Befehl) (priv : f.Privat) :
   obtain ⟨h, s, hw, hardware, zul, konform, _, normal, bereit, kopf, transfer, vollzug⟩ :=
     Ast.Semantik.sim_formvoraussetzungen_erfuellbar f priv
   let vor := (I.start E s).2
-  let nach := f.nach eintritt vor
+  let nach := f.maschinennach eintritt vor (f.nach eintritt vor)
   let event : SchrittWahl PUnit × SchrittSpur Ast.Semantik.Zelle Int := (.kontext eintritt (), ⟨[], []⟩)
   have schritt : Lauffolge E hw 0 (some vor) event (some nach) :=
     .schritt (.kontext normal bereit ⟨f, kopf, transfer⟩ vollzug)
