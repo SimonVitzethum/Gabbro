@@ -71,24 +71,24 @@ theorem bleibtImBlockKopie (ziel quelle : Nat) : BleibtImBlock (kopie ziel quell
   rw [kopieLaenge] at hlt ⊢
   have hcases : r.pc = 0 ∨ r.pc = 1 ∨ r.pc = 2 := by omega
   rcases hcases with h0 | h1 | h2
-  · rw [h0]
+  · rw [h0] at hget
     simp only [kopie, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
     omega
-  · rw [h1]
+  · rw [h1] at hget
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
     omega
-  · rw [h2]
+  · rw [h2] at hget
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_succ,
       List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
     omega
 
 /-- Forward reachability of the loop end with the first zero candidate in the
