@@ -291,7 +291,7 @@ private theorem jlWaechter (code : List ExecInstruction) :
     exact (hne rfl).elim
 private theorem jlAkzeptiert (code : List ExecInstruction) :
     Annahme.Akzeptiert (execProgram Plattform.x86_64.katalog code) := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_⟩,
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ?_, ?_, ?_, ?_, ?_⟩,
     jlKlauseln code, jlWaechter code⟩
   · intro i
     exact execRegelLokal Plattform.x86_64.katalog i
@@ -308,6 +308,7 @@ private theorem jlAkzeptiert (code : List ExecInstruction) :
   · exact execProgramFlussLokal Plattform.x86_64.katalog code
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · exact execDomaenenLokal _ _
 private theorem jumpLongJoint : JumpLongJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog
   let extent : Strecke := ⟨0, 4096⟩

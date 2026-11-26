@@ -136,7 +136,7 @@ def existingSurface : List SurfaceForm :=
   ⟨"surface.SAdapt.mk", "The source adapter's target call, result binder, reason arm and prelude.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "SAdapt.mk"⟩, .m6⟩,
   ⟨"surface.FnSig.mk", "The written function header, arguments, result, reasons, clauses and generic parameters.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "FnSig.mk"⟩, .m6⟩,
   ⟨"surface.SFeld.mk", "A typed field with its position, association and layout constraints.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "SFeld.mk"⟩, .m6⟩,
-  ⟨"surface.SRegFeld.mk", "One register bit field: SYNTAX.md section 10 `regfeld`.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "SRegFeld.mk"⟩, .m6⟩,
+  ⟨"surface.SRegFeld.mk", "One register bit field: SYNTAX.md section 10 `registerField`.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "SRegFeld.mk"⟩, .m6⟩,
   ⟨"surface.SReg.mk", "A typed register with its address, access policy, fields and dependencies.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "SReg.mk"⟩, .m6⟩,
   ⟨"surface.STrans.mk", "A state transition with its steps, precondition and effects.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1a.lean", "STrans.mk"⟩, .m6⟩,
   ⟨"surface.SGruppenInv.mk", "A named table or group invariant with its predicate.", ⟨"grammatik/Grammatik/Parser/Item/ElementTief/Kopf/Teil1.lean", "SGruppenInv.mk"⟩, .m6⟩,

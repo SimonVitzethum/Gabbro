@@ -68,16 +68,16 @@ theorem genauInternal {k : Katalog} {t : Nat} {c : Kontext} {s u : State k}
   cases trace with
   | mk events outside =>
     cases action
-    simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+    simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
     have unchanged : ∀ {recorded graph},
         Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
           recorded = [] ∧ graph = s.graph := by
       intro _ _ run
       cases run
       exact ⟨rfl, rfl⟩
-    obtain ⟨rfl, graph⟩ := unchanged memory
-    rw [graph] at nextEq
-    rw [← rahmen.graph] at nextEq
+    have hmem := unchanged memory
+    rw [hmem.1]
+    rw [hmem.2, ← rahmen.graph] at nextEq
     exact ⟨rfl, nextEq⟩
 
 theorem vollzugGenau {k : Katalog} (op : Instruction k) {t : Nat} {c : Kontext}

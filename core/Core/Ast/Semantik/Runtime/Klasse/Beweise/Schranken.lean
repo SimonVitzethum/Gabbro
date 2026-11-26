@@ -68,6 +68,13 @@ theorem Schrittform.ideal_erhaelt {ι : Type} (E : Klasseneinheit ι) (F : Schri
       refine ⟨rfl, rfl, ?_⟩
       intro d hd
       simp only [Schrittform.nach, Function.update_of_ne hd]
+  | verbrauche =>
+      obtain ⟨hp, hu⟩ := step
+      cases hp
+      subst u
+      refine ⟨Schrittform.verbraucheNach_rechte _ _ _, Schrittform.verbraucheNach_umfang _ _ _, ?_⟩
+      intro d hd
+      exact Schrittform.verbraucheNach_andere _ _ _ _ hd
   | maskiere =>
       obtain ⟨hp, hu⟩ := step
       cases hp
@@ -208,6 +215,34 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
         subst u
         simp only [Schrittform.nach, Function.update_self]
         exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+    | verbrauche =>
+        obtain ⟨hp, hu⟩ := step
+        cases hp
+        subst u
+        cases h : s.naechsteAntwort c with
+        | none =>
+          have hnach : Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s =
+              Schrittform.nach ⟨.verbrauche, o, t⟩ c s 0 := by
+            simp only [Schrittform.verbraucheNach, h]
+          rw [hnach]
+          simp only [Schrittform.nach, Function.update_self]
+          exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
+        | some a =>
+          cases hr : a.reply.result with
+          | ok _v =>
+            have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
+                (s.lokal c).fortsetzungen := by
+              simp only [Schrittform.verbraucheNach, h, hr, Zustand.verbrauche,
+                Function.update_self, verbraucheSchreibe_fortsetzungen]
+            simp only [tiefe, hfort] at vorTief ⊢
+            exact vorTief
+          | error _e =>
+            have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
+                (s.lokal c).fortsetzungen := by
+              simp only [Schrittform.verbraucheNach, h, hr, Zustand.verbrauche,
+                Function.update_self, Rahmen.weiter]
+            simp only [tiefe, hfort] at vorTief ⊢
+            exact vorTief
     | maskiere =>
         obtain ⟨hp, hu⟩ := step
         cases hp

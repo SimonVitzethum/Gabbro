@@ -64,7 +64,7 @@ def bootData (k : Katalog) (regions : List Strecke) (core : Option Nat) :
 
 def setup (k : Katalog) : Einrichtung PUnit Nat UInt8 PUnit (Frame k) PUnit PUnit :=
   ⟨fun _ => 0, fun _ => 0, fun _ => 0, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => bootData k [] (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => bootData k [] (some 0), fun _ _ => 0, id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def image : Bild := ⟨.elf, fun a => if a = 0 then some 0 else none, [0]⟩

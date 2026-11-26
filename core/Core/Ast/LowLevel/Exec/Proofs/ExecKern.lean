@@ -144,17 +144,27 @@ theorem execGenauInternal {t : Nat} {c : Kontext} {s u : ExecState}
   cases trace with
   | mk events outside =>
       cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil] at memory
+      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
       have unchanged : ∀ {recorded graph},
           Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
             recorded = [] ∧ graph = s.graph := by
         intro _ _ run
         cases run
         exact ⟨rfl, rfl⟩
-      obtain ⟨rfl, graph⟩ := unchanged memory
-      rw [graph] at nextEq
-      rw [← rahmen.graph] at nextEq
+      have hmem := unchanged memory
+      rw [hmem.1]
+      rw [hmem.2, ← rahmen.graph] at nextEq
       exact ⟨rfl, nextEq⟩
+
+/-- Every execution of an exec instruction records the empty cut, so every head form meets
+    the isolation duty under the unit's own (single-domain, entry-free) table. -/
+theorem execDomaenenLokal (k : Katalog) (code : List ExecInstruction) :
+    DomaenenLokal (execProgram k code) := by
+  refine ⟨eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+  obtain ⟨_, _, planEq, _⟩ := himpl
+  cases (List.cons.inj planEq).1
+  obtain ⟨rfl, _⟩ := execGenauInternal haus
+  exact spurRespektiert_leer _ _ _
 
 theorem execAbgleich (k : Katalog) (op : ExecInstruction) :
     I.RegelAbgleich (execUnit k op) op := by

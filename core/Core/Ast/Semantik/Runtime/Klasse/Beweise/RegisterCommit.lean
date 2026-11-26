@@ -37,6 +37,10 @@ private theorem klassen_aktion {F : Schrittform} {c : Kontext} {s u : Zustand} {
       have hp : plan = Semantik.plan := (List.cons.inj step.1).1
       subst plan
       exact Or.inl trivial
+  | verbrauche =>
+      have hp : plan = Semantik.plan := (List.cons.inj step.1).1
+      subst plan
+      exact Or.inl trivial
   | maskiere =>
       have hp : plan = Semantik.plan := (List.cons.inj step.1).1
       subst plan
@@ -163,6 +167,11 @@ private theorem wirkungen_gleich (F : Schrittform) (c : Kontext) (s u : Zustand)
   | ruf =>
       rw [step.2]
       rfl
+  | verbrauche =>
+      have hbuchung : (Schrittform.verbraucheNach ⟨.verbrauche, o, tr⟩ c s).buchung =
+          s.buchung :=
+        Schrittform.verbraucheNach_buchung _ _ _
+      rw [step.2, hbuchung]
   | maskiere =>
       rw [step.2]
       rfl

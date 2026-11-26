@@ -4,7 +4,8 @@
              declares as expressions of the decidable predicate language, the checker's footprint
              rule, and the safety of checker-accepted elaborated units with invariants.
 
-  `UnitMitInvarianten` and `programmMitInvarianten` live in `Elaborierung` (below the checker);
+   `UnitMitInvarianten`, `programmMitInvarianten` and `elaborierenMitInvarianten` live in
+   `Elaborierung` (below the checker);
   the clause table of an elaborated unit is exactly the denotations of its declared predicates
   (`programmMitInvarianten_klauseln`, `rfl`), so `programm_keine_invarianten` is gone: plain
   units elaborate with the empty list and safety is proved for tables of predicate denotations
@@ -21,7 +22,7 @@
   * MK-19/3 (Designer): surface syntax for unit-level invariant declarations with
     `UnitReads`/`printPieces`/`Category` round-trip (`reads_print`, `unique`), so the parser
     denotes `UnitMitInvarianten` instead of `Ast.Unit`.
-  * MK-19/4 (Designer + Prover): memory commands (MK-04) populate `Befehl.schreibFussabdruck`
+  * MK-19/4 (Designer + Prover): memory commands (MK-04) populate `Befehl.schreibtMoeglich` (`Atom/Fussabdruck`)
     and prove the conditional `fussabdruck_treu`; the stability certificate
     `Praedikat.haelt_stabil` already carries the rule.
   * MK-19/5 (Prover): the four falsifications at `Ast.Semantik.Einheit` for
@@ -34,6 +35,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Ast.Semantik.Elaborierung
 public import Core.Ast.Semantik.Runtime.Praedikat
 public import Core.Ast.Semantik.Runtime.Atom.Rein
+public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Sicherheit.RegelnErfuellbar
 
 @[expose] public section
@@ -42,8 +44,8 @@ namespace Gabbro.Core.Ast.Semantik
 
 open Maschine Sicherheit Katalog
 
-def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
-  (programmMitInvarianten u).einheit platform
+/-- `elaborierenMitInvarianten` (in `Elaborierung`, below the checker) is the elaborated unit
+    of the fragment carrying the invariant denotations. -/
 
 theorem sicherheitsEinheit_invarianten (u : UnitMitInvarianten) (platform : Plattform) :
     ((programmMitInvarianten u).sicherheitsEinheit platform).invarianten =
@@ -72,11 +74,48 @@ def InvariantenSicherheitAussage (P : Plattform) : Prop :=
         Rennfrei ((programmMitInvarianten u).sicherheitsEinheit P) H ρ ∧
         ToctouFrei ((programmMitInvarianten u).sicherheitsEinheit P) H ρ
 
-/-- Checker-accepted units with invariants elaborate to safe units. -/
-theorem invariantenSicherheit (P : Plattform) : InvariantenSicherheitAussage P := by
+/-- **The fragment of a source unit**: the elaboration of a source tree, with or without declared invariants. -/
+def Fragment.Quelleinheit (p : Fragment) : Prop :=
+  (∃ u : UnitMitInvarianten, p = programmMitInvarianten u) ∨ ∃ t : Ast.Unit, p = programm t
+
+/-- **The four safety legs for the unit of a source tree with an access instruction** (MK-04b). The fragment of a source
+    unit has only frame-only and access instructions (`programm_klassenrein`), an access instruction among them, and the
+    checker's verdict on its declared invariants (`pruefeEinheit`: loader, restart and per-command premises, the
+    command premise refusing an invariant that observes a cell an access may write, `Befehl.schreibtMoeglich`). Every run
+    is memory safe, keeps the declared invariants, is race free and is TOCTOU free. Difficulty: schwer. Sketch: three
+    independent units. (1) The class-determined legs (`klassenSicherheit`: booking, register, commit, questions) hold for
+    every step of an access (`Befehl.eingebettet`), so `Speichersicher` and `ToctouFrei` follow by the induction of
+    `sicherheit_aus_regeln` once its per-step race leg is replaced by a run invariant: `RegelSicher.rennen` quantifies
+    over EVERY pre-state, so for a plain store it fails for a state with an unordered conflicting write, while the
+    induction carries `RennenImGraph` along the run (`SchnittSicher`). (2) The race leg: a source unit runs in ONE
+    context (no source form starts a thread or a handler: `eintritte` has only the entry), whose events are ordered by
+    its program order, so every conflicting pair is ordered and `RennenImGraph` holds; a unit that starts threads needs
+    the lock-window discipline instead (`Speicher.Graph.Abschnitte` with `rennfreiAusLokal`, finding MK-05 in
+    `Sicherheit/Atom/RennfreiAusLokal`). (3) `InvariantenErhalten`: the checker's per-command verdict plus
+    `Befehl.plan_schreibt_fussabdruck` (the footprint is sound against the plan of the access). NOTE: the denotation
+    `Praedikat.gilt` reads `s.initial`, which no step changes (a store is an event of the graph), so the leg is only as
+    strong as that denotation: it must read the CURRENT content of the cell (the last write of the graph) before the
+    footprint carries meaning. -/
+def ZugriffSicherAussage : Prop :=
+  ∀ (p : Fragment) (platform : Plattform) (ps : List Praedikat), p.Quelleinheit → p.MitZugriff →
+    p.klauseln.invariant = ps.map Praedikat.gilt → pruefeEinheit p ps = true →
+    ∀ (H : Katalog.Umgebung) (ρ : Sicherheit.Lauf (p.sicherheitsEinheit platform)),
+      Laeufe (p.einheit platform) H ρ →
+        Speichersicher (p.sicherheitsEinheit platform) H ρ ∧
+        InvariantenErhalten (p.sicherheitsEinheit platform) H ρ ∧
+        Rennfrei (p.sicherheitsEinheit platform) H ρ ∧
+        ToctouFrei (p.sicherheitsEinheit platform) H ρ
+
+/-- Checker-accepted units with invariants elaborate to safe units: a frame-only fragment by `fragment_sicher`, a fragment
+    with an access instruction by the pinned `ZugriffSicherAussage`. -/
+theorem invariantenSicherheit (P : Plattform) (zugriff : ZugriffSicherAussage) :
+    InvariantenSicherheitAussage P := by
   intro u ok H ρ lauf
-  exact fragment_sicher (programmMitInvarianten u) P u.invarianten
-    (programmMitInvarianten_klauseln u) ok (programm_rein u.baum) H ρ lauf
+  by_cases rein : (programmMitInvarianten u).Rein
+  · exact fragment_sicher (programmMitInvarianten u) P u.invarianten
+      (programmMitInvarianten_klauseln u) ok rein H ρ lauf
+  · exact zugriff (programmMitInvarianten u) P u.invarianten (Or.inl ⟨u, rfl⟩)
+      ⟨programm_klassenrein u.baum, rein⟩ (programmMitInvarianten_klauseln u) ok H ρ lauf
 
 /-- The checker premises hold jointly: the empty unit with a satisfied predicate passes. -/
 theorem InvariantenSicherheitAussage.erfuellbar :

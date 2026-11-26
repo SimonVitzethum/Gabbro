@@ -52,7 +52,7 @@ def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch2 j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))),
-    Eq, fun _ => 1, .leer, e1Schranken, .leer, .leer⟩
+    Eq, fun _ => 1, .leer, eineTabelle, e1Schranken, .leer, .leer⟩
 
 def zE0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_1 s0).2
 

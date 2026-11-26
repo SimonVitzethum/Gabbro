@@ -168,13 +168,15 @@ theorem block_scope_extends (body : Block result before after) : before <:+ afte
     (fun b a _ => b <:+ a)
     (fun _ _ => True)
     (fun _ _ _ _ _ => True)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ before after body
   all_goals
     intros
     first
     | exact List.suffix_refl _
     | exact List.suffix_cons _ _
     | exact List.suffix_append _ _
+    | (rename_i form
+       cases form <;> first | exact List.suffix_refl _ | exact List.suffix_cons _ _)
     | trivial
     | apply List.IsSuffix.trans <;> assumption
 

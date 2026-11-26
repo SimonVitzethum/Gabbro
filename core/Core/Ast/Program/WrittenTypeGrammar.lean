@@ -3,7 +3,8 @@ module
 public import Core.Ast.Aggregate.Types.Model
 public import Core.Ast.Expression.Grammar
 public import Core.Ast.LowLevel.TypeTokens
-public import Core.Ast.Tree
+public import Core.Ast.Tree.Root
+public import Core.Ast.Tree.Statement
 
 @[expose] public section
 

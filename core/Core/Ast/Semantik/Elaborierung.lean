@@ -40,6 +40,44 @@ def forInstruction (body : Fragment) (handler : Option Identifier) : Befehl :=
 def BracedBlock.freigabe : BracedBlock result before → Nat
   | @BracedBlock.braces _ _ after _ => after.length - before.length
 
+/-- The memory order of the memory model that a written order names. -/
+def _root_.Gabbro.Core.Ast.AccessMode.modus : AccessMode → Gabbro.Core.Speicher.Modus
+  | .na => .na
+  | .rlx => .rlx
+  | .ra => .ra
+  | .sc => .sc
+
+/-- **The code of an access form**: the index (and the value) are evaluated into the temporaries `0` (and `1`), then ONE
+    access instruction names the region by the position of its owner local, and a load binds the value it read. -/
+def accessCode : Access before after → Fragment
+  | .load _ _ written _ region _ _ index mode =>
+    ((expr 0 index).anhaengen
+      (.einzel (.zugriff (.lade 0 region.index 0 written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false))
+  | .store region _ _ index value mode =>
+    ((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (.zugriff (.speichere region.index 0 1 mode.modus)))
+  | .swap _ _ written _ region _ _ index value mode =>
+    ((((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (.zugriff (.tausche 0 region.index 0 1 written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false)))
+  | .vergleicheTausche _ _ written _ region _ _ index expected neu mode =>
+    (((((expr 0 index).anhaengen (expr 1 expected)).anhaengen (expr 2 neu)).anhaengen
+      (.einzel (.zugriff (.vergleicheTausche 0 region.index 0 1 2 written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false)))
+  | .holeUndAddiere _ _ written _ region _ _ index betrag mode =>
+    ((((expr 0 index).anhaengen (expr 1 betrag)).anhaengen
+      (.einzel (.zugriff (.holeUndAddiere 0 region.index 0 1 written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false)))
+  | .erwarte _ _ written _ region _ _ index marker mode =>
+    (((expr 0 index).anhaengen
+      (.einzel (.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false)))
+
+  | .veroeffentliche region _ _ index value mode =>
+    ((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (.zugriff (.veroeffentliche region.index 0 1 mode.modus)))
+
 mutual
 /-- Record whether the range index is shadowed or written in its body. -/
 def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × Bool
@@ -57,6 +95,11 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .variantMatch _ arms => VariantArms.rangeUses index arms
   | .whileBounded _ _ _ _ _ body => BracedBlock.rangeUses index body
   | .forever _ body => BracedBlock.rangeUses index body
+  | .access (.load name ..) => (name.val == index.val, false)
+  | .access (.swap name ..) => (name.val == index.val, false)
+  | .access (.vergleicheTausche name ..) => (name.val == index.val, false)
+  | .access (.holeUndAddiere name ..) => (name.val == index.val, false)
+  | .access (.erwarte name ..) => (name.val == index.val, false)
   | .forRange name _ _ _ _ _ body =>
     let (shadow, writes) := BracedBlock.rangeUses index body
     (name.val == index.val || shadow, writes)
@@ -150,6 +193,7 @@ def stmt : Stmt result before after → Fragment
   | .forever _ body =>
     let pass := bracedBlock body
     pass.anhaengen (.einzel (.zurueckSprung pass.code.length))
+  | .access form => accessCode form
 
 def block : Block result before after → Fragment
   | .done => .leer
@@ -221,7 +265,7 @@ theorem mainName_direct : directName mainName := by
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   all_goals first | (intro same; cases same; done) | skip
   simp only [List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false]
-  rintro (same | same | same | same | same | same | same | same | same) <;> cases same
+  rintro (same | same | same | same | same | same | same | same | same | same) <;> cases same
 
 def programm (tree : Ast.Unit) : Fragment :=
   ((unitBody tree.2).anhaengen (.einzel (.starte mainName))).anhaengen (.einzel .ende)
@@ -324,7 +368,7 @@ def startdaten (scope : Scope) (eintritte : Kontext → Option Nat) (kern : Opti
 def einrichtung (scope : Scope) (eintritte : Kontext → Option Nat) (plan : Speicherplan) :
     Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit :=
   ⟨plan.initial, Zelle.sperre, fun _ => Zelle.aussen, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0, id⟩,
     Zelle.objekt, Zustand.griff⟩
 
 /-- The model's entry slot. An image compiler and its byte-level proof are later milestones. -/
@@ -367,6 +411,11 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
 
 def elaborieren (platform : Plattform) {category : Category} (tree : category.Tree) : Einheit :=
   (fragment category tree).einheit platform
+
+/-- A source unit with the invariants it declares denotes the elaborated unit of the fragment
+    carrying the invariant denotations (`programmMitInvarianten`). -/
+def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
+  (programmMitInvarianten u).einheit platform
 
 /-- Platform selection binds the hardware catalogue without changing the source system or its guards. -/
 theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category}

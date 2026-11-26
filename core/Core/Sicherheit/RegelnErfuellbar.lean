@@ -240,7 +240,8 @@ theorem sicherheit_aus_regeln_erfuellbar :
   let abEins := voran (schritt := fun t => schritt (t + 1)) abZwei (some z₁) _ s₁
   let zeit := voran (schritt := schritt) abEins (some z₀) _ s₀
   let ρ : Lauf E := ⟨start, hw, zeit⟩
-  have rein : ∀ b ∈ p.code, b.Privat := stmt_rein tree
+  have rein : ∀ b ∈ p.code, b.Privat :=
+    stmt_letValue_rein name ordinary (.binary .add (.lit 1) (.binary .mul (.lit 2) (.lit 3)))
   exact ⟨E, H, ρ, arithmetik_grenzen platform tab leer leerStart,
     fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).2,
     fun f => (Fragment.sicherheitsPflichten_alle p platform [] tab okAll rein f).1,
