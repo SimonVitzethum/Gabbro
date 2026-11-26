@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindEval
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueckRand
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindIterationRun
 
 @[expose] public section
@@ -81,7 +82,8 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         rw [hknone] at hrun1
         cases hrun1
       have htail : (Schritt (rfindSchleife cfBlk aus frei))^[schr - k] (some r1) = some rEnd := by
-        rw [show schr = k + (schr - k) by omega, Function.iterate_add_apply, hrun1] at hrun
+        rw [show schr = k + (schr - k) by omega] at hrun
+        rw [Function.iterate_add_apply, hrun1] at hrun
         exact hrun
       have hvorErweitert : ∀ zz, m0 ≤ zz → zz < y + 1 → ∃ vv,
           Nat.Partrec.Code.eval cf (Nat.pair a zz) = Part.some vv ∧ vv ≠ 0 := by
@@ -97,10 +99,8 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       obtain ⟨z, hEvalZ, hy1le, hausZ, hpresTail, hlokTail, hrueckTail, hstoppTail⟩ :=
         ih (schr - k) (by omega) m0 (y + 1) r1 rEnd hpc1 ha1 hm1 hy1 (by omega)
           hvorErweitert hcf hv hbl hfreiCf hfreiP htail hpcEnd
-      have hEvalY : Nat.Partrec.Code.eval (.rfind' cf) (Nat.pair a m0) = Part.some y :=
-        rfindEvalAusVor cf a m0 y hmy hzero hvor
       have hyz : y ≤ z := by omega
-      refine ⟨z, hEvalY, hyz, hausZ, ?_, ?_, ?_, ?_⟩
+      refine ⟨z, hEvalZ, hyz, hausZ, ?_, ?_, ?_, ?_⟩
       · intro s hsl hsaus
         rw [hpresTail s hsl hsaus]
         exact hpres1 s hsl hsaus
