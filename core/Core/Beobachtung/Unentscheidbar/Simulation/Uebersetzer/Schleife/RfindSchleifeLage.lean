@@ -17,7 +17,7 @@ theorem rfindSchleifeNulltestLage :
     (rfindSchleife ([] : List Befehl) 0 10)[44]? = some (.literal 15 0) ∧
     (rfindSchleife ([] : List Befehl) 0 10)[45]? = some (.vergleichen .lt 15) ∧
     (rfindSchleife ([] : List Befehl) 0 10)[46]? = some (.springeWenn 15 false 3) := by
-  repeat' constructor <;> rfl
+  refine ⟨rfl, rfl, rfl, rfl⟩
 
 /-- The back edge of the concrete loop sits at offset 49 and jumps to offset
     zero. -/
