@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.ExpressionCode
+public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Katalog.Ziel
 
 @[expose] public section
@@ -204,6 +205,26 @@ def bauplanOk (plan : Bauplan) : Bool :=
 /-- Concatenation of all fragments in plan order. -/
 def verknuepfteFragmente (plan : Bauplan) : Fragment :=
   plan.module.foldl (fun acc m => acc.anhaengen m.fragment) Fragment.leer
+
+/-- Appending preserves the two classes, so the linked whole is in the two classes once every module's fragment
+    is. The premise is per module; no link check derives it (see `linker_akzeptiert_aus_guard_transfer`, which
+    likewise takes a frame-only premise). -/
+theorem foldl_anhaengen_klassenrein (acc : Fragment) (ms : List Modul)
+    (hacc : acc.KlassenRein) (hmod : ∀ m ∈ ms, m.fragment.KlassenRein) :
+    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).KlassenRein := by
+  induction ms generalizing acc with
+  | nil => exact hacc
+  | cons m ms ih =>
+      apply ih
+      · exact (Fragment.klassenrein_anhaengen_iff acc m.fragment).mpr
+          ⟨hacc, hmod m List.mem_cons_self⟩
+      · intro m' hm'
+        exact hmod m' (List.mem_cons_of_mem m hm')
+
+theorem verknuepfte_klassenrein (plan : Bauplan)
+    (hmod : ∀ m ∈ plan.module, m.fragment.KlassenRein) :
+    (verknuepfteFragmente plan).KlassenRein :=
+  foldl_anhaengen_klassenrein Fragment.leer plan.module Fragment.klassenrein_leer hmod
 
 /-- Linking: resolve imports, append fragments, keep names unique. Returns `none` when the
     declarative check fails; the linked whole program is then checked as one unit. -/
