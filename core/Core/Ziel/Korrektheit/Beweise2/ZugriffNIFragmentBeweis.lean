@@ -7,7 +7,7 @@ module
 
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
-public import Core.Beobachtung.Fluss.Beweise.ZugriffNI
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.NI
 
 @[expose] public section
 

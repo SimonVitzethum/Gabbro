@@ -8,7 +8,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
-public import Core.Beobachtung.Fluss.Beweise.ZugriffNI
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.NI
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragment
 
 @[expose] public section
