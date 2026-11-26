@@ -121,6 +121,7 @@ public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphInvariante
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphKopplungBeweis
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragmentBeweis
 public import Core.Beobachtung.Fluss.AufrufSchleifeBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Sicht
 public import Core.Beobachtung.Fluss.Beschriftung.Einheit
