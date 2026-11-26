@@ -97,6 +97,7 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
       kern.mass = some m ∧
       (∃ earlier params result globals skip calls effects,
         pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
+      (∃ later, post = (bracedBlock kern.koerper.2.2).code ++ (.rueckVoid :: later)) ∧
       (unitBody source).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   induction source generalizing pc with
@@ -147,10 +148,11 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
                 rfl
               refine ⟨name, ⟨⟨_, _, body⟩, some m⟩, m, [header],
                 ((bracedBlock body).code ++ [.rueckVoid]) ++ (unitBody rest).code,
-                List.mem_cons_self, ?_, rfl, ?_, ?_, position, zeroSlot⟩
+                List.mem_cons_self, ?_, rfl, ?_, ?_, ?_, position, zeroSlot⟩
               · intro _
                 simp only [findeKern, beq_self_eq_true, ite_true]
               · exact ⟨[], _, _, _, _, _, _, rfl⟩
+              · exact ⟨(unitBody rest).code, List.append_assoc _ _ _⟩
               · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
         · rw [List.getElem?_append_right (Nat.le_of_not_gt prolog)] at localPC
           exact False.elim (OhneMass.not_at restFree localPC)
@@ -162,8 +164,9 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
     · have outside := Nat.le_of_not_gt inside
       change ((decl first).code ++ (unitBody rest).code)[pc]? = _ at atPC
       rw [List.getElem?_append_right outside] at atPC
-      obtain ⟨name, kern, m, pre, post, mem, found, declared, header, layout, position, zeroSlot⟩ := ih atPC
-      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, ?_, declared, ?_, ?_, ?_, zeroSlot⟩
+      obtain ⟨name, kern, m, pre, post, mem, found, declared, header, tail, layout, position, zeroSlot⟩ :=
+        ih atPC
+      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, ?_, declared, ?_, tail, ?_, ?_, zeroSlot⟩
       · cases first <;> first | exact List.mem_cons_of_mem _ mem | exact mem
       · intro unique
         cases first with
@@ -195,21 +198,38 @@ theorem programm_pruefeMass_herkunft {u : Ast.Unit} {pc slot : Nat}
       kern.mass = some m ∧
       (∃ earlier params result globals skip calls effects,
         pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
+      (∃ later, post = (bracedBlock kern.koerper.2.2).code ++ (.rueckVoid :: later)) ∧
       (programm u).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   change (((unitBody u.2).code ++ [.starte mainName]) ++ [.ende])[pc]? = _ at atPC
   rw [List.append_assoc] at atPC
   by_cases within : pc < (unitBody u.2).code.length
   · rw [List.getElem?_append_left within] at atPC
-    obtain ⟨name, kern, m, pre, post, mem, found, declared, header, layout, position, zeroSlot⟩ :=
+    obtain ⟨name, kern, m, pre, post, mem, found, declared, header, ⟨later, tail⟩, layout, position, zeroSlot⟩ :=
       mass_imRumpf u.2 atPC
-    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, found, declared, header, ?_,
+    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, found, declared, header, ?_, ?_,
       position, zeroSlot⟩
-    simp only [programm, Fragment.anhaengen, Fragment.einzel, layout, List.append_assoc,
-      List.singleton_append]
+    · exact ⟨later ++ [.starte mainName, .ende], by rw [tail, List.append_assoc, List.cons_append]⟩
+    · simp only [programm, Fragment.anhaengen, Fragment.einzel, layout, List.append_assoc,
+        List.singleton_append]
   · rw [List.getElem?_append_right (Nat.le_of_not_gt within)] at atPC
     have free : OhneMass ([.starte mainName] ++ [.ende]) :=
       .append (.single (fun _ h => by cases h)) (.single (fun _ h => by cases h))
     exact False.elim (OhneMass.not_at free atPC)
+
+/-- A backward edge in the placed function body stays after the measure
+    prologue. The relative bound is that of the actual elaborated body. -/
+theorem measurePrologue_rueckkante {kern : FunktionsKern} {m : Measure kern.koerper.1}
+    (pre suffix : List Befehl) {pc : Nat} {b : Befehl}
+    (within : pc < (bracedBlock kern.koerper.2.2).code.length)
+    (head : (pre ++ (measurePrologue (some m)).code ++
+      ((bracedBlock kern.koerper.2.2).code ++ suffix))
+        [((pre ++ (measurePrologue (some m)).code).length + pc)]? = some b) :
+    (pre ++ (measurePrologue (some m)).code).length ≤
+      (pre ++ (measurePrologue (some m)).code).length + pc - b.rueckweite := by
+  rw [List.getElem?_append_right (Nat.le_add_right _ _), Nat.add_sub_cancel_left,
+    List.getElem?_append_left within] at head
+  have back := braced_rueckkanten kern.koerper.2.2 pc b head
+  omega
 
 end Gabbro.Core.Beobachtung

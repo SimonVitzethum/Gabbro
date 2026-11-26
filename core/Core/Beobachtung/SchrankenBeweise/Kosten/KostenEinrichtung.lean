@@ -43,6 +43,7 @@ theorem kostenKopf_pruefeMass_herkunft (P : Katalog.Plattform) (u : UnitMitSchra
       kern.mass = some m ∧
       (∃ earlier params result globals skip calls effects,
         pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
+      (∃ later, post = (bracedBlock kern.koerper.2.2).code ++ (.rueckVoid :: later)) ∧
       (programm u.baum).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       (s.lokal c).pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 :=
   programm_pruefeMass_herkunft (u := u.baum) (kopf_position head)
