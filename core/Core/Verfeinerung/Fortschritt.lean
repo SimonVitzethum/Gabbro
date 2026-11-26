@@ -167,16 +167,17 @@ theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η) (valid : Laeufe 
       obtain ⟨_, _, _, _, _, opened, enabled⟩ := pf.systemweit fair a active absent
       exact matched.entladet valid bound pf fair opened enabled
 
+/-- Simulation, outside answers and fair progress refer to the same whole ideal run. -/
 theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E)
     (run : Maschine.Laeufe E h ρ)
     (fortschritt : ∀ η, Laeufe E η → Laufabgleich ρ η → η.umgebung = h →
       FairLaeufe E.katalog h ρ.hw → ∃ nutzbar, FortschrittsPflichten klasse ρ η nutzbar) :
-    ∃ η, Laeufe E η ∧ Sim E ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
+    ∃ η, Laeufe E η ∧ Sim E ρ η ∧ Antwortabgleich ρ η ∧ (∀ k, ZielFX E h ρ k) ∧
       (FairLaeufe E.katalog h ρ.hw → (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η) := by
   obtain ⟨η, valid, matched, checked, environment⟩ := laufabgleich pflicht.abgleich run
   have bound := pflicht.abgleich.schranke h ρ η run matched checked
   have sim := matched.sim valid bound (pflicht.autoritaet h ρ run) pflicht.fortsetzung
-  refine ⟨η, valid, sim, pflicht.zielFX run, fun fair => ?_⟩
+  refine ⟨η, valid, sim, matched.antwortabgleich valid, pflicht.zielFX run, fun fair => ?_⟩
   obtain ⟨_, pf⟩ := fortschritt η valid matched environment fair
   exact matched.fortschritt valid bound pf (environment.symm ▸ fair)
 
