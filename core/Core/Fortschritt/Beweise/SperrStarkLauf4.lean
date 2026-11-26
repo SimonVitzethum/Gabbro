@@ -119,7 +119,12 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
   have tailReady (t : Nat) : KannSchreiten hw4 t (tail t) s9 := by
     refine ⟨t % 3, hw4_opp t, ?_, rfl⟩
     have hr : t % 3 < 3 := Nat.mod_lt _ (Nat.zero_lt_succ 2)
-    have hc : t % 3 = 0 ∨ t % 3 = 1 ∨ t % 3 = 2 := by omega
+    have hc : t % 3 = 0 ∨ t % 3 = 1 ∨ t % 3 = 2 := by
+      rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hr) with lt | eq
+      · rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ lt) with lt | eq
+        · exact Or.inl (Nat.lt_one_iff.mp lt)
+        · exact Or.inr (Or.inl eq)
+      · exact Or.inr (Or.inr eq)
     rcases hc with h | h | h <;> simp only [tail, h, ↓reduceIte] <;> rfl
   have step (t : Nat) : ImplSchritt E_4.einrichtung E_4.system E_4.katalog hw4
       t (z t) (spur t) (z (t + 1)) := by
