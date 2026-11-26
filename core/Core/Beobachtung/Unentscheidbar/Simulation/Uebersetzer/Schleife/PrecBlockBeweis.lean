@@ -267,7 +267,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hpcQ_LR' : rQ.pc = (L ++ R ++ cfBlk).length :=
       hpcQ_LR.trans (@List.length_append Befehl (L ++ R) cfBlk).symm
     have hrunQ' : (Schritt (L ++ R ++ cfBlk))^[jI] (some r) = some rQ := by
-      simpa only [Q] using hrunQ
+      change (Schritt Q)^[jI] (some r) = some rQ
+      exact hrunQ
     obtain ⟨jC, rLR, hjCk, hrunCcomp, hrunLR, hpcLR⟩ :=
       randAusEndePrefix L R hL hlenL hlenR r jI rQ hpc hrunQ' hpcQ_LR'
     obtain ⟨a, kk, haeval, hkeval, hrLRa0, hrLRk0, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
