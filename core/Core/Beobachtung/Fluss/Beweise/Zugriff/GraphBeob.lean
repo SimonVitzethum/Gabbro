@@ -167,7 +167,6 @@ theorem SchreibBeob_filterMap_speicherBeob
     | none =>
       rw [hsome] at ho
       simp only [SchreibBeobOpt] at ho
-      cases ho
     | some ev =>
       rw [hsome] at ho
       simp only [SchreibBeobOpt] at ho
