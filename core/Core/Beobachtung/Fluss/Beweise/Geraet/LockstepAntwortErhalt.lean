@@ -180,10 +180,10 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hn2fragen : n₂.fragen = s₂.fragen ++ [a] := by
                     have h := congrArg Zustand.fragen stateEq₂
                     simpa only [Zustand.fragen, aeq] using h
-                  have hn1verlauf : n₁.verlauf = s₁.verlauf ++ [(a.cut, .frage a.question)] := by
+                  have hn1verlauf : n₁.verlauf = s₁.verlauf ++ [(a.cut, .antwort a.question a.reply)] := by
                     rw [stateEq₁]
                     rfl
-                  have hn2verlauf : n₂.verlauf = s₂.verlauf ++ [(a.cut, .frage a.question)] := by
+                  have hn2verlauf : n₂.verlauf = s₂.verlauf ++ [(a.cut, .antwort a.question a.reply)] := by
                     have h := congrArg Zustand.verlauf stateEq₂
                     simpa only [Zustand.verlauf, aeq] using h
                   have hn1antworten : n₁.antworten = s₁.antworten ++ [a] := by
