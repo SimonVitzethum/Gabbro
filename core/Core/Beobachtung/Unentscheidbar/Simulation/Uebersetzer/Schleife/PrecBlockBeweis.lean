@@ -79,10 +79,12 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hn : Nat.pair a k = n := by
       dsimp only [a, k]
       exact Nat.pair_unpair n
-    have hvOrig : Nat.Partrec.Code.eval (.prec cf cg) n = Part.some v := hv
-    rw [← hn] at hvOrig
-    rw [evalPrecAlsFolge] at hv
-    obtain ⟨v0, hcfEval, hvFolge⟩ := Part.bind_eq_some_iff.mp hv
+    have hvPair : Nat.Partrec.Code.eval (.prec cf cg) (Nat.pair a k) = Part.some v := by
+      rw [hn]
+      exact hv
+    have hvBind := hvPair
+    rw [evalPrecAlsFolge] at hvBind
+    obtain ⟨v0, hcfEval, hvFolge⟩ := Part.bind_eq_some_iff.mp hvBind
     have ha : Nat.Partrec.Code.eval .left n = Part.some a := by rfl
     have hk : Nat.Partrec.Code.eval .right n = Part.some k := by rfl
     obtain ⟨kLR, rLR, hrunLR, hpcLR, hrLRa, hrLRk, hpresLR, hlokLR, hrueckLR, hstoppLR⟩ :=
@@ -167,7 +169,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     obtain ⟨kS, rS, hrunS, hpcS, hrSaus, hpresS, hlokS, hrueckS, hstoppS⟩ :=
       precSchleifeVorwaerts cgBlk cf cg a aus frei freiCg k v0 v rI0
         rfl hrI0a hrI0k hrI0c hrI0v
-        haus hfreiCg20 hcg hcgV hcfEval hvOrig
+        haus hfreiCg20 hcg hcgV hcfEval hvPair
     have hbleibS := laufBleibtVorEnde S rI0 kS rS hrunS hpcS
     have hshiftS : (Schritt (P ++ S))^[kS] (some rI) = some (mitPc P.length rS) := by
       have hs := laufMitPc P S [] hvS rI0 kS hbleibS
