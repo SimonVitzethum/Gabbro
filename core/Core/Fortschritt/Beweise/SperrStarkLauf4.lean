@@ -112,7 +112,7 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     refine ⟨t % 3, hw4_opp t, ?_, rfl⟩
     have hr : t % 3 < 3 := Nat.mod_lt _ (by decide)
     have hc : t % 3 = 0 ∨ t % 3 = 1 ∨ t % 3 = 2 := by omega
-    rcases hc with h | h | h <;> simp only [tail, h, Nat.reduceEq, ↓reduceIte] <;> rfl
+    rcases hc with h | h | h <;> simp only [tail, h, ↓reduceIte] <;> rfl
   have step (t : Nat) : ImplSchritt E_4.einrichtung E_4.system E_4.katalog hw4
       t (z t) (spur t) (z (t + 1)) := by
     match t with
@@ -148,38 +148,46 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
       ∃ r, b ≤ r ∧ r + 1 ≤ b + 3 ∧
         ((z r).sperren ()).Gibt c ((z (r + 1)).sperren ()) ∧
         ((z (r + 1)).sperren ()).besitzer ≠ some c := by
+    revert own
     match b with
-    | 0 => cases own
-    | 1 => cases own
-    | 2 => cases own
-    | 3 => cases own
+    | 0 => intro own; cases own
+    | 1 => intro own; cases own
+    | 2 => intro own; cases own
+    | 3 => intro own; cases own
     | 4 =>
+      intro own
       change some A = some c at own
       obtain rfl := Option.some.inj own
       exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
     | 5 =>
+      intro own
       change some A = some c at own
       obtain rfl := Option.some.inj own
       exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
     | 6 =>
+      intro own
       change some A = some c at own
       obtain rfl := Option.some.inj own
       exact ⟨6, by decide, by decide, .besitzer A [B, C4], by decide⟩
     | 7 =>
+      intro own
       change some B = some c at own
       obtain rfl := Option.some.inj own
       exact ⟨7, by decide, by decide, .besitzer B [C4], by decide⟩
     | 8 =>
+      intro own
       change some C4 = some c at own
       obtain rfl := Option.some.inj own
       exact ⟨8, by decide, by decide, .besitzer C4 [], by decide⟩
-    | b + 9 => cases own
+    | _ + 9 => intro own; cases own
   have state (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
       (eq : ρ.zeit.zustand t = some s) : z t = s := Option.some.inj eq
   have halteschranke : HalteSchranken E_4 ρ := by
     intro l c b n live
     cases l
-    change Kontextkosten ρ c b n ≤ 5
+    intro H hb
+    have hH : H = 5 := Option.some.inj (hb.symm.trans e4halten)
+    subst H
     have cost : Kontextkosten ρ c b n ≤ n := zaehle_le _ _ _
     by_contra! over
     obtain ⟨s, hs, ho⟩ := live b (Nat.le_refl _) (by omega)
@@ -188,7 +196,7 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     obtain ⟨s', hs', ho'⟩ := live (r + 1) (by omega) (by omega)
     rw [← state (r + 1) s' hs'] at ho'
     exact hchange ho'
-  refine ⟨E_4, h4, ρ, C4, 5, 4, akzeptiert_E_4,
+  refine ⟨E_4, Gabbro.Core.Fortschritt.h4, ρ, C4, 5, 4, akzeptiert_E_4,
     ⟨fair4.hardware, fair4.konform, hstart, rfl⟩, fair4, halteschranke, e4halten,
     ⟨s4, rfl, ⟨A, rfl, by decide⟩, rfl⟩, ?_, ?_, ?_⟩
   · intro s hs
