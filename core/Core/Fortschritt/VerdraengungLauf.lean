@@ -24,7 +24,8 @@ open Gabbro.Core.Katalog
 noncomputable def stepV0 : ImplSchritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
-    ⟨by decide, by decide, pendingV0, by decide, auswahlV0⟩,
+    ⟨by rw [zV0_epoche]; exact Nat.le_refl 0, Nat.le_refl 0, pendingV0,
+      by rw [zV0_geliefert]; exact List.not_mem_nil _, auswahlV0⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
     zV0_ruht_Hv, rfl, by have h := hmemV; rw [rV_eq, ← labV] at h; exact h, rfl⟩
 
@@ -46,7 +47,8 @@ noncomputable def taktV (t : Nat) : Takt (Lauffolge E_v hwV) (KeinSchritt (Lauff
 noncomputable def istepV0 : Maschine.I.Schritt E_v.einrichtung E_v.system E_v.katalog hwV 0 zV0
     (.interrupt (0, 0), ⟨esV, [Ereignis.interrupt 0 irqV Eintritt.handler]⟩) zV1 :=
   .interrupt rfl ⟨0, irqV, Hv, false, rfl,
-    ⟨by decide, by decide, pendingV0, by decide, auswahlV0⟩,
+    ⟨by rw [zV0_epoche]; exact Nat.le_refl 0, Nat.le_refl 0, pendingV0,
+      by rw [zV0_geliefert]; exact List.not_mem_nil _, auswahlV0⟩,
     NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl 0),
     zV0_ruht_Hv, rfl, by have h := hmemV; rw [rV_eq, ← labV] at h; exact h, rfl⟩
 

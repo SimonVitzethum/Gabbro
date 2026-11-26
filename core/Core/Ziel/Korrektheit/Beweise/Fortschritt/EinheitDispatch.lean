@@ -39,7 +39,7 @@ theorem einheitVon_dispatch_gueltig (P : Katalog.Plattform) (t : Ast.Unit)
   have zul := lauf.2.2.1
   have hw := lauf.1
   have hbild : (einheitVon P t).bild.entries = [0] := rfl
-  obtain ⟨k₀, assign0⟩ := zul.2.2.1 0 (by rw [hbild]; decide)
+  obtain ⟨k₀, assign0⟩ := zul.2.2.1 0 (by rw [hbild]; show (0 : Nat) < 1; exact Nat.zero_lt_succ 0)
   have k0lt : k₀ < H.kernzahl := (zul.2.2.2.1 0 k₀ assign0).2
   -- The canonical initial state dispatches the entry context on its assigned core only.
   have startkerne : ∀ k c, (((Maschine.I.start (einheitVon P t) ρ.start).2.kerne k).laeuft =
@@ -210,7 +210,7 @@ theorem einheitVon_dispatch_eindeutig (P : Katalog.Plattform) (t : Ast.Unit)
       ((η.zeit.zustand tick).kerne k₂).laeuft = some c → k₁ = k₂) := by
   have hbild : (einheitVon P t).bild.entries = [0] := rfl
   have zul : (einheitVon P t).ZulStart η.umgebung η.start := valid.2.2.1
-  obtain ⟨k₀, assign0⟩ := zul.2.2.1 0 (by rw [hbild]; decide)
+  obtain ⟨k₀, assign0⟩ := zul.2.2.1 0 (by rw [hbild]; show (0 : Nat) < 1; exact Nat.zero_lt_succ 0)
   have hinit : η.zeit.zustand 0 = (Maschine.I.start (einheitVon P t) η.start).2 := valid.2.2.2.1
   have startkerne : ∀ k c,
       ((((Maschine.I.start (einheitVon P t) η.start).2).kerne k).laeuft = some c) →

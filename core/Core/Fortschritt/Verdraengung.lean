@@ -116,10 +116,10 @@ theorem gueltigV (i : Nat) :
     · intro sig hmem
       simp only [angebotV, irqV] at hmem
       rcases List.mem_cons.mp hmem with rfl | hmem
-      · exact ⟨by decide, hsupV⟩
+      · exact ⟨by rw [HV1]; exact Nat.zero_lt_succ 0, hsupV⟩
       · have hmem : sig = .zustellen 0 (0, 0) irqV := List.mem_singleton.mp hmem
         subst hmem
-        refine ⟨by decide, hsupV, rfl, auswahlV0, ?_, rfl, ?_⟩
+        refine ⟨by rw [HV1]; exact Nat.zero_lt_succ 0, hsupV, rfl, auswahlV0, ?_, rfl, ?_⟩
         · exact ⟨rfl, pendingV0⟩
         · intro e
           rfl
@@ -142,7 +142,7 @@ theorem gueltigV (i : Nat) :
     · intro sig hmem
       simp only [angebotV, irqV, List.mem_singleton] at hmem
       rw [hmem]
-      exact ⟨by decide, hsupV⟩
+      exact ⟨by rw [HV1]; exact Nat.zero_lt_succ 0, hsupV⟩
     · intro e he
       exact of_decide_eq_true he
     · intro h
@@ -284,7 +284,7 @@ theorem zV1_live_Hv : zV1.status Hv = .laeuft := by
   simp only [zV1, Maschine.Zustandseintritt, Function.update_self]
 
 theorem zV1_live_A : zV1.status A = .laeuft := by
-  have hne : A ≠ Hv := by decide
+  have hne : A ≠ Hv := by simp only [A, Hv, ne_eq, reduceCtorEq, not_false_eq_true]
   simp only [zV1, Maschine.Zustandseintritt, Function.update_of_ne hne.symm]
   exact zV0_live_A
 
@@ -321,7 +321,7 @@ theorem nirgendsV (t : Nat) (k : Kern) (ht : 0 < t) :
   intro h
   rcases nurV t k A h with ⟨h0, _⟩ | ⟨_, hc⟩
   · omega
-  · exact absurd hc (by decide)
+  · exact absurd hc (by simp only [A, Hv, ne_eq, reduceCtorEq, not_false_eq_true])
 
 /-- The worker stays live on the whole run. -/
 theorem zV_live_A : ∀ t, (ZV t).status A = .laeuft := by
