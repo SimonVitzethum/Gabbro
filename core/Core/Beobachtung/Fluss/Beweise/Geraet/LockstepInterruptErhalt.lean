@@ -131,10 +131,10 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                 | kontext _ bereit₂ _ _ =>
                     exact (geraete_interrupt_schliesst_kontext_aus (E := E) gueltig wahl₂ bereit₂).elim
                 | antwort _ hAnt =>
-                    rename_i spurAns ans
+                    have hres := AngebotGueltig.interrupt_reserviert gueltig wahl₂
                     have hdelivered := hAnt.1.2.1.1
                     rw [hAnt.1.1] at hdelivered
-                    exact (geraete_interrupt_schliesst_antwort_aus (a := ans) gueltig wahl₂ hdelivered).elim
+                    exact (Bool.false_ne_true ((hres.2.2 _).symm.trans hdelivered)).elim
                 | absturz crash₂ =>
                     exfalso
                     rw [crash₂.1.2] at hkein₂
