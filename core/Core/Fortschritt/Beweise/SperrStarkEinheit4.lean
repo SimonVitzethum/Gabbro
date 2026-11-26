@@ -153,13 +153,6 @@ theorem e4_ideal_ticket {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit
   refine ⟨(), rfl, ?_⟩
   exact Or.inl ⟨hs, Or.inl ⟨next, hn, rfl, rfl⟩⟩
 
-theorem e4_ideal_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
-    {next : SperrZustand} (hs : statisch4 c)
-    (hn : SperrSchritt .nehmen c (s.sperren ()) next) :
-    E_4.system.ISchritt c s () [nehmenPlan] s := by
-  refine ⟨(), rfl, ?_⟩
-  exact Or.inl ⟨hs, Or.inr ⟨next, hn, rfl, rfl⟩⟩
-
 theorem e4_impl_nehmen {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {next : SperrZustand} (hs : statisch4 c)
     (hn : SperrSchritt .nehmen c (s.sperren ()) next) :
@@ -184,9 +177,8 @@ theorem e4_impl_geben {c : Kontext} {s : Zustand Unit Unit Unit Unit Bool Unit}
 theorem e4_regel_lokal (i : Unit) : RegelLokal E_4 i := by
   intro c s u w plan h
   cases i
-  have hrule : e4Regel c s w [plan] u := h
-  rcases hrule with ⟨_, ⟨_, _, hpeq, _⟩ | ⟨_, _, hpeq, _⟩⟩ |
-    ⟨_, _, hpeq, _⟩ | ⟨hpeq, _⟩
+  have hrule : e4RegelIdeal c s w [plan] u := h
+  rcases hrule with ⟨_, _, hpeq, _⟩ | ⟨hpeq, _⟩
   all_goals
     obtain rfl := (List.cons.inj hpeq).1
     exact ⟨fun x hx => (List.not_mem_nil hx).elim,

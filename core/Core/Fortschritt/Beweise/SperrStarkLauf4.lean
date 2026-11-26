@@ -203,7 +203,7 @@ def takt4 : ∀ t, Takt (Lauffolge E_4 hw2) (KeinSchritt (Lauffolge E_4 hw2))
   | 0 =>
     .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 0)
       ⟨0, hw2_opp0 rfl, s4_0_kerne0, s4_0_live A⟩
-      (e4_ideal_nehmen statisch4_A s4_0_nimmt) ausfuehr_nehmen0))
+      (e4_impl_nehmen statisch4_A s4_0_nimmt) ausfuehr_nehmen0))
   | 1 =>
     .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 1)
       ⟨1, hw2_opp1 (by decide : (1 : Nat) % 2 = 1), s4_0_kerne1, s4_0_live B⟩
@@ -211,11 +211,11 @@ def takt4 : ∀ t, Takt (Lauffolge E_4 hw2) (KeinSchritt (Lauffolge E_4 hw2))
   | 2 =>
     .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 2)
       ⟨0, hw2_opp0 (by decide : (2 : Nat) % 2 = 0), s4_0_kerne0, s4_0_live A⟩
-      (e4_ideal_geben s4_1_gibt) ausfuehr_geben1))
+      (e4_impl_geben s4_1_gibt) ausfuehr_geben1))
   | 3 =>
     .schritt rfl (.schritt (ImplSchritt.kontext (hw2_crash 3)
       ⟨1, hw2_opp1 (by decide : (3 : Nat) % 2 = 1), s4_0_kerne1, s4_0_live B⟩
-      (e4_ideal_geben s4_2_gibt) ausfuehr_geben2))
+      (e4_impl_geben s4_2_gibt) ausfuehr_geben2))
   | t + 4 => by
       rw [spur4_spurw, z4_ge4]
       rw [show z4 (t + 5) = s4_3 by simpa [Nat.add_assoc] using z4_ge4 (t + 1)]
