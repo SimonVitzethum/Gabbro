@@ -25,6 +25,7 @@ public import Core.Annahme.Annahme
 public import Core.Sicherheit.Erfuellbar
 public import Core.Beobachtung.NichtinterferenzErfuellbar
 public import Core.Linken.Aussage
+public import Core.Linken.OffenSchluss
 
 @[expose] public section
 
@@ -235,38 +236,33 @@ theorem ZielInhaltAussage.nichtTrivial :
   ⟨Annahme.staleEinheit, Annahme.stale_nicht_akzeptiert⟩
 
 /-- The premise of linker acceptance holds jointly: the two-module example plan links, is sealed,
-    and both of its modules are accepted on their own. -/
+    and both of its modules are openly accepted on their own. -/
 theorem LinkerAkzeptiertAussage.erfuellbar :
     ∃ (plan : Bauplan) (frag : Ast.Semantik.Fragment), linke plan = some frag ∧
       kontrollflussAbgeschottet plan = true ∧
-      ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
-  refine ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke,
-    Linken.beispielAbgeschottet, ?_⟩
-  intro m present
-  simp only [Linken.beispielPlan, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl
-  · exact modulDef_akzeptiert
-  · exact modulCall_akzeptiert
+      ∀ m ∈ plan.module, Linken.OffenAkzeptiertAussage m plan.plattform :=
+  ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke,
+    Linken.beispielAbgeschottet, Linken.beispiel_offen⟩
 
-/-- Linking is not vacuous: a plan whose entry names no module is refused although its module is accepted. -/
+/-- Linking is not vacuous: the duplicate-name plan is refused although each of its modules is
+    openly accepted on its own. -/
 theorem LinkerAkzeptiertAussage.nichtTrivial :
     ∃ (plan : Bauplan), linke plan = none ∧
-      ∀ m ∈ plan.module, Annahme.Akzeptiert (m.fragment.einheit plan.plattform) := by
-  let plan : Bauplan := ⟨[], [("x", "y")], Plattform.x86_64, "keinEinstieg"⟩
-  refine ⟨plan, ?_, ?_⟩
-  · unfold Linken.linke
-    rfl
-  · intro m present
-    cases present
+      ∀ m ∈ plan.module, Linken.OffenAkzeptiertAussage m plan.plattform := by
+  refine ⟨Linken.doppelPlan, Linken.doppelLinke, ?_⟩
+  intro m present
+  simp only [Linken.doppelPlan, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl <;>
+    exact Linken.modulOffenOk_korrekt _ _ (by rfl)
 
-/-- The linker is non-trivial in both directions: it links the accepted two-module example and refuses a plan
-    whose only module is accepted (`Linken.link_erfuellbar`, the refusal witness above). -/
+/-- The linker is non-trivial in both directions: it links the two-module example and refuses the
+    duplicate-name plan whose parts are each accepted (`Linken.link_erfuellbar`, `Linken.doppelTeile`). -/
 theorem LinkerNichtTrivialAussage.erfuellbar : LinkerNichtTrivialAussage := by
   refine ⟨?_, ?_⟩
   · obtain ⟨plan, frag, fn, linked, length, defs, call, accepted⟩ := Linken.link_erfuellbar
     refine ⟨plan, frag, linked, ?_⟩
     omega
-  · exact LinkerAkzeptiertAussage.nichtTrivial
+  · exact ⟨Linken.doppelPlan, Linken.doppelLinke, Linken.doppelTeile⟩
 
 /-- The definition-level acceptance statement is empty (`Iff.rfl`), so the non-triviality of `linke` is the
     content of its own statement, not of the old one. -/

@@ -63,6 +63,7 @@ public import Core.Annahme.DomaeneBeweise.Kanal
 public import Core.Annahme.DomaeneBeweise.NI
 public import Core.Annahme.DomaeneBeweise.Pruefer
 public import Core.Annahme.DomaeneBeweise.Tabellen
+public import Core.Annahme.DomaeneBeweise.Unentscheidbar
 public import Core.Sicherheit.Erfuellbar
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Verfeinerung.Erfuellbar
@@ -385,6 +386,12 @@ public import Core.Linken.GuardTransfer
 public import Core.Linken.DeckungsZustand
 public import Core.Linken.DeckungsSchluss
 public import Core.Linken.LaufChirurgie
+public import Core.Linken.Offen
+public import Core.Linken.OffenSchluss
+public import Core.Linken.Relativ
+public import Core.Linken.RelativSchritt
+public import Core.Linken.RelativBindeRegion
+public import Core.Linken.RelativBefehl
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 meta import Core.Waechter.Check
 
