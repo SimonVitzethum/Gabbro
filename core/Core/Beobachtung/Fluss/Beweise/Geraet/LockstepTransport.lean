@@ -442,7 +442,7 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
           rw [hcut] at hpol
           rw [hcut'] at hpol'
           rw [hquest] at hpol
-          exact Option.some.inj (hpol.symm.trans hpol')
+          exact Entscheidung.antwort.inj (hpol.symm.trans hpol')
         have hcutEq : a.cut = a'.cut := hcut.trans hcut'.symm
         cases a with
         | mk ac actx ai aq ar =>
