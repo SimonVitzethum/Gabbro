@@ -1,26 +1,22 @@
 /-
   File:      core/Core/Ziel/Korrektheit/PrueferWaechterBeweise.lean
-  Subject:   PROOFS of the three pinned guard-checker statements of `Core/Ziel/Korrektheit/Pruefer.lean`:
-             soundness and completeness of the guard component, and non-triviality of the checker.
+  Subject:   PROOFS of the two pinned guard-checker statements of `Core/Ziel/Korrektheit/Pruefer.lean`:
+             soundness and completeness of the deployed computable guard checker
+             `prueferWaechterDecidierbar`, and non-triviality of the deployed checker.
 
-  The statements are indexed by a checker `C : Pruefer`; they are proved here for the concrete deciding
-  checker `prueferEntscheidet` (`Beweise/BegleitPruefer.lean`), whose three verdicts are the classical
-  decisions of the three conjuncts of `Annahme.Akzeptiert` and whose fragment is total. Soundness and
-  completeness then reduce by `split` on the verdict, and the first half of non-triviality is discharged
-  by `trivialUnit_akzeptiert` (`Beweise/BegleitZusammensetzung.lean`).
-
-  The second half of `PrueferNichtTrivialAussage` needs a source unit whose elaboration is not accepted.
-  No such unit is in the current catalogue of forms: the same witness is listed as open in
-  `ZielInhaltAussage` (`core/Core/Ziel/Korrektheit/Zusammensetzung.lean`). The two theorems below that
-  name the missing premise are proved: non-triviality implies such a unit, and if every elaborated unit
-  is accepted then no checker is non-trivial. The missing step for the deployed checker is its computable
-  decision body together with the abstraction lemma from that finite decision to `Annahme.WaechterHalten`
-  over all ideal runs; the classical `if` here is a stand-in and carries no such computation.
+  Soundness is the abstraction lemma `waechterAbstrakt` (`Waechter/WaechterAbstrakt.lean`):
+  the static analysis implies `Annahme.WaechterHalten` over all ideal runs.
+  Completeness rests on the pinned fragment statement
+  `WaechterFragmentVollstaendigAussage`, handed to provers. Non-triviality uses the
+  accepted empty unit (`BegleitZusammensetzung`) for the first half; the second
+  half needs a source unit whose elaboration is not accepted, which
+  `NichtAkzeptierteEinheit.lean` supplies. The classical placeholder
+  `prueferEntscheidet` is deleted: every statement here speaks about the real checker.
 -/
 module
 
 public import Core.Ziel.Korrektheit.Pruefer
-public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
+public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 
 @[expose] public section
@@ -28,99 +24,97 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
-open Classical
 
-/-- SOUNDNESS of the guard component, proved for the deciding checker: the verdict reduces by `split`
-    and the true branch is exactly the guard premise. -/
-theorem prueferWaechterKorrekt : PrueferWaechterKorrektAussage prueferEntscheidet := by
+/-- The guard verdict of the deployed checker unfolds to the static analysis. -/
+theorem pruefeWaechter_decidierbar (P : Katalog.Plattform) (t : Ast.Unit) :
+    prueferWaechterDecidierbar.pruefeWaechter P t =
+      WaechterAnalyse.waechterPruefeCode
+        (Ast.Semantik.fragment Ast.Category.unit t).code := rfl
+
+/-- The fragment verdict of the deployed checker unfolds to the named fragment. -/
+theorem fragmentWaechter_decidierbar (P : Katalog.Plattform) (t : Ast.Unit) :
+    prueferWaechterDecidierbar.fragmentWaechter P t =
+      WaechterAnalyse.waechterFragmentCode
+        (Ast.Semantik.fragment Ast.Category.unit t).code := rfl
+
+/-- SOUNDNESS of the deployed guard checker, from the abstraction lemma. -/
+theorem prueferWaechterKorrekt : PrueferWaechterKorrektAussage := by
   intro P t accepted
-  change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true at accepted
-  split at accepted
-  · assumption
-  · cases accepted
+  rw [pruefeWaechter_decidierbar] at accepted
+  exact WaechterAnalyse.waechterAbstrakt (Ast.Semantik.fragment Ast.Category.unit t) P accepted
 
-/-- COMPLETENESS of the guard component on its fragment, proved for the deciding checker: the verdict
-    reduces by `split`; the false branch contradicts the guard premise. -/
-theorem prueferWaechterVollstaendig : PrueferWaechterVollstaendigAussage prueferEntscheidet := by
-  intro P t _ guards
-  change (if Annahme.WaechterHalten (einheitVon P t) then true else false) = true
-  split
-  · rfl
-  · rename_i notGuards
-    exact (notGuards guards).elim
+/-- COMPLETENESS of the deployed guard checker on its fragment, from the pinned
+    fragment statement. -/
+theorem prueferWaechterVollstaendig
+    (h : WaechterAnalyse.WaechterFragmentVollstaendigAussage) :
+    PrueferWaechterVollstaendigAussage := by
+  intro P t hfrag hwahr
+  rw [fragmentWaechter_decidierbar] at hfrag
+  rw [pruefeWaechter_decidierbar]
+  exact h (Ast.Semantik.fragment Ast.Category.unit t) P hfrag hwahr
 
-/-- COMPLETENESS is not a property of every checker: replacing the guard verdict of the deciding
-    checker by the constant refusal breaks it on the accepted empty unit (whose fragment is total).
-    The premise that completeness needs is a verdict that decides the guard conjunct on its fragment. -/
+/-- The pinned soundness statement holds: it is realised by the deployed checker. -/
+theorem PrueferWaechterKorrektAussage.erfuellbar : PrueferWaechterKorrektAussage :=
+  prueferWaechterKorrekt
+
+/-- COMPLETENESS is not a property of every checker: replacing the guard verdict of
+    the deployed checker by the constant refusal breaks it on the accepted empty unit
+    (whose fragment holds). The premise that completeness needs is a verdict that
+    decides the guard conjunct on its fragment. -/
 theorem prueferWaechterVollstaendigNichtFuerAlle :
-    ¬ ∀ C : Pruefer, PrueferWaechterVollstaendigAussage C := by
-  intro allC
-  let C : Pruefer := { prueferEntscheidet with pruefeWaechter := fun _ _ => false }
-  have hc := allC C
+    ∃ C : Pruefer, ¬ (∀ P t, C.fragmentWaechter P t = true →
+      Annahme.WaechterHalten (einheitVon P t) → C.pruefeWaechter P t = true) := by
+  refine ⟨{ prueferWaechterDecidierbar with pruefeWaechter := fun _ _ => false }, ?_⟩
+  intro hall
+  have hfrag : prueferWaechterDecidierbar.fragmentWaechter
+      Katalog.Plattform.x86_64 trivialUnit = true := by
+    rw [fragmentWaechter_decidierbar]
+    show WaechterAnalyse.waechterFragmentCode
+      (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code = true
+    have hcode : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
+        [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
+    rw [hcode]
+    rfl
   have hA : Annahme.WaechterHalten (einheitVon Katalog.Plattform.x86_64 trivialUnit) :=
     (trivialUnit_akzeptiert Katalog.Plattform.x86_64).2.2
-  have hres := hc Katalog.Plattform.x86_64 trivialUnit rfl hA
-  change false = true at hres
-  cases hres
+  have hres := hall Katalog.Plattform.x86_64 trivialUnit hfrag hA
+  exact Bool.false_ne_true hres
 
-/-- The first half of non-triviality: the deciding checker accepts the empty source unit, because its
-    elaboration is accepted on every platform. -/
-theorem prueferNichtTrivialAkzeptiert : ∃ P t, prueferEntscheidet.pruefe P t = true := by
-  refine ⟨Katalog.Plattform.x86_64, trivialUnit, ?_⟩
-  have hA := trivialUnit_akzeptiert Katalog.Plattform.x86_64
-  have hL : (if Annahme.Lokal (einheitVon Katalog.Plattform.x86_64 trivialUnit) then true else false) = true := by
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.1).elim
-  have hK : (if Annahme.KlauselnWahr
-      (Ast.Semantik.elaborierenMitInvarianten Katalog.Plattform.x86_64 ⟨trivialUnit, []⟩)
-      then true else false) = true := by
-    rw [← einheitVon_mitInvarianten]
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.2.1).elim
-  have hW : (if Annahme.WaechterHalten (einheitVon Katalog.Plattform.x86_64 trivialUnit) then true else false) = true := by
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.2.2).elim
-  simp only [Pruefer.pruefe, prueferEntscheidet, hL, hK, hW]
+/-- The deployed checker accepts the accepted empty unit. -/
+theorem prueferWaechterDecidierbar_akzeptiertTrivial :
+    prueferWaechterDecidierbar.pruefeWaechter Katalog.Plattform.x86_64 trivialUnit = true := by
+  rw [pruefeWaechter_decidierbar]
+  show WaechterAnalyse.waechterPruefeCode
+    (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code = true
+  have hcode : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
+      [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
+  rw [hcode]
   rfl
 
-/-- With a source unit whose elaboration is not accepted, non-triviality is proved for the deciding
-    checker: the verdict is false because acceptance fails, and the fragment is total. -/
-theorem prueferNichtTrivialAusNichtAkzeptierterEinheit
-    (hNA : ∃ P t, ¬ Annahme.Akzeptiert (einheitVon P t)) :
-    ∃ C : Pruefer, PrueferNichtTrivialAussage C := by
-  refine ⟨prueferEntscheidet, ?_⟩
-  constructor
-  · exact prueferNichtTrivialAkzeptiert
-  · obtain ⟨P, t, hn⟩ := hNA
-    refine ⟨P, t, rfl, ?_, hn⟩
-    simp only [Pruefer.pruefe, prueferEntscheidet]
-    split
-    · rename_i hL
-      split
-      · rename_i hK
-        split
-        · rename_i hW
-          exact False.elim (hn ⟨hL, hK, hW⟩)
-        · rfl
-      · rfl
-    · rfl
+/-- The first half of non-triviality: the deployed checker accepts the empty source
+    unit, because its elaboration is accepted on every platform. -/
+theorem prueferNichtTrivialAkzeptiert :
+    ∃ P t, prueferWaechterDecidierbar.pruefe P t = true := by
+  refine ⟨Katalog.Plattform.x86_64, trivialUnit, ?_⟩
+  have hL : prueferWaechterDecidierbar.pruefeLokal
+      Katalog.Plattform.x86_64 trivialUnit = true := rfl
+  have hK : prueferWaechterDecidierbar.pruefeKlauseln
+      Katalog.Plattform.x86_64 ⟨trivialUnit, []⟩ = true := rfl
+  have hW := prueferWaechterDecidierbar_akzeptiertTrivial
+  simp only [Pruefer.pruefe, hL, hK, hW]
+  rfl
 
-/-- The second half of non-triviality forces a source unit whose elaboration is not accepted. This is
-    the precise missing premise: a witness for `∃ P t, ¬ Annahme.Akzeptiert (einheitVon P t)`. -/
+/-- The second half of non-triviality forces a source unit whose elaboration is not
+    accepted. This is the precise missing premise: a witness for
+    `∃ P t, ¬ Annahme.Akzeptiert (einheitVon P t)`. -/
 theorem prueferNichtTrivialBrauchtNichtAkzeptierteEinheit
     (C : Pruefer) (h : PrueferNichtTrivialAussage C) :
     ∃ P t, ¬ Annahme.Akzeptiert (einheitVon P t) := by
   obtain ⟨_, ⟨P, t, _, _, hn⟩⟩ := h
   exact ⟨P, t, hn⟩
 
-/-- If every elaborated unit is accepted, the second half of non-triviality is contradictory for every
-    checker; no checker is then non-trivial. -/
+/-- If every elaborated unit is accepted, the second half of non-triviality is
+    contradictory for every checker; no checker is then non-trivial. -/
 theorem prueferNichtTrivialUnmoeglichOhneNichtAkzeptierteEinheit
     (hAll : ∀ P t, Annahme.Akzeptiert (einheitVon P t)) :
     ∀ C : Pruefer, ¬ PrueferNichtTrivialAussage C := by

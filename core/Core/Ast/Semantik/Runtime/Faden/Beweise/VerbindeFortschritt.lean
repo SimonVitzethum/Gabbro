@@ -382,16 +382,14 @@ theorem verbindeFortschritt_mitPraemissen_falsch :
 
 /-- THE JOIN PROGRESS PROMISE HOLDS for accepted elaborated units. It is the per-context instance of
     MK-11's `fortschritt_akzeptiert`: on the matched ideal run that theorem constructs, the checker
-    verdict has discharged every context's obligation, including the joiner's, so no free join or
-    progress parameter is needed. The join-specific premises of the former free-form statement are
-    absent by design — no source form elaborates to `Befehl.faden`, so they would make the promise
-    vacuous on `einheitVon`. The only hypothesis carried is the scheduler selection premise that
-    MK-11 itself leaves open for fragments with access instructions. -/
-theorem verbindeFortschritt (scheduler : Ziel.Korrektheit.SchedulerFortschrittVoraussetzung) :
-    Ast.Semantik.VerbindeFortschrittAussage := by
+    verdict has discharged every context's obligation, including the joiner's, so no free join,
+    progress or scheduler parameter is needed. The join-specific premises of the former free-form
+    statement are absent by design — no source form elaborates to `Befehl.faden`, so they would make
+    the promise vacuous on `einheitVon`. -/
+theorem verbindeFortschritt : Ast.Semantik.VerbindeFortschrittAussage := by
   intro P t akzeptiert H ρ lauf fair sf ret c
   obtain ⟨η, valid, sim, keineHaengt, klasse⟩ :=
-    Ziel.Korrektheit.fortschritt_akzeptiert Ziel.Korrektheit.zugriffSchrittExistiert scheduler
+    Ziel.Korrektheit.fortschritt_akzeptiert Ziel.Korrektheit.zugriffSchrittExistiert
       P t akzeptiert H ρ lauf fair sf ret
   exact ⟨η, valid, sim, keineHaengt c, klasse⟩
 

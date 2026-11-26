@@ -32,6 +32,7 @@ namespace Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
 
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast
+open Gabbro.Core.Aussenfrage
 
 /-- A static integer contribution: an unknown same-kind write poisons the slot to top. -/
 inductive IntBeitrag where
@@ -47,7 +48,11 @@ inductive TextBeitrag where
 
 /-- Every temporary slot an instruction may write. Calls reset temporaries (sound to ignore
     in the join) and returns restore saved ones (covered by the saved-temporary invariant);
-    access instructions are excluded globally. -/
+    access instructions are excluded globally. An outside answer poisons its target slot:
+    `frage` binds its answer and `verbrauche` takes the next arrived answer into its slot,
+    so both write unknown values there. The frame transfer is currently the identity for
+    these forms; poisoning is the conservative reading that stays sound when the answer
+    binding lands. -/
 def schreibtTemp : Befehl → List Nat
   | .literal dst _ | .negativ dst _ | .binaer _ dst | .wahrheitswert dst _ | .lesen dst _
   | .negieren dst | .verneinen dst | .teilen dst | .vergleichen _ dst => [dst]
@@ -55,6 +60,8 @@ def schreibtTemp : Befehl → List Nat
   | .baueRecord dst _ _ _ _ | .liesRecordFeld dst _ _ _ _ | .baueVariante dst _ _ _ _
   | .textLiteral dst _ | .textConcat dst _ _ | .textIndex dst _ | .substring dst _
   | .textLength dst _ | .optionIstBesetzt dst _ => [dst]
+  | .aussen (.frage ziel _ _) => [ziel]
+  | .aussen (.verbrauche ziel) => [ziel]
   | _ => []
 
 /-- The static integer information one instruction writes to one slot: `none` means the

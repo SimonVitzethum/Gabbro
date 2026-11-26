@@ -404,6 +404,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffIdealBestimmtAussage, 2644829311587586954),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffNIFragmentAussage, 7858762338163909109),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffSchrittExistiertAussage, 12011956342942153024),
+  (`Gabbro.Core.Ziel.Korrektheit.SchedulerFortschrittVoraussetzungAussage, 14635417704699386862),
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 17866836081802873869),
   (`Gabbro.Core.Beobachtung.SpeicherGraphKopplungAussage, 5122222790422226156),
   (`Gabbro.Core.Beobachtung.SpeicherGraphInvariantAussage, 14948003621617868869),
@@ -418,8 +419,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precRumpfRueckAussage, 17094476976889742883),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precSchleifeRueckAussage, 13044116986245465722),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 17945051885790618584),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 16949391721795130390),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 15065692479669933639),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 6132789267391028435)]
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 15266179548767744066),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 5385424585100888287),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 10956785015232498392)]
 
 end Gabbro.Core.Waechter
