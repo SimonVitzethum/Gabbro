@@ -109,15 +109,16 @@ theorem precCheckSprungLauf (cgBlk : List Befehl) (aus frei y k : Nat) (r : Rahm
     change rC.temp s = r.temp s
     exact hCpres s hs6 hs7
 
-/-- The last three instructions of the loop increment the counter and jump back
-    to its first instruction. -/
-theorem precEndeGanzLauf (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahmen)
+/-- The literal and the increment of the back edge, run inside the whole loop. -/
+theorem precEndeZweiSchritte (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahmen)
     (hrEpc : rE.pc = cgBlk.length + 96)
     (hy : rE.temp (frei + 2) = some (natVal y)) :
-    ∃ rEnd : Rahmen, (Schritt (precSchleife cgBlk aus frei))^[3] (some rE) = some rEnd ∧
-      rEnd.pc = 0 ∧ rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
-      (∀ s, s ≠ frei + 2 → rEnd.temp s = rE.temp s) ∧
-      rEnd.lokale = rE.lokale ∧ rEnd.rueckgabe = rE.rueckgabe ∧ rEnd.stopp = rE.stopp := by
+    ∃ rE2 : Rahmen, (Schritt (precSchleife cgBlk aus frei))^[2] (some rE) = some rE2 ∧
+      rE2.pc = cgBlk.length + 98 ∧
+      rE2.temp (frei + 2) = some (natVal (y + 1)) ∧
+      rE2.temp (frei + 3) = some (natVal 1) ∧
+      (∀ s, s ≠ frei + 2 → s ≠ frei + 3 → rE2.temp s = rE.temp s) ∧
+      rE2.lokale = rE.lokale ∧ rE2.rueckgabe = rE.rueckgabe ∧ rE2.stopp = rE.stopp := by
   let prog := precSchleife cgBlk aus frei
   let rE1 : Rahmen := rE.schreibe (frei + 3) (some (natVal 1))
   have eE0 : (Schritt prog)^[1] (some rE) = some rE1 := by
@@ -153,35 +154,59 @@ theorem precEndeGanzLauf (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahmen)
     change (Schritt prog)^[1] (some rE1) =
       some (rE1.schreibe (frei + 2) (some (precAddWert y)))
     simpa only [Rahmen.schreibe, Function.iterate_one, precAddWert] using eE1
-  have hpcE2 : rE2.pc = cgBlk.length + 98 := by
-    change rE1.pc + 1 = cgBlk.length + 98
+  refine ⟨rE2, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl⟩
+  · rw [Function.iterate_add_apply, eE0, eE1']
+  · change rE1.pc + 1 = cgBlk.length + 98
     rw [hpcE1]
-  have g2 : prog[rE2.pc]? = some (.zurueckSprung (cgBlk.length + 98)) := by
-    rw [hpcE2]
-    change (precSchleife cgBlk aus frei)[cgBlk.length + 98]? =
-      some (.zurueckSprung (cgBlk.length + 98))
-    exact precSchleifeBeiEnde2 cgBlk aus frei
-  have eE2 : (Schritt prog)^[1] (some rE2) = some { rE2 with pc := rE2.pc - (cgBlk.length + 98) } :=
-    schrittZurueck prog rE2 (cgBlk.length + 98) (cgBlk.length + 98) hpcE2 g2
-  let rEnd : Rahmen := { rE2 with pc := 0 }
-  have eE2' : (Schritt prog)^[1] (some rE2) = some rEnd := by
-    rw [eE2]
-    congr 1
-    rw [hpcE2]
-    rfl
-  refine ⟨rEnd, ?_, rfl, ?_, ?_, rfl, rfl, rfl⟩
-  · rw [show (3 : Nat) = 1 + 1 + 1 by omega, Function.iterate_add_apply,
-      Function.iterate_add_apply, eE0, eE1', eE2']
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
       some (natVal (y + 1))
     rw [updateHit]
     congr 1
     exact packAddSucc y
-  · intro s hs
+  · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 3) =
+      some (natVal 1)
+    rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 2))]
+    exact hrE1e
+  · intro s hs2 hs3
     change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) s = rE.temp s
-    rw [updateMiss _ _ _ _ (Ne.symm hs)]
+    rw [updateMiss _ _ _ _ (Ne.symm hs2)]
     change (Function.update rE.temp (frei + 3) (some (natVal 1))) s = rE.temp s
-    rw [updateMiss _ _ _ _ (by omega)]
+    rw [updateMiss _ _ _ _ (Ne.symm hs3)]
+
+/-- The back jump of the back edge returns the counter to zero. -/
+theorem precEndeRueckSchritt (cgBlk : List Befehl) (aus frei : Nat) (rE2 : Rahmen)
+    (hrE2pc : rE2.pc = cgBlk.length + 98) :
+    (Schritt (precSchleife cgBlk aus frei))^[1] (some rE2) = some { rE2 with pc := 0 } := by
+  have g : (precSchleife cgBlk aus frei)[rE2.pc]? =
+      some (.zurueckSprung (cgBlk.length + 98)) := by
+    rw [hrE2pc]
+    exact precSchleifeBeiEnde2 cgBlk aus frei
+  have e := schrittZurueck (precSchleife cgBlk aus frei) rE2 (cgBlk.length + 98)
+    (cgBlk.length + 98) hrE2pc g
+  rw [e]
+  congr 1
+  rw [hrE2pc]
+
+/-- The last three instructions of the loop increment the counter and jump back
+    to its first instruction. -/
+theorem precEndeGanzLauf (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahmen)
+    (hrEpc : rE.pc = cgBlk.length + 96)
+    (hy : rE.temp (frei + 2) = some (natVal y)) :
+    ∃ rEnd : Rahmen, (Schritt (precSchleife cgBlk aus frei))^[3] (some rE) = some rEnd ∧
+      rEnd.pc = 0 ∧ rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
+      (∀ s, s ≠ frei + 2 → s ≠ frei + 3 → rEnd.temp s = rE.temp s) ∧
+      rEnd.lokale = rE.lokale ∧ rEnd.rueckgabe = rE.rueckgabe ∧ rEnd.stopp = rE.stopp := by
+  obtain ⟨rE2, hrun2, hpc2, hy2, hthree, hpres2, hlok2, hrueck2, hstopp2⟩ :=
+    precEndeZweiSchritte cgBlk aus frei y rE hrEpc hy
+  let rEnd : Rahmen := { rE2 with pc := 0 }
+  have hrun1 : (Schritt (precSchleife cgBlk aus frei))^[1] (some rE2) = some rEnd := by
+    change (Schritt (precSchleife cgBlk aus frei))^[1] (some rE2) = some { rE2 with pc := 0 }
+    exact precEndeRueckSchritt cgBlk aus frei rE2 hpc2
+  refine ⟨rEnd, ?_, rfl, hy2, ?_, hlok2, hrueck2, hstopp2⟩
+  · rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, hrun1]
+  · intro s hs2 hs3
+    change rE2.temp s = rE.temp s
+    exact hpres2 s hs2 hs3
 
 /-- One iteration of the primitive-recursion loop when the counter is still
     below the limit: check, fall through the conditional, run the body and take
@@ -260,11 +285,11 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   refine ⟨3 + kR + 8, rEnd, ?_, hpcEnde, hrEndY, ?_, ?_, ?_, ?_, ?_⟩
   · rw [show 3 + kR + 8 = 3 + (kR + 8) by omega, Function.iterate_add_apply, hrunMitte, hrunEnde]
   · change rEnd.temp aus = some (natVal v)
-    rw [hpresEnde aus (by omega)]
+    rw [hpresEnde aus (by omega) (by omega)]
     change rR.temp aus = some (natVal v)
     exact hrRaus
   · intro s hs hne
-    rw [hpresEnde s (by omega)]
+    rw [hpresEnde s (by omega) (by omega)]
     change rR.temp s = r.temp s
     rw [hpresR s (by omega) hne (by omega) (by omega)]
     change r7_0.temp s = r.temp s
