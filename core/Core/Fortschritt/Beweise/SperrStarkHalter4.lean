@@ -87,8 +87,8 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   · rcases hreg with ⟨hs, hreg⟩
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
-      rw [hueq] at hF
-      rw [hueq] at hss
+      subst u
+      rw [hueq] at hziel
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
       rw [hziel]
@@ -105,8 +105,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
         · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
       · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
-      rw [hueq] at hF
-      rw [hueq] at hss
+      subst u
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
       rw [hziel]
@@ -120,7 +119,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       · exact (hnach.1 c hs k hlk).elim
   · rcases hreg with ⟨_, hss, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
-    rw [hueq] at hF
+    subst u
     have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
     cases hF
     rw [hziel]
@@ -144,13 +143,12 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor)
     · exact (hnach.1 c (by
         have hg : (s.sperren ()).Gibt c _ := by
-          rw [hueq] at hss
-          exact hss
+              exact hss
         cases hg
         exact hlock_u.1) k hlk).elim
   · rcases hreg with ⟨hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
-    rw [hueq] at hF
+    subst u
     have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
     cases hF
     rw [hziel]
