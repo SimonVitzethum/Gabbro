@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecEinSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecFolge
 
 @[expose] public section
 
@@ -43,6 +44,7 @@ theorem precExitLauf (cgBlk : List Befehl) (aus frei j : Nat) (r : Rahmen)
     rw [eJump]
     congr 1
     rw [hpcC]
+    change 7 + (cgBlk.length + 92) = cgBlk.length + 99
     omega
   refine ⟨rEnd, ?_, ?_, ?_, hlokC, hrueckC, hstoppC⟩
   · rw [show (8 : Nat) = 1 + 7 by omega, Function.iterate_add_apply, hrunC', eJump']
@@ -79,7 +81,9 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     subst v
     obtain ⟨rEnd, hrun, hpcEnd, hpres, hlok, hrueck, hstopp⟩ :=
       precExitLauf cgBlk aus frei j r hpc hy hk
-    refine ⟨8, rEnd, hrun, hpcEnd, hi, ?_, hlok, hrueck, hstopp⟩
+    refine ⟨8, rEnd, hrun, hpcEnd, ?_, ?_, hlok, hrueck, hstopp⟩
+    · rw [hpres aus (by omega) (by omega)]
+      exact hi
     intro s hs hne
     exact hpres s (by omega) (by omega)
   | succ k ih =>
