@@ -199,12 +199,8 @@ theorem ideal_quelleinheit (zugriff : ZugriffZielAussage) (p : Ast.Semantik.Frag
    * Declared invariants. `programmMitInvarianten u` differs from `programm u.baum` only in its clause table, so
      `programm_klassenrein u.baum` gives the class obligation (`fragmentQuelleinheit_klassenrein`). `Quelleinheit`
      covers both source origins exactly; no checker verdict is needed for determinacy or progress.
-   * Linked fragments. `Linken.verknuepfteFragmente plan` is a `Fragment`, so `ideal_fragment_einheit` applies as soon
-     as `(verknuepfteFragmente plan).KlassenRein` is supplied. `Linken.verknuepfte_klassenrein` derives it from one
-     `KlassenRein` premise per module (concatenation preserves the predicate). There is NO closed proof of that
-     obligation from `bauplanOk plan = true` alone: `Linken.linker_akzeptiert_aus_guard_transfer` likewise takes
-     `hpriv : ∀ b ∈ (verknuepfteFragmente plan).code, b.Privat` as a premise, and no module of the plan constrains
-     the classes of its instructions. That premise is the missing proof, not a theorem of the model.
+   * Linked fragments. Successful links supply the classes via `Linken.linke_klassenrein`.
+     `Beweise2.EinheitHerkunft` uses this with the ordinary and invariant-carrying source cases.
 
    The generalization does NOT close `idealLuecke`: the eighth conjunct of `NichtLeer` ranges over every accepted
    `Einheit`, while the theorem above ranges over `Fragment.einheit` units with a proved class obligation. The

@@ -53,9 +53,8 @@ theorem IdealVerlinkteEinheitAussage.erfuellbar :
       Annahme.Akzeptiert (p.einheit plan.plattform) :=
   ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke, Linken.beispielAkzeptiert⟩
 
-/-- The ideal leg on the construction image reduces to the linked case. Ordinary units and units carrying
-    invariants receive determinacy and progress from their elaboration's class proofs. -/
-theorem ideal_spracheinheit (zugriff : ZugriffZielAussage) (link : IdealVerlinkteEinheitAussage)
+/-- Source elaboration and successful linking supply the class proofs for ideal determinacy and progress. -/
+theorem ideal_spracheinheit (zugriff : ZugriffZielAussage)
     (E : Spracheinheit) (akzeptiert : Annahme.Akzeptiert E.val) :
     Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
     Maschine.I.Fortschritt E.val.einrichtung E.val.system := by
@@ -63,10 +62,9 @@ theorem ideal_spracheinheit (zugriff : ZugriffZielAussage) (link : IdealVerlinkt
   cases herkunft with
   | quelle P t => exact ideal_akzeptierte_einheit zugriff P t
   | mitInvarianten P u => exact ideal_quelleinheit zugriff _ P (Or.inl ⟨u, rfl⟩)
-  | verlinkt plan p h => exact link plan p h akzeptiert
+  | verlinkt plan p h => exact ideal_verlinkte_einheit zugriff plan p h akzeptiert
 
-/-- With the access-class proofs, the linked case is precisely what remains of the universal ideal leg.
-    The converse uses the inclusion of every successful link, regardless of its classes. -/
+/-- The universal ideal leg includes every successful link. -/
 theorem ideal_spracheinheit_iff (zugriff : ZugriffZielAussage) :
     (∀ E : Spracheinheit, Annahme.Akzeptiert E.val →
       Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
