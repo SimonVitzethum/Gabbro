@@ -111,6 +111,7 @@ public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeob
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeobMehr
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphKopplungBeweis
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffFragmentAusTeilen
