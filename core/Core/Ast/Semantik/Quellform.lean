@@ -48,8 +48,8 @@ def Realisiert (platform : Plattform) (args : Arguments) (s : Zustand) : Prop :=
   let E := form.einheit platform args
   (s.lokal eintritt).pc = form.position args ∧
   E.system.kopf s eintritt = some b ∧
-  E.system.ISchritt eintritt s () [plan] (b.nach eintritt s) ∧
-  E.system.ImplSchritt eintritt s () [plan] (b.nach eintritt s)
+  E.system.ISchritt eintritt s () [b.plan (s.lokal eintritt) 0] (b.nach eintritt s) ∧
+  E.system.ImplSchritt eintritt s () [b.plan (s.lokal eintritt) 0] (b.nach eintritt s)
 
 theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     (args : Arguments) (s : Zustand) (running : s.status eintritt = .laeuft)
@@ -59,8 +59,8 @@ theorem Quellform.realisiert (position : form.RegelAmOrt) (platform : Plattform)
     Realisiert form platform args s := by
   have head : kopf (form.fragment args).code s eintritt = some (form.befehl args) := by
     simp only [kopf, ite_true, running, active, live, atPc, position args]
-  exact ⟨atPc, head, ⟨_, head, ((form.befehl args).ideal_privat (form.privat args) eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩,
-    ⟨_, head, ((form.befehl args).impl_privat (form.privat args) eintritt s () [plan] _).2 ⟨rfl, rfl⟩⟩⟩
+  exact ⟨atPc, head, ⟨_, head, ((form.befehl args).ideal_privat (form.privat args) eintritt s () [_] _).2 ⟨rfl, rfl⟩⟩,
+    ⟨_, head, ((form.befehl args).impl_privat (form.privat args) eintritt s () [_] _).2 ⟨rfl, rfl⟩⟩⟩
 
 /-- Elaboration-independent part of the schema supplies the real raw grammar proof. -/
 def Quellform.ParseAussage : Prop :=
@@ -89,7 +89,7 @@ def Quellform.AnnahmeAussage : Prop :=
 def Quellform.IdealAussage : Prop :=
   form.RegelAmOrt ∧ ∀ args, Ideal.RegelBestimmt (form.befehl args).regel ∧
     ∀ c s w plans u, (form.befehl args).ideal c s w plans u ↔
-      plans = [plan] ∧ u = (form.befehl args).nach c s
+      plans = [(form.befehl args).plan (s.lokal c) 0] ∧ u = (form.befehl args).nach c s
 
 def Quellform.EinheitAussage : Prop :=
   ∀ platform args,
@@ -99,7 +99,7 @@ def Quellform.EinheitAussage : Prop :=
 
 def Quellform.ImplAussage : Prop :=
   ∀ args c s w plans u, (form.befehl args).impl c s w plans u ↔
-    plans = [plan] ∧ u = (form.befehl args).nach c s
+    plans = [(form.befehl args).plan (s.lokal c) 0] ∧ u = (form.befehl args).nach c s
 
 /-- Both implementation safety obligations travel with each source form's preservation proof. -/
 def Quellform.SicherheitsAussage : Prop :=
