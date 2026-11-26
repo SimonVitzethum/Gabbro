@@ -177,7 +177,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           hbuchung₂, hepoche₂, hgeliefert₂, hkerne₂, hstatus₂, hlokal₂, _, hinitial₂,
                           hrechte₂, hleihen₂, _, _, _, _, _⟩ :=
                           geraete_issue_tick (target := target) aus₂a hplansA' rfl owned₂A idle₂A
-                         let uR := setFrame s₂ c { s₂.lokal c with pending := some (d.binding.question access) }
+                        let uR := setFrame s₂ c { s₂.lokal c with pending := some (d.binding.question access) }
                         have hbeob₁ : schrittBeob ρ₁ predictor t =
                             [.frage c.nummer s₁.fragen.length (d.binding.question access)] :=
                           geraete_issue_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
@@ -314,7 +314,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           hrechte₂, hleihen₂, _⟩ :=
                           geraete_consume_tick (target := target) aus₂a hplansA' rfl owned₂A
                             pending₂A ready₂A sameQuestion₂A
-                         let uR := setFrame s₂ c (geraete_consume_rahmen s₂ c d.binding access answer₂A target)
+                        let uR := setFrame s₂ c (geraete_consume_rahmen s₂ c d.binding access answer₂A target)
                         have hbeob₁ : schrittBeob ρ₁ predictor t = [] :=
                           geraete_consume_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
                             hplans' rfl kopf₁ hbuchung₁.symm hstatus₁
