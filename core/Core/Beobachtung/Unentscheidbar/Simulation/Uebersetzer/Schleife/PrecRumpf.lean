@@ -37,8 +37,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hbleib1 := laufBleibtVorEnde (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
     r k1 r1 hrun1 (by rw [hpc1, paarBerechnungLaenge])
   have hprefix1 : (Schritt (precRumpf cgBlk aus frei))^[k1] (some r) = some r1 := by
-    change (Schritt ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
-      paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) ++ cgBlk))^[k1] (some r) = some r1
+    rw [precRumpf, ← List.append_assoc]
     exact (laufAnhang (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
       (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20) ++ cgBlk)
       r k1 hbleib1).trans hrun1
@@ -65,7 +64,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       r1_0 k2 hbleib2
     rw [List.length_append] at hshift
     simp only [paarBerechnungLaenge] at hshift
-    simpa only [hmitPc1, hrun2] using hshift
+    simpa only [precRumpf, hmitPc1, hrun2] using hshift
   let r2_0 : Rahmen := { r2 with pc := 0 }
   have hr2_0pc : r2_0.pc = 0 := rfl
   have hr2_0p : r2_0.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) := hr2p
@@ -79,6 +78,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hprefix3 : (Schritt (precRumpf cgBlk aus frei))^[k3] (some (mitPc 44 r2)) =
       some (mitPc 88 r3) := by
     rw [← hmitPc2]
+    rw [precRumpf, ← List.append_assoc]
     have hshift := laufMitPc ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10) ++
       paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))) cgBlk [] hvCg r2_0 k3 hbleib3
     simp only [List.append_nil] at hshift
