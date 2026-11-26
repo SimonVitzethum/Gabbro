@@ -155,7 +155,8 @@ theorem precEndeZweiSchritte (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahm
       some (rE1.schreibe (frei + 2) (some (precAddWert y)))
     simpa only [Rahmen.schreibe, Function.iterate_one, precAddWert] using eE1
   refine ⟨rE2, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl⟩
-  · rw [Function.iterate_add_apply, eE0, eE1']
+  · change (Schritt prog)^[2] (some rE) = some rE2
+    rw [show (2 : Nat) = 1 + 1 by omega, Function.iterate_add_apply, eE0, eE1']
   · change rE1.pc + 1 = cgBlk.length + 98
     rw [hpcE1]
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
@@ -169,9 +170,9 @@ theorem precEndeZweiSchritte (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahm
     exact hrE1e
   · intro s hs2 hs3
     change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) s = rE.temp s
-    rw [updateMiss _ _ _ _ (Ne.symm hs2)]
+    rw [updateMiss _ _ _ _ hs2]
     change (Function.update rE.temp (frei + 3) (some (natVal 1))) s = rE.temp s
-    rw [updateMiss _ _ _ _ (Ne.symm hs3)]
+    rw [updateMiss _ _ _ _ hs3]
 
 /-- The back jump of the back edge returns the counter to zero. -/
 theorem precEndeRueckSchritt (cgBlk : List Befehl) (aus frei : Nat) (rE2 : Rahmen)
@@ -181,10 +182,8 @@ theorem precEndeRueckSchritt (cgBlk : List Befehl) (aus frei : Nat) (rE2 : Rahme
       some (.zurueckSprung (cgBlk.length + 98)) := by
     rw [hrE2pc]
     exact precSchleifeBeiEnde2 cgBlk aus frei
-  have e := schrittZurueck (precSchleife cgBlk aus frei) rE2 (cgBlk.length + 98)
-    (cgBlk.length + 98) hrE2pc g
-  rw [e]
-  congr 1
+  change Schritt (precSchleife cgBlk aus frei) (some rE2) = some { rE2 with pc := 0 }
+  simp only [Schritt, g, Befehl.auswerten]
   rw [hrE2pc]
 
 /-- The last three instructions of the loop increment the counter and jump back
