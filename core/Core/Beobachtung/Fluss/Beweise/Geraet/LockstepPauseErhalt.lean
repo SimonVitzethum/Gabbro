@@ -145,7 +145,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                 have heta : some ev = some (ev.1, ev.2) := by
                   cases ev
                   rfl
-                exact ⟨ev.1, ev.2, hlab.trans heta⟩
+                exact ⟨ev.1, ev.2, heta⟩
           obtain ⟨wahl, spur', label'⟩ := someEv
           have evEq := Option.some.inj (label₂.symm.trans label')
           rw [evEq] at step₂
