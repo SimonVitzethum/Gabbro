@@ -32,7 +32,7 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
       rw [stateEq]
-      cases hs : s.status c <;> simp [neuBeendet, hs]
+      cases hs : s.status c <;> simp [neuBeendet, hs, Zustand.antwort]
     rw [hnone] at hc
     cases hc
   rw [schrittBeob, hlabel, atS, atN]
@@ -69,8 +69,10 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
             subst v₁
             have gut₂ : s₂.SpeicherGut := geraete_lauf_speicher_gut vergleich.rechts t hz₂
             obtain ⟨spur₂, n₂t, hstep₂t, spurEq₂⟩ :=
-              geraete_antwort_transport vergleich hkopp hz₁ hz₂ gut₂ h1
-            obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1
+              geraete_antwort_transport vergleich hkopp hz₁ hz₂ gut₂ h1a
+            have h1a : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog
+                ρ₁.hw t a s₁ spur n₁ := h1
+            obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1a
             have hang := geraete_angebot_gleich vergleich t
             have hkein₂ : (ρ₂.hw.angebot t).crash = false := by
               rw [← hang]
@@ -78,6 +80,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
             have st₂ : Lauffolge (d.unit locals) ρ₂.hw t (some s₂) (.antwort a, spur₂) (some n₂t) :=
               .schritt (ImplSchritt.antwort hkein₂ hstep₂t)
             have tick₂ := ρ₂.zeit.takt t
+            rw [hz₂] at tick₂
             cases tick₂ with
             | wartet lab₂ _ hkein => exact (hkein (.antwort a, spur₂) _ st₂).elim
             | schritt lab₂ step₂ =>
