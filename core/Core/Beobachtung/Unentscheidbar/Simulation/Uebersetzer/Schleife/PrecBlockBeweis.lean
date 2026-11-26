@@ -450,6 +450,20 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hEvalPair : Nat.Partrec.Code.eval (.prec cf cg) n = Part.some vFinal := by
       rw [← hn, evalPrecAlsFolge, hcfEval0, Part.bind_some]
       exact hFolge
+    have hvPair : Nat.Partrec.Code.eval (.prec cf cg) (Nat.pair a kk) = Part.some vFinal := by
+      rw [← hn]
+      exact hEvalPair
+    obtain ⟨schrRef, rSRef, hrunSRef, hpcSRef, hrSRefAus, hpresSRef, hlokSRef, hrueckSRef, hstoppSRef⟩ :=
+      precSchleifeVorwaerts cgBlk cf cg a aus frei freiCg 0 v0 vFinal rP0
+        rfl hrP0a hrP0k hrP0c hrP0v haus hfreiCg20 hcg hcgV hcfEval0 hvPair
+    have hschrEq : k - jP = schrRef := by
+      by_contra hne
+      rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+      · exact laufStirbtNach S rP0 (k - jP) schrRef rS rSRef hrunS hpcS hrunSRef hpcSRef hlt
+      · exact laufStirbtNach S rP0 schrRef (k - jP) rSRef rS hrunSRef hpcSRef hrunS hpcS hgt
+    have hSstate : rS = rSRef := Option.some.inj (by
+      rw [hschrEq]
+      exact hrunS.symm.trans hrunSRef)
     refine ⟨vFinal, hEvalPair, ?_, ?_, ?_, ?_, ?_⟩
     · rw [hEqEnd]
       change rS.temp aus = some (natVal vFinal)
@@ -457,7 +471,9 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     · intro s hs hneAus
       rw [hEqEnd]
       change rS.temp s = r.temp s
-      have hpresS' : rS.temp s = rP0.temp s := hpresS s (by
+      have hpresS' : rS.temp s = rP0.temp s := by
+        rw [hSstate]
+        exact hpresSRef s (by
         rw [hpcS]
         dsimp only [S]
         rw [precSchleifeLaenge]
