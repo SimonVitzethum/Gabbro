@@ -392,6 +392,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       exact Option.some.inj (hEq.symm.trans eQI)
     have hPendEq : rP = mitPc Q.length (rQ0.schreibe (frei + 2) (some (natVal 0))) := hPendEq0
     have hrP0a : rP0.temp (frei + 0) = some (natVal a) := by
+      change rP.temp (frei + 0) = some (natVal a)
       rw [hPendEq]
       dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 0) = some (natVal a)
@@ -402,6 +403,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rw [hpresCr (frei + 0) (by omega) (by omega)]
       exact hrLR0a
     have hrP0k : rP0.temp (frei + 1) = some (natVal kk) := by
+      change rP.temp (frei + 1) = some (natVal kk)
       rw [hPendEq]
       dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 1) = some (natVal kk)
@@ -413,6 +415,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       change rLR.temp (frei + 1) = some (natVal kk)
       exact hrLRk0
     have hrP0c : rP0.temp (frei + 2) = some (natVal 0) := by
+      change rP.temp (frei + 2) = some (natVal 0)
       rw [hPendEq]
       dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 2) = some (natVal 0)
