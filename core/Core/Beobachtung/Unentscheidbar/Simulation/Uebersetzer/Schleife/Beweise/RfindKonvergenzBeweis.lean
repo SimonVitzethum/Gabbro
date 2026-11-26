@@ -34,7 +34,7 @@ theorem rfindKonvergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       have hzM : Nat.Partrec.Code.eval cf (Nat.pair a m1) = Part.some 0 := by
         rw [← hy1m]
         exact hz
-      obtain ⟨k, rE, hrunE, hpcE, haus⟩ :=
+      obtain ⟨k, rE, hrunE, hpcE, haus, _, _, _, _⟩ :=
         rfindExitIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1 hcfBlk hvBlk hzM
       refine ⟨k, rE, hrunE, hpcE, ?_⟩
       simpa only [hy1m] using haus
@@ -45,7 +45,7 @@ theorem rfindKonvergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         hd m1 (by omega) hmlt
       have hnM : Nat.Partrec.Code.eval cf (Nat.pair a m1) ≠ Part.some 0 :=
         hn m1 (by omega) hmlt
-      obtain ⟨k1, r2, _, hrun1, rpc2, ra2, hm2, hy2, _, _, _⟩ :=
+      obtain ⟨k1, r2, _, hrun1, rpc2, ra2, hm2, hy2, _, _, _, _⟩ :=
         rfindWeiterIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1
           hcfBlk hvBlk hdM hnM
       have hgap' : y1 - (m1 + 1) = d := by omega
