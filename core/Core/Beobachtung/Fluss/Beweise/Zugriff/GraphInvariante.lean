@@ -15,7 +15,7 @@ namespace Gabbro.Core.Beobachtung
 open Katalog Maschine
 open Ast.Semantik (Fragment Befehl Plan)
 
-variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
+variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L] [DecidableEq Ort]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 
 /-- Every observed memory event that writes is a `speicher` constructor. -/
@@ -64,5 +64,14 @@ theorem SchreibBeob_nicht_aussen
       split at hmem
       · cases hmem
       · cases hmem
+
+def SB (x : Ort) : NiedrigesEreignis Ort Wert Grund Form → Bool
+  | .speicher _ .schreiben ort _ _ _ => decide (ort = x)
+  | .speicher _ .rmw ort _ _ _ => decide (ort = x)
+  | _ => false
+
+example (x : Ort) (event : Ereignis) : (aussenBeob E event).filter (SB x) = [] := by
+  cases event <;> simp only [aussenBeob, sichtbar, Option.toList, List.filter_append,
+    List.filter_cons, List.filter_nil, SB, Bool.false_eq_true, if_false, List.nil_append]
 
 end Gabbro.Core.Beobachtung
