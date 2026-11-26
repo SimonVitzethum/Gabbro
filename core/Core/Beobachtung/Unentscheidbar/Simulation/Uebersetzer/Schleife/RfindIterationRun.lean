@@ -35,7 +35,7 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       hpc ha hy (by omega) (by omega)
   have hpcPaarEnde : rp.pc = (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)).length := by
     rw [hpcP, paarBerechnungLaenge]
-  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hpcPaarEnde
+  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
     exact (laufAnhang (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) _ r kp hbleibP).trans hrunP
@@ -51,7 +51,7 @@ theorem rfindWeiterIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   obtain ⟨kcf, rc, hrunC, hpcC, h6C, hpresC, hlokC, hrueckC, hstoppC⟩ :=
     (hcfNr (Nat.pair a y) r0 rfl h04).1 v hv
   have hpcCEnde : rc.pc = cfBlk.length := by rw [hpcC]
-  have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hpcCEnde
+  have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hrunC hpcCEnde
   have hshift := laufMitPc (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) cfBlk ((rfindNullTest frei ++ rfindRueck cfBlk frei) ++
     kopie aus (frei + 2)) hvBlk r0 kcf hbleibC
   rw [paarBerechnungLaenge, hrunC] at hshift
@@ -149,7 +149,7 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       hpc ha hy (by omega) (by omega)
   have hpcPaarEnde : rp.pc = (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)).length := by
     rw [hpcP, paarBerechnungLaenge]
-  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hpcPaarEnde
+  have hbleibP := laufBleibtVorEnde (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) r kp rp hrunP hpcPaarEnde
   have hrunPAll : (Schritt (rfindSchleife cfBlk aus frei))^[kp] (some r) = some rp := by
     rw [rfindSchleifeAlsAnhang]
     exact (laufAnhang (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) _ r kp hbleibP).trans hrunP
@@ -164,7 +164,7 @@ theorem rfindExitIter (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   obtain ⟨kcf, rc, hrunC, hpcC, h6C, hpresC, hlokC, hrueckC, hstoppC⟩ :=
     (hcfNr (Nat.pair a y) r0 rfl h04).1 0 hzero
   have hpcCEnde : rc.pc = cfBlk.length := by rw [hpcC]
-  have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hpcCEnde
+  have hbleibC := laufBleibtVorEnde cfBlk r0 kcf rc hrunC hpcCEnde
   have hshift := laufMitPc (paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10)) cfBlk ((rfindNullTest frei ++ rfindRueck cfBlk frei) ++
     kopie aus (frei + 2)) hvBlk r0 kcf hbleibC
   rw [paarBerechnungLaenge, hrunC] at hshift
