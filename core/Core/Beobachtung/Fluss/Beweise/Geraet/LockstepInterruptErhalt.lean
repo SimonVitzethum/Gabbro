@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepTransport
+public import Core.Beobachtung.Fluss.Interrupt
 
 @[expose] public section
 
@@ -130,10 +131,9 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                 | kontext _ bereit₂ _ _ =>
                     exact (geraete_interrupt_schliesst_kontext_aus (E := E) gueltig wahl₂ bereit₂).elim
                 | antwort _ hAnt =>
-                    have hdel : (ρ₂.hw.angebot t).delivery hAnt.1.question.endpoint = true := by
-                      rw [← hAnt.1.1]
-                      exact hAnt.1.2.1
-                    exact (geraete_interrupt_schliesst_antwort_aus gueltig wahl₂ hdel).elim
+                    have hdelivered := hAnt.1.2.1
+                    rw [hAnt.1.1] at hdelivered
+                    exact (geraete_interrupt_schliesst_antwort_aus gueltig wahl₂ hdelivered).elim
                 | absturz crash₂ =>
                     exfalso
                     rw [crash₂.1.2] at hkein₂
