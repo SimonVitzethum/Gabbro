@@ -83,7 +83,7 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
       fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => ?_⟩
     have head' : kopf (verknuepfteFragmente plan).code s c = some i := hkopf
     have hpriv_i := hpriv i (kopf_mem head')
-    obtain ⟨rfl, _⟩ := i.vollzug_genau (h := Or.inl rfl) (w := w) himpl haus hpriv_i
+    obtain ⟨rfl, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _⟩ := i.vollzug_genau_privat hpriv_i (w := w) himpl haus
     exact spurRespektiert_leer _ _ _
   refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => Befehl.regelLokal _ _ b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _ hpriv,
