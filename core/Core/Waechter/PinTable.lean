@@ -383,7 +383,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.GeraeteKopplungAlleAussage, 8104319302042136736),
   (`Gabbro.Core.Beobachtung.GeraeteKopplungAussage, 12392925228536263475),
   (`Gabbro.Core.Beobachtung.GeraeteLedgerGleichAussage, 5479693944465842336),
-  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 0),
+  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253),
   (`Gabbro.Core.Beobachtung.GeraetePauseErhaltAussage, 12997972707612115964),
   (`Gabbro.Core.Aussenfrage.VerbraucheSchrittAussagen, 9653400672800903365),
   (`Gabbro.Core.Aussenfrage.VerbraucheKlasseAussage, 6717755339853453320),
