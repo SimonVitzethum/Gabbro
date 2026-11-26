@@ -77,12 +77,12 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           simpa only [Function.iterate_one] using hstepEnd
         obtain ⟨t, ht⟩ := Nat.exists_eq_add_of_le (by omega : schr + 1 ≤ k)
         have hknone : (Schritt (rfindSchleife cfBlk aus frei))^[k] (some r) = none := by
-          rw [← ht]
+          rw [ht]
           exact laufVerlaengertKein (rfindSchleife cfBlk aus frei) r (schr + 1) t h1none
         rw [hknone] at hrun1
         cases hrun1
       have htail : (Schritt (rfindSchleife cfBlk aus frei))^[schr - k] (some r1) = some rEnd := by
-        rw [show schr = k + (schr - k) by omega] at hrun
+        rw [show schr = (schr - k) + k by omega] at hrun
         rw [Function.iterate_add_apply, hrun1] at hrun
         exact hrun
       have hvorErweitert : ∀ zz, m0 ≤ zz → zz < y + 1 → ∃ vv,
@@ -150,8 +150,7 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         rw [show (rfindPaar frei).length + cfBlk.length + (rfindRest cfBlk aus frei).length =
             (rfindSchleife cfBlk aus frei).length by
           rw [rfindSchleifeAlsAnhang]
-          simp only [List.length_append]
-          omega]
+          simp only [List.length_append]]
         exact hpcEnd
       have h4 : rp0.temp (frei + 4) = some (natVal (Nat.pair a y)) := by
         dsimp only [rp0]
@@ -160,15 +159,13 @@ theorem rfindSchleifeRueck (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       by_cases hlenCg : cfBlk.length = 0
       · have hp0pc : rp0.pc = cfBlk.length := by
           dsimp only [rp0]
-          rw [hpcP]
-          rw [rfindPaar, paarBerechnungLaenge]
           omega
         obtain ⟨v, hvEval, hv6, hvpres, hvlok, hvruck, hvstopp⟩ :=
           (hcfNr (Nat.pair a y) rp0 rfl h4).2 0 rp0
             (by rw [Function.iterate_zero_apply]) hp0pc
         exact (hdef ⟨v, hvEval⟩).elim
       · have hlenRest' : 0 < (rfindRest cfBlk aus frei).length := by
-          rw [rfindRest, rfindNullTestLaenge, rfindRueckLaenge, kopieLaenge, List.length_append]
+          simp only [rfindRest, rfindNullTestLaenge, rfindRueckLaenge, kopieLaenge, List.length_append]
           omega
         obtain ⟨jB, rB, rMid, hjB, hrunB, hpcB, hrBMid, hrunMid, hpcMid⟩ :=
           randAusEndeMitPc (rfindPaar frei) cfBlk (rfindRest cfBlk aus frei) hv hbl
