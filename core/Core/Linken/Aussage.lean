@@ -103,7 +103,8 @@ theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (fram
 /-- Every instruction of the example is frame-only. -/
 theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
+  rcases present with rfl | rfl | rfl | rfl | rfl <;>
+    first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 /-- The example's linked unit is accepted. -/
 theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.plattform) := by
@@ -114,7 +115,7 @@ theorem beispielAkzeptiert : Akzeptiert (beispielFragment.einheit beispielPlan.p
 theorem link_erfuellbar : LinkErfuellbarAussage := by
   refine ⟨beispielPlan, beispielFragment, mainName, beispielLinke, beispielZwei, ?_, ?_,
     beispielAkzeptiert⟩
-  · refine ⟨[], none, 0, 2, false, [], none, ?_⟩
+  · refine ⟨[], none, 0, 3, false, [], none, ?_⟩
     rw [beispielCode]
     exact List.mem_cons_self
   · refine ⟨[], none, ?_⟩
@@ -220,20 +221,21 @@ theorem verknuepfte_code (plan : Bauplan) :
 theorem modulDef_klauseln : modulDef.fragment.klauseln = .leer :=
   rfl
 
+theorem modulDef_code : modulDef.fragment.code =
+    [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0,
+      Befehl.rueckVoid, Befehl.ende] :=
+  rfl
+
 /-- The defining module uses no guarded instruction. -/
 theorem modulDef_guard (b : Befehl) (present : b ∈ modulDef.fragment.code) (frame : Rahmen) :
     b.guard frame = none := by
-  have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende] := rfl
-  simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
+  simp only [modulDef_code, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl <;> rfl
 
 /-- The defining module uses only frame-only instructions. -/
 theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.Privat := by
-  have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende] := rfl
-  simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
+  simp only [modulDef_code, List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with rfl | rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 /-- The defining module alone is accepted. -/
 theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := by
