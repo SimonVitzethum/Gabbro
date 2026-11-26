@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBleibt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueck
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.VerschiebbarBlk
 
 @[expose] public section
@@ -29,6 +30,7 @@ theorem bleibtImBlockPrecInit (frei : Nat) :
   injection hget with hb
   subst b
   simp only [Befehl.auswerten, Rahmen.schreibe]
+  omega
 
 /-- The counter initialisation is relocatable. -/
 theorem verschiebbarPrecInit (frei : Nat) :
