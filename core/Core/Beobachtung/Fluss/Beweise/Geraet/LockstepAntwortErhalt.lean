@@ -19,7 +19,7 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     {t : Nat} {a : AntwortEreignis} {s n : State} {spur : SchrittSpur Nat UInt8}
     (hlabel : ρ.zeit.spur t = some (.antwort a, spur))
     (atS : ρ.zeit.zustand t = some s) (atN : ρ.zeit.zustand (t + 1) = some n)
-    (step : AntwortSchritt (d.unit locals) (d.unit locals).katalog ρ.hw t a s spur n) :
+    (step : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog ρ.hw t a s spur n) :
     schrittBeob ρ predictor t = aussenBeob (d.unit locals) (.antwort a) := by
   obtain ⟨offered, spurEq, append, stateEq⟩ := step
   have haussen : ∀ l ∈ [aussenEtikett (d.unit locals).einrichtung (.antwort a)], l.art = .aussen := by
@@ -31,8 +31,7 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
   have hende : ¬ ∃ c, (neuBeendet s n (d.unit locals).etiketten c).isSome = true := by
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
-      have hn : n.status c = s.status c := by rw [stateEq]; rfl
-      rw [← hn]
+      rw [stateEq]
       cases hs : s.status c <;> simp [neuBeendet, hs]
     rw [hnone] at hc
     cases hc
@@ -44,7 +43,6 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
 theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope) :
     GeraeteAntwortErhaltAussage (d := d) (locals := locals) := by
   intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t a spur hkopp hlabel
-  let E := d.unit locals
   have tick₁ := ρ₁.zeit.takt t
   rw [hlabel] at tick₁
   cases tick₁ with
@@ -65,7 +63,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           | absturz _ => cases lab
           | interrupt _ _ => cases lab
           | antwort hkein₁ h1 =>
-            obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1
             obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
               (by intro h; rw [hz₁] at h; cases h.1)
             have hvEq : v₁ = s₁ := Option.some.inj (hv₁.symm.trans hz₁)
@@ -73,11 +70,12 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
             have gut₂ : s₂.SpeicherGut := geraete_lauf_speicher_gut vergleich.rechts t hz₂
             obtain ⟨spur₂, n₂t, hstep₂t, spurEq₂⟩ :=
               geraete_antwort_transport vergleich hkopp hz₁ hz₂ gut₂ h1
+            obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1
             have hang := geraete_angebot_gleich vergleich t
             have hkein₂ : (ρ₂.hw.angebot t).crash = false := by
               rw [← hang]
               exact hkein₁
-            have st₂ : Lauffolge E ρ₂.hw t (some s₂) (.antwort a, spur₂) (some n₂t) :=
+            have st₂ : Lauffolge (d.unit locals) ρ₂.hw t (some s₂) (.antwort a, spur₂) (some n₂t) :=
               .schritt (ImplSchritt.antwort hkein₂ hstep₂t)
             have tick₂ := ρ₂.zeit.takt t
             cases tick₂ with
@@ -94,7 +92,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   obtain ⟨hfragen, hverlauf, hantworten, _, _⟩ :=
                     geraeteKopplung_ledger hkopp hz₁ hz₂
                   have hepoche := ((geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂).2.1
-                  have offered₂ : s₂.AntwortAngeboten E.katalog ρ₂.hw t a :=
+                  have offered₂ : s₂.AntwortAngeboten (d.unit locals).katalog ρ₂.hw t a :=
                     geraete_angeboten_transport vergleich offered₁ hfragen hverlauf hantworten hepoche
                   cases impl₂ with
                   | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
@@ -124,16 +122,16 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                      let L₁ := NiedrigeBeob E ρ₁ predictor t
-                      let L₂ := NiedrigeBeob E ρ₂ predictor t
-                      let A := aussenBeob E (.antwort a)
+                      let L₁ := NiedrigeBeob (d.unit locals) ρ₁ predictor t
+                      let L₂ := NiedrigeBeob (d.unit locals) ρ₂ predictor t
+                      let A := aussenBeob (d.unit locals) (.antwort a)
                       have hlenP : L₁.length = L₂.length := by simpa only [L₁, L₂, E, NiedrigeBeob] using hlen
                       have happLen : (L₂ ++ A).length = (L₁ ++ A).length := by
                         simp only [List.length_append, hlenP]
                       have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
                         List.take_of_length_le (le_of_eq happLen)
                       rw [ht]
-                      have reflA : List.Forall₂ (EreignisAequiv E.fluss.freigabe) A A := by
+                      have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
                         induction A with
                         | nil => exact List.Forall₂.nil
                         | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
@@ -142,7 +140,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
-                      have hquell₁ : QuellzustandGleich E s₁ s₂ :=
+                      have hquell₁ : QuellzustandGleich (d.unit locals) s₁ s₂ :=
                         ((geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂).1
                       have hstatus := ((geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂).2.2.2.2
                       have hkerne := ((geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂).2.2.2.1
@@ -162,7 +160,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
                         List.length_append]
                       simp only [NiedrigeBeob] at hlen
-                      exact congrArg (fun n => n + (aussenBeob E (.antwort a)).length) hlen
+                      exact congrArg (fun n => n + (aussenBeob (d.unit locals) (.antwort a)).length) hlen
                     · intro v w hv hw
                       obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                       obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
