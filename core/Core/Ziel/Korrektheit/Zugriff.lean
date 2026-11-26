@@ -95,8 +95,9 @@ theorem komponierbar_koepfe (existiert : ZugriffSchrittExistiertAussage) (p : As
         FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s' := by
   intro i t s c head memory
   rcases klassenrein i (Ast.Semantik.kopf_mem (code := p.code) head) with privat | ⟨z, same⟩
-  · exact ⟨(), Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s,
-      (i.ideal_privat privat c s () [Ast.Semantik.plan] (i.nach c s)).2 ⟨rfl, rfl⟩, i.vollzug _ t c s⟩
+  · exact ⟨(), i.plan (s.lokal c) 0, i.nach c s, ⟨[], []⟩, i.maschinennach c s (i.nach c s),
+      (i.ideal_privat privat c s () [_] (i.nach c s)).2 ⟨rfl, rfl⟩,
+      i.vollzug (p.einheit platform).einrichtung t c s privat⟩
   · subst same
     obtain ⟨w, plan, u, es, g, step, folge⟩ := existiert p platform z s c head memory
     obtain ⟨spur, s', run⟩ := Ast.Semantik.zugriffKomponierbar p platform z t s c w plan u es g head step folge
