@@ -1,13 +1,14 @@
 /-
   THE ACCESS-FRAGMENT NONINTERFERENCE LEG from the run-level access coupling and the liveness of the
   memory model. The family dispatch uses `KlassenRein`: a form at the head of a step in an accepted
-  fragment is frame-only or an access instruction, so `stummer_schritt_koppelt` and
-  `zugriff_schritt_koppelt` cover all cases. The remaining open premises are the pinned
-  `SpeicherGraphKopplungAussage` and `ZugriffSchrittExistiertAussage`.
+  fragment is frame-only or an access instruction, so `stummer_schritt_koppelt` and the proved
+  concrete-form packet `Beobachtung.zugriffFormNI` cover all cases. The remaining premise is the
+  proved liveness of every access form.
 -/
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Lauf
+public import Core.Beobachtung.Fluss.Beweise.ZugriffNI
 public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragment
 
 @[expose] public section
@@ -21,7 +22,7 @@ open Katalog Maschine
 /-- The fragment NI leg, from the run-level access coupling and the liveness of the memory model. -/
 theorem zugriffNIFragmentAusTeilen
     (existiert : ZugriffSchrittExistiertAussage)
-    (graphKopplung : SpeicherGraphKopplungAussage) : ZugriffNIFragmentAussage := by
+    (zugriff : Beobachtung.ZugriffFormNIAussage) : ZugriffNIFragmentAussage := by
   intro p plattform mitZugriff akzeptiert
   have klassenrein : p.KlassenRein := mitZugriff.1
   apply ni_akzeptierter_einheit (p.einheit plattform) akzeptiert (fragment_start_ni p plattform)
@@ -31,8 +32,8 @@ theorem zugriffNIFragmentAusTeilen
     · exact stummer_schritt_koppelt vergleich zustand kopf tick
         (antwortNI p plattform h₂ ρ₂ vergleich.rechts t · ·) hpriv kopplung
     · subst f
-      exact zugriff_schritt_koppelt existiert graphKopplung p plattform z vergleich
-        fluss zustand kopf tick kopplung
+      exact zugriff p plattform z fluss h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
+        zustand kopf tick kopplung
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with
     | kontext _ _ => exact False.elim protokoll

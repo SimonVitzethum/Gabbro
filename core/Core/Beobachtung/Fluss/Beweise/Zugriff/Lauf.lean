@@ -6,7 +6,6 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
-public import Core.Beobachtung.Fluss.Beweise.Antwort
 
 @[expose] public section
 

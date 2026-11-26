@@ -11,6 +11,7 @@ module
 
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
+public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Atom.Beweise.Komponierbar
 public import Core.Ziel.Korrektheit.Zugriff
 

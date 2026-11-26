@@ -22,7 +22,6 @@ theorem fragmentNIBeweise : FragmentNIBeweise where
   aggregat := aggregatNI
   text := textNI
   variante := varianteNI
-  zugriff := zugriffNI
   antwort := antwortNI
   interrupt := interruptNI
   absturz := absturzNI
