@@ -97,7 +97,7 @@ theorem pruefeMass_kostenEinrichtung_amEnde {u : Ast.Unit} {name : Identifier}
     (active : entry.Aktiv) (typed : entry.traegt env) (owner : entry.funktion = some name)
     (checked : entry.WaechterHalten (programm u).code)
     (walk : Rahmen.Lauf (pre ++ (expr 0 m.expression).code) entry r) :
-    KostenEinrichtung u (.pruefeMass 0) r := by
+    r.funktion = some name ∧ KostenEinrichtung u (.pruefeMass 0) r := by
   let prefixCode := pre ++ (expr 0 m.expression).code
   have layout : (programm u).code = prefixCode ++ (.pruefeMass 0 :: post) := by
     simpa only [prefixCode, measurePrologue, Fragment.anhaengen, Fragment.einzel,
@@ -114,7 +114,7 @@ theorem pruefeMass_kostenEinrichtung_amEnde {u : Ast.Unit} {name : Identifier}
     simp only [prefixCode, List.length_append, Nat.le_refl]
   have same := lauf_ende_eindeutig outWalk (atEnd out trace.position) walk (atEnd r atCheck)
   have named : out.funktion = some name := (congrArg Rahmen.funktion trace.frame).trans owner
-  exact same ▸ pruefeMass_einrichtung found declared named (m.expression.wert env) operand
+  exact same ▸ ⟨named, pruefeMass_einrichtung found declared named (m.expression.wert env) operand⟩
 
 /-- Evaluate the declared measure at its entry address and execute the actual
     installer. Both a successful write and a rejected decrease preserve the
