@@ -411,7 +411,7 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
   by_cases hB : s.buchung.geraet = (startBuchung binding.object binding.handle).geraet
   · obtain ⟨hverw, hepoche, hidle, hbusy⟩ := hpre hB
     by_cases hp : (s.lokal entryContext).pending = none
-    · exact (hwiderlege (hidle hp)).elim
+    · exact (hwiderlege (hidle hp).2.2).elim
     · cases hbusy hp with
       | inl hbb => exact (hwiderlege hbb.2.2).elim
       | inr hub =>
@@ -426,24 +426,35 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
         have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a := by
-          simp only [List.getElem_append_right]
+          simp
         have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a' := by
-          simp only [List.getElem_append_right]
+          simp
         rw [hgeta] at hzua
         rw [hgeta'] at hzua'
         have hqeq : s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ = s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ := rfl
         have hinst : a.questionInstance = a'.questionInstance :=
           hzua.2.2.1.symm.trans hzua'.2.2.1
-        have hctx : a.context = a'.context :=
-          hzua.2.1.symm.trans (congrArg (fun q : FrageEreignis => q.context) hqeq).trans hzua'.2.1
-        have hquest : a.question = a'.question := by
-          exact hzua.2.2.2.symm.trans ((congrArg (fun q : FrageEreignis => q.question) hqeq).trans hzua'.2.2.2)
+        have hctx : a.context = a'.context := hzua.2.1.symm.trans hzua'.2.1
+        have hquest : a.question = a'.question := hzua.2.2.2.symm.trans hzua'.2.2.2
         have hreply : a.reply = a'.reply := by
           have hpol := herlaubt.2
           have hpol' := herlaubt'.2
-          rw [hcut, hcut', hquest] at hpol hpol'
+          rw [hcut] at hpol
+          rw [hcut'] at hpol'
+          rw [hquest] at hpol
           exact Option.some.inj (hpol.symm.trans hpol')
-        exact ⟨hcut.trans hcut'.symm, hctx, hinst, hquest, hreply⟩
+        have hcutEq : a.cut = a'.cut := hcut.trans hcut'.symm
+        cases a with
+        | mk ac actx ai aq ar =>
+          cases a' with
+          | mk ac' actx' ai' aq' ar' =>
+            simp only at hcutEq hctx hinst hquest hreply
+            subst ac'
+            subst actx'
+            subst ai'
+            subst aq'
+            subst ar'
+            rfl
   · obtain ⟨hbuch, hpending, hcutalt⟩ := hpost hB
     have hqalt := hcutalt q0 hq0mem
     omega
