@@ -46,13 +46,15 @@ def ZugriffIdealBestimmtAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff →
     Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system
 
-/-- **The memory model offers a read to every access head.** In a consistent complete memory, an access instruction at the
-    head of a context has an ideal step whose labels the memory model can append: some value is readable (the
-    liveness of the memory model; the initial write of a location is materialised lazily and a read of a location with a
-    coherent write exists). Difficulty: mittel. Sketch: for a load, an update or the confirming observation take the
-    modification-order maximal write of the cell visible to the context (`Initialisierung` supplies the initial write if
-    there is none) as the reads-from source, and extend `rf`, `mo` and the events accordingly (`Speicherfolge.cons`);
-    a store extends `mo` at the end. The plan is `Wirkungsklasse.plan` at that value, the authority decision is the
+/-- **The memory model offers a read to every access head.** In a consistent complete memory, an access instruction
+    at the head of a context has an ideal step whose labels the memory model can append: some value is readable (the
+    liveness of the memory model; the initial write of a location is materialised lazily and a read of a location with
+    a coherent write exists). No well-formedness premise is needed: the step of a form the checker refuses (`na` update,
+    whose `rmw` event no consistent memory accepts) takes its refusal branch and records no memory event. Difficulty:
+    mittel. Sketch: for a load, an update or the confirming observation take the modification-order maximal write of
+    the cell visible to the context (`Initialisierung` supplies the initial write if there is none) as the reads-from
+    source, and extend `rf`, `mo` and the events accordingly (`Speicherfolge.cons`); a store extends `mo` at the end;
+    a refused form keeps the graph. The plan is `Wirkungsklasse.plan` at that value, the authority decision is the
     state's. -/
 def ZugriffSchrittExistiertAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform) (z : Ast.Semantik.Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext),
