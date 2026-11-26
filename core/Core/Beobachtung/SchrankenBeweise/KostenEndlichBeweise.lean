@@ -68,9 +68,11 @@ theorem forEinrichtung_inGrenzen {low lowHi highLo high : Int}
   refine ⟨(stop.wert - start.wert).toNat, ⟨highLo, high, stop⟩, ?_, ?_, ?_, stop.oben⟩
   · simp only [Befehl.auswerten, Id.run, readLower, readUpper, allowed, Bool.false_eq_true,
       if_false, ordered, fits, Function.update_self]
+    exact Function.update_self _ _ _
   · exact Int.toNat_le_toNat (Int.sub_le_sub stop.oben start.unten)
   · simp only [Befehl.auswerten, Id.run, readLower, readUpper, allowed, Bool.false_eq_true,
       if_false, ordered, fits, Function.update_self]
+    exact Function.update_self _ _ _
 
 /-- Converting a nonnegative measure to the runtime representation preserves both endpoints. -/
 theorem masswert_imIntervall {lo hi : Int} (value : Zahl lo hi) (nonneg : 0 ≤ lo) :
