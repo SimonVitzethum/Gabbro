@@ -248,12 +248,12 @@ theorem e4_sperrAus {t c s u next} {a : SperrAktion}
       using hm
 
 theorem e4_frame (s : Zustand Unit Unit Unit Unit Bool Unit) :
-    Zustandsrahmen s s :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    Zustandsrahmen s s := by
+  constructor <;> rfl
 
 theorem e4_toggle_frame (s : Zustand Unit Unit Unit Unit Bool Unit) (c : Kontext) :
-    Zustandsrahmen s (toggleUpdate c s) :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    Zustandsrahmen s (toggleUpdate c s) := by
+  constructor <;> rfl
 
 /-- The ideal run has a real owner and executes its release from the canonical empty lock. -/
 theorem e4_ideal_halter_erfuellbar :
