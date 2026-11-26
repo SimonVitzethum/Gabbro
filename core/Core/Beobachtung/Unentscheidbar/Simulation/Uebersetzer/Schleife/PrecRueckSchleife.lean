@@ -42,7 +42,7 @@ theorem precRumpfRueckOhneHlen (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       simpa only [precRumpf, precPaarEinsGleich, precPaarZweiGleich, List.append_nil] using hk
     have hpcP : rEnd.pc = 44 + 44 := by
       rw [hpcEnd, precRumpfLaenge]
-      simp only [List.append_nil, precPaarEinsLaenge, precPaarZweiLaenge]
+      omega
     obtain ⟨hrPair, hpres2, hlok2, hrueck2, hstopp2⟩ :=
       precPaarPaarWert aus frei y i a r rEnd k hpc hy hi ha hausFrei hkP hpcP
     let rEnd0 : Rahmen := { rEnd with pc := 0 }
@@ -94,8 +94,8 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       have hval : some (natVal v) = some (natVal i) := hvEnd.symm.trans hrEndAus
       have hnat : natVal v = natVal i := Option.some.inj hval
       have hvi : v = i := by
-        have hh := congrArg NatAusgabe hnat
-        simpa only [natValAusgabe] using hh
+        exact Option.some.inj (by
+          simpa only [natValAusgabe] using congrArg NatAusgabe hnat)
       subst v
       rfl
   | succ k ih =>
@@ -109,6 +109,7 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       have hylen : 0 < (En.length) := by
         dsimp only [En]
         rw [precEndeLaenge]
+        omega
       have hyk : j < j + (k + 1) := by omega
       obtain ⟨r7, hRef8, hpc7, hpres7, hlok7, hrueck7, hstopp7⟩ :=
         precCheckCondLauf cgBlk aus frei j (j + (k + 1)) r hpc hy hk hyk
@@ -142,7 +143,9 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [hmit7]
         simpa only [List.append_assoc] using htail
       have hKend' : rEnd.pc = V.length + Rm.length + En.length := by
-        rw [hKend, List.length_append, List.length_append]
+        rw [hKend]
+        simp only [List.length_append]
+        omega
       have hvRm : VerschiebbaresProgramm Rm := by
         dsimp only [Rm]
         exact (verschiebbarVonNull (precRumpf cgBlk aus frei)).mp
@@ -198,7 +201,7 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [hpres7 (frei + 1) (by omega) (by omega)]
         rw [hk]
         congr 1
-        omega
+        exact (show j + (k + 1) = (j + 1) + k by omega)
       have hrBi : rB.temp aus = some (natVal v1) := by
         rw [hrBMid']
         change rMid.temp aus = some (natVal v1)
@@ -215,25 +218,31 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       have hprog8 : (Schritt (precSchleife cgBlk aus frei))^[8] (some r) = some r7 := by
         simpa only [V, precSchleife, List.append_assoc] using hrun8
       have hprogB : (Schritt (precSchleife cgBlk aus frei))^[jB] (some r7) = some rB := by
+        rw [← hmit7]
         simpa only [V, Rm, En, precSchleife, List.append_assoc] using hrunB
       have hrunToBack : (Schritt (precSchleife cgBlk aus frei))^[8 + jB + 3] (some r) = some rBack := by
         rw [show 8 + jB + 3 = 3 + (jB + 8) by omega, Function.iterate_add_apply,
-          Function.iterate_add_apply, hrunBack, hprog8, hprogB]
+          Function.iterate_add_apply, hprog8, hprogB, hrunBack]
+      have hrunToB : (Schritt (precSchleife cgBlk aus frei))^[8 + jB] (some r) = some rB := by
+        rw [show 8 + jB = jB + 8 by omega, Function.iterate_add_apply, hprog8, hprogB]
       have hstepsLe : 8 + jB + 3 ≤ schr := by
         by_contra hnot
-        have hltTo : 8 + jB < schr := by omega
-        obtain ⟨rT, hrT⟩ := laufHatZwischen (precSchleife cgBlk aus frei) r schr (8 + jB) rEnd hrun
-          (by omega)
-        have hT : rT = rB := Option.some.inj (by
-          obtain ⟨rT2, hrT2⟩ := laufHatZwischen (precSchleife cgBlk aus frei) r (8 + jB) (8 + jB)
-            rB hrunToBack (le_rfl)
-          exact hrT2.symm.trans hrT)
-        have hschrCases : schr = 8 + jB + 1 ∨ schr = 8 + jB + 2 := by omega
-        rcases hschrCases with hs1 | hs2
+        have hbase : 8 + jB ≤ schr := by omega
+        obtain ⟨rT, hrT⟩ := laufHatZwischen (precSchleife cgBlk aus frei) r schr (8 + jB) rEnd hrun hbase
+        have hT : rT = rB := Option.some.inj (hrunToB.symm.trans hrT)
+        have hcases : schr = 8 + jB ∨ schr = 8 + jB + 1 ∨ schr = 8 + jB + 2 := by omega
+        rcases hcases with hs0 | hs1 | hs2
+        · have hE : rEnd = rB := by
+            have hh : some rEnd = some rT := by
+              rw [hs0] at hrun
+              exact hrun.symm.trans hrT
+            exact (Option.some.inj hh).trans hT
+          rw [hE, hrBpc, hpcEnd, precSchleifeLaenge] at hrun
+          omega
         · obtain ⟨r1, hr1⟩ := laufHatZwischen (precSchleife cgBlk aus frei) r schr (8 + jB + 1)
             rEnd hrun (by omega)
           rw [show 8 + jB + 1 = Nat.succ (8 + jB) by omega, Function.iterate_succ_apply',
-            hT] at hr1
+            hrunToB] at hr1
           have hg : (precSchleife cgBlk aus frei)[rB.pc]? =
               some (.literal (frei + 3) 1) := by
             rw [hrBpc]
@@ -253,11 +262,10 @@ theorem precSchleifeRueck (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
           omega
         · obtain ⟨r2, hr2⟩ := laufHatZwischen (precSchleife cgBlk aus frei) r schr (8 + jB + 2)
             rEnd hrun (by omega)
-        -- the second case is discharged by the two-step back-edge reference
           obtain ⟨rTwo, hTwo, hpTwo, hyTwo, hthree, hpresTwo, hlokTwo, hrueckTwo, hstoppTwo⟩ :=
             precEndeZweiSchritte cgBlk aus frei j rB hrBpc hrBy
           have hT2 : r2 = rTwo := Option.some.inj (by
-            rw [show 8 + jB + 2 = 2 + (8 + jB) by omega, Function.iterate_add_apply, hT] at hr2
+            rw [show 8 + jB + 2 = 2 + (8 + jB) by omega, Function.iterate_add_apply, hrunToB] at hr2
             exact hr2.symm.trans hTwo)
           rw [hT2, hpTwo, hpcEnd, precSchleifeLaenge] at hr2
           omega
