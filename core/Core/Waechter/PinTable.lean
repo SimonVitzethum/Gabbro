@@ -405,6 +405,12 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.EndlichAkzeptiertAussage, 14810701671255145002),
   (`Gabbro.Core.Beobachtung.KostenSchaetzerKorrektAussage, 3038677247240970749),
   (`Gabbro.Core.Beobachtung.GebundenKHEndlichAussage, 12616975233130910026),
-  (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 9850116192743815101)]
+  (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 9850116192743815101),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.precRumpfRueckAussage, 0),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.precSchleifeRueckAussage, 0),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.blockPrecAussage, 0),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.rfindKonvergenzAussage, 0),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.rfindDivergenzAussage, 0),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.blockRfindAussage, 0)
 
 end Gabbro.Core.Waechter
