@@ -131,7 +131,7 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
             (some (mitPc pre.length r0)) = some (mitPc pre.length (b.auswerten rm)) := by
           rw [Function.iterate_succ_apply', hcomp, hstepComp, hstepMid]
         have hJ : rJ = mitPc pre.length (b.auswerten rm) :=
-          Option.some.inj (hJstep.symm.trans hrunJs)
+          Option.some.inj (hrunJs.symm.trans hJstep)
         rw [hJ, mitPc] at hgtJ
         dsimp only [K] at hgtJ hleB
         omega
