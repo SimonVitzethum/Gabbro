@@ -27,7 +27,7 @@ private theorem geraeteKopplung_umkehren {ρ₁ ρ₂ : Lauf (d.unit locals)} {p
       have htake : (NiedrigeBeob (d.unit locals) ρ₂ predictor t).take
           (NiedrigeBeob (d.unit locals) ρ₁ predictor t).length =
           NiedrigeBeob (d.unit locals) ρ₂ predictor t :=
-        List.take_of_length_le (le_of_eq hlen)
+        List.take_of_length_le (le_of_eq hlen.symm)
       have hcover : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe)
           (NiedrigeBeob (d.unit locals) ρ₁ predictor t)
           (NiedrigeBeob (d.unit locals) ρ₂ predictor t) := by
@@ -37,9 +37,9 @@ private theorem geraeteKopplung_umkehren {ρ₁ ρ₂ : Lauf (d.unit locals)} {p
           EreignisAequiv (d.unit locals).fluss.freigabe b a := by
         intro a b hr
         cases hr with
-        | gleich e => exact EreignisAequiv.gleich e
+        | gleich _ => exact .gleich _
         | freigabe c id l r g decl auth =>
-            exact EreignisAequiv.freigabe c id r l g decl auth.symm
+            exact .freigabe c id r l g decl auth.symm
       have hforall : ∀ {as bs : List (NiedrigesEreignis Nat UInt8 PUnit PUnit)},
           List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) as bs →
           List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) bs as := by
@@ -50,14 +50,14 @@ private theorem geraeteKopplung_umkehren {ρ₁ ρ₂ : Lauf (d.unit locals)} {p
       have htake' : (NiedrigeBeob (d.unit locals) ρ₁ predictor t).take
           (NiedrigeBeob (d.unit locals) ρ₂ predictor t).length =
           NiedrigeBeob (d.unit locals) ρ₁ predictor t :=
-        List.take_of_length_le (le_of_eq hlen.symm)
+        List.take_of_length_le (le_of_eq hlen)
       rw [htake']
       exact hforall hcover
     · intro v w hv hw
       obtain ⟨q, ep, ge, ke, st⟩ := (geraeteKopplung_kopplung h).2.1 w v hw hv
       exact ⟨Gabbro.Core.Ast.Semantik.Beobachtung.QuellzustandGleich.symm q,
         ep.symm, ge.symm, ke.symm, st.symm⟩
-    · exact hlen.symm
+    · exact (kopplung_laenge (geraeteKopplung_kopplung h)).symm
   · intro v w hv hw
     obtain ⟨ledger, buch⟩ := h.2 w v hw hv
     exact ⟨ledger.symm, buch.symm⟩
@@ -121,7 +121,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
             exact (geraeteKopplung_kopplung hkopp).1
           · intro v w hv hw
             have hvEq : v = s₁ := Option.some.inj (hv.symm.trans ((zustandGleich₁.trans hz₁)))
-            have hwEq : w = s₂ := Option.some.inj (hw.symm.trans gleich₂)
+            have hwEq : w = s₂ := Option.some.inj (hw.symm.trans (hn₂.trans gleich₂))
             subst v
             subst w
             exact (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
@@ -130,7 +130,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
             exact kopplung_laenge (geraeteKopplung_kopplung hkopp)
           · intro v w hv hw
             have hvEq : v = s₁ := Option.some.inj (hv.symm.trans ((zustandGleich₁.trans hz₁)))
-            have hwEq : w = s₂ := Option.some.inj (hw.symm.trans gleich₂)
+            have hwEq : w = s₂ := Option.some.inj (hw.symm.trans (hn₂.trans gleich₂))
             subst v
             subst w
             exact ⟨geraeteKopplung_ledger hkopp hz₁ hz₂,
@@ -141,7 +141,9 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
             | none =>
                 rw [hlab] at label₂
                 cases label₂
-            | some ev => exact ⟨ev.1, ev.2, hlab⟩
+            | some ev =>
+                cases ev
+                exact ⟨_, _, hlab⟩
           obtain ⟨wahl, spur', label'⟩ := someEv
           have evEq := Option.some.inj (label₂.symm.trans label')
           rw [evEq] at step₂
@@ -155,6 +157,8 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                       geraete_rule_binding locals d
                     subst binding
                     obtain ⟨_, plan', hplans', rule₂⟩ := geraete_kontext_regel ruleEq regel₂
+                    have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] u₂ := by
+                      simpa only [hplans'] using regel₂
                     have keinAbsturz₁ : (ρ₁.hw.angebot t).crash = false := by
                       rw [hang]
                       exact keinAbsturz₂
@@ -170,21 +174,15 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                         exact stat₂
                     cases rule₂ with
                     | issue owned₂ idle₂ =>
-                        have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] u₂ := by
-                          simpa only [hplans'] using regel₂
-                        have hplans : [plan'] =
-                            [{ internal with aktion := .frage (binding.question access) }] := rfl
-                        have hu : u₂ =
-                            setFrame s₂ c₂ { s₂.lokal c₂ with pending := some (binding.question access) } := rfl
                         obtain ⟨spur₁', u₁', n₁', regel₁, aus₁, _, _, _, _, _, _, _, _⟩ :=
                           geraete_issue_transport (locals := locals) (d := d)
                             (vergleich := vergleich.symm) (t := t) (binding := binding)
                             (access := access) (required := required) (target := target)
-                            (c := c₂) (w := w₂) (s₁ := s₂) (s₂ := s₁) (u₁ := u₂)
-                            (n₁ := n₂t) (spur₁ := spur') (plan := plan')
+                            (c := c₂) (w := w₂) (s₁ := s₂) (s₂ := s₁)
+                            (spur₁ := spur')
                             hkoppUmkehr hz₂ hz₁ gut₁
                             (Gabbro.Core.Ast.Semantik.Beobachtung.QuellzustandGleich.symm quell₁₂)
-                            regel₂' ruleEq aus₂ hplans hu owned₂ idle₂
+                            regel₂' ruleEq aus₂ rfl rfl owned₂ idle₂
                         have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                             (.kontext c₂ w₂, spur₁') n₁' :=
                           .kontext keinAbsturz₁ bereit₁ regel₁ aus₁
@@ -192,21 +190,15 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                           rw [hz₁]
                           exact Lauffolge.schritt step₁)).elim
                     | @consume owned₂ answer₂ pending₂ ready₂ sameQuestion₂ =>
-                        have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] u₂ := by
-                          simpa only [hplans'] using regel₂
-                        have hplans : [plan'] =
-                            [{ internal with aktion := .verbrauche answer₂ }] := rfl
-                        have hu : u₂ =
-                            setFrame s₂ c₂ (geraete_consume_rahmen s₂ c₂ binding access answer₂ target) := rfl
                         obtain ⟨spur₁', u₁', n₁', regel₁, aus₁, _, _, _, _, _, _, _, _⟩ :=
                           geraete_consume_transport (locals := locals) (d := d)
                             (vergleich := vergleich.symm) (t := t) (binding := binding)
                             (access := access) (required := required) (target := target)
-                            (c := c₂) (w := w₂) (s₁ := s₂) (s₂ := s₁) (u₁ := u₂)
-                            (n₁ := n₂t) (spur₁ := spur') (plan := plan') (answer := answer₂)
+                            (c := c₂) (w := w₂) (s₁ := s₂) (s₂ := s₁)
+                            (spur₁ := spur') (answer := answer₂)
                             hkoppUmkehr hz₂ hz₁
                             (Gabbro.Core.Ast.Semantik.Beobachtung.QuellzustandGleich.symm quell₁₂)
-                            regel₂' ruleEq aus₂ hplans hu owned₂ pending₂ ready₂ sameQuestion₂
+                            regel₂' ruleEq aus₂ rfl rfl owned₂ pending₂ ready₂ sameQuestion₂
                         have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                             (.kontext c₂ w₂, spur₁') n₁' :=
                           .kontext keinAbsturz₁ bereit₁ regel₁ aus₁
@@ -222,7 +214,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                     obtain ⟨spur₁', n₁', h₁', _⟩ :=
                       geraete_antwort_transport (locals := locals) (d := d)
                         (vergleich := vergleich.symm) (t := t) (a := a)
-                        (s₁ := s₂) (s₂ := s₁) (n₁ := n₂t) (spur₁ := spur')
+                        (s₁ := s₂) (s₂ := s₁) (spur₁ := spur')
                         hkoppUmkehr hz₂ hz₁ gut₁ h₂
                     have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                         (.antwort a, spur₁') n₁' := .antwort keinAbsturz₁ h₁'
@@ -238,7 +230,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                     obtain ⟨spur₁', n₁', h₁', _⟩ :=
                       geraete_interrupt_transport (locals := locals) (d := d)
                         (vergleich := vergleich.symm) (t := t) (id := id)
-                        (s₁ := s₂) (s₂ := s₁) (n₁ := n₂t) (spur₁ := spur')
+                        (s₁ := s₂) (s₂ := s₁) (spur₁ := spur')
                         hkoppUmkehr hz₂ hz₁ gut₁ h₂
                     have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                         (.interrupt id, spur₁') n₁' := .interrupt keinAbsturz₁ h₁'
