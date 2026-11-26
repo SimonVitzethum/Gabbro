@@ -28,36 +28,37 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
     · rw [show 0 + (rfindPaar frei).length = 44 by rw [hlenPaar]]
       exact verschiebbarVonLift 44 cfBlk hvBlk
   · rw [show 0 + (rfindPaar frei ++ cfBlk).length = 44 + cfBlk.length by
-      rw [List.length_append, hlenPaar]]
+      rw [List.length_append, hlenPaar]
+      omega]
     rw [rfindRest]
     apply verschiebbarVonAppend
-      · apply verschiebbarVonAppend
-        · unfold VerschiebbarVon
-          intro j hj
-          simp only [rfindNullTest, List.length_cons, List.length_nil] at hj
-          interval_cases j <;>
-            refine ⟨_, rfl, ?_, ?_⟩ <;> simp only [Verschiebbar] <;>
-            intro d hd <;> cases hd
-        · unfold VerschiebbarVon
-          intro j hj
-          simp only [rfindRueck, List.length_cons, List.length_nil] at hj
-          interval_cases j
-          · refine ⟨_, rfl, ?_, ?_⟩
-            · simp only [Verschiebbar]
-            · intro d hd
-              cases hd
-          · refine ⟨_, rfl, ?_, ?_⟩
-            · simp only [Verschiebbar]
-            · intro d hd
-              cases hd
-          · refine ⟨_, rfl, ?_, ?_⟩
-            · simp only [Verschiebbar]
-            · intro d hd
-              injection hd with hdeq
-              subst d
-              omega
-      · exact verschiebbarVonLift (44 + cfBlk.length + 3 + 3) (kopie aus (frei + 2))
-          (verschiebbarKopie aus (frei + 2))
+    · apply verschiebbarVonAppend
+      · unfold VerschiebbarVon
+        intro j hj
+        simp only [rfindNullTest, List.length_cons, List.length_nil] at hj
+        interval_cases j <;>
+          refine ⟨_, rfl, ?_, ?_⟩ <;> simp only [Verschiebbar] <;>
+          intro d hd <;> cases hd
+      · unfold VerschiebbarVon
+        intro j hj
+        simp only [rfindRueck, List.length_cons, List.length_nil] at hj
+        interval_cases j
+        · refine ⟨_, rfl, ?_, ?_⟩
+          · simp only [Verschiebbar]
+          · intro d hd
+            cases hd
+        · refine ⟨_, rfl, ?_, ?_⟩
+          · simp only [Verschiebbar]
+          · intro d hd
+            cases hd
+        · refine ⟨_, rfl, ?_, ?_⟩
+          · simp only [Verschiebbar]
+          · intro d hd
+            injection hd with hdeq
+            subst d
+            omega
+    · exact verschiebbarVonLift (44 + cfBlk.length + 3 + 3) (kopie aus (frei + 2))
+        (verschiebbarKopie aus (frei + 2))
 
 /-- A copy segment stays inside itself: every instruction advances the program
     counter by one. -/
@@ -65,10 +66,27 @@ theorem bleibtImBlockKopie (ziel quelle : Nat) : BleibtImBlock (kopie ziel quell
   unfold BleibtImBlock
   intro r b hlt hget
   rw [kopieLaenge] at hlt ⊢
-  interval_cases r.pc <;>
-    simp only [kopie, List.getElem?_cons_zero, List.getElem?_cons_succ, List.getElem?_nil] at hget <;>
-    injection hget with hb <;> subst b <;>
-    simp only [Befehl.auswerten, Rahmen.schreibe] <;> omega
+  have hcases : r.pc = 0 ∨ r.pc = 1 ∨ r.pc = 2 := by omega
+  rcases hcases with h0 | h1 | h2
+  · subst h0
+    simp only [kopie, List.getElem?_cons_zero] at hget
+    injection hget with hb
+    subst b
+    simp only [Befehl.auswerten, Rahmen.schreibe]
+    omega
+  · subst h1
+    simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_zero] at hget
+    injection hget with hb
+    subst b
+    simp only [Befehl.auswerten, Rahmen.schreibe]
+    omega
+  · subst h2
+    simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_succ,
+      List.getElem?_cons_zero] at hget
+    injection hget with hb
+    subst b
+    simp only [Befehl.auswerten, Rahmen.schreibe]
+    omega
 
 /-- Forward reachability of the loop end with the first zero candidate in the
     output slot, by induction over the remaining gap. -/
