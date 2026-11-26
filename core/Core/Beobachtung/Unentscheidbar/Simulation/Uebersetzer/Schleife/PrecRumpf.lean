@@ -72,6 +72,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     rw [paarBerechnungLaenge]
     show { r1 with pc := 44 + 0 } = r1
     rw [show (44 : Nat) + 0 = r1.pc by omega]
+  rw [paarBerechnungLaenge] at hmitPc1
   obtain ⟨k2, r2, hrun2, hpc2, hr2p, hpres2, hlok2, hrueck2, hstopp2⟩ :=
     paarVorwaerts (frei + 0) (frei + 4) (frei + 5) (frei + 20) r1_0 a (Nat.pair y i)
       hr1_0pc hr1_0a hr1_0q (by omega) (by omega)
@@ -92,9 +93,8 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hmitPc2 : mitPc 88 r2_0 = mitPc 44 r2 := by
     show { r2 with pc := 88 + 0 } = { r2 with pc := 44 + r2.pc }
     rw [hpc2]
-    omega
   obtain ⟨k3, r3, hrun3, hpc3, hr3aus, hpres3, hlok3, hrueck3, hstopp3⟩ :=
-    hcgNr (Nat.pair a (Nat.pair y i)) r2_0 hr2_0pc hr2_0p v hv
+    (hcgNr (Nat.pair a (Nat.pair y i)) r2_0 hr2_0pc hr2_0p).1 v hv
   have hbleib3 := laufBleibtVorEnde cgBlk r2_0 k3 r3 hrun3 (by rw [hpc3])
   have hprefix3 : (Schritt (precRumpf cgBlk aus frei))^[k3] (some (mitPc 44 r2)) =
       some (mitPc 88 r3) := by
