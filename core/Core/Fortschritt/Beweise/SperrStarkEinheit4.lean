@@ -191,8 +191,7 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
       refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
         ⟨[], ?_, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
         fun hoffen q hmem hepo hant => ?_⟩
-      · rw [hziel, List.append_nil]
-        rfl
+      · rw [hziel, List.append_nil] <;> rfl
       · rw [hziel] at hmem hepo hant ⊢
         exact hoffen q hmem hepo hant
 
