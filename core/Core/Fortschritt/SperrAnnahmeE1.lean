@@ -49,6 +49,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
+        generalize hau : spur.aussen = au
         cases hF with
         | sperre _ _ =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
@@ -63,6 +64,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
+        generalize hau : spur.aussen = au
         cases hF with
         | intern =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
@@ -72,9 +74,6 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
             fun hoffen q hmem hepo hant => ?_⟩
           rw [hziel] at hmem hepo hant ⊢
           exact hoffen q hmem hepo hant
-
-/-- The all-high label. -/
-def e1Hoch : Beobachtung.Etikett := {0}
 
 theorem e1Hoch_verborgen : oeffentlich e1Hoch = false := by
   apply decide_eq_false
@@ -139,15 +138,18 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
     (s'.sperren ()).besitzer = none := by
   cases step with
-  | kontext normal bereit regel aus =>
+  | @kontext s s' u plan spur c w _ _ regel aus =>
     obtain ⟨f, _, hreg⟩ := regel
     cases f with
     | unit =>
-      obtain ⟨_, _, _, v, hF, _, heq⟩ := aus
-      rcases hreg with ⟨next, hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
+      obtain ⟨_, _, _, _, hF, _, heq⟩ := aus
+      rcases hreg with ⟨next, _hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
       · subst hueq
+        have hplan : plan = ticketPlan := (List.cons.inj hpeq).1
+        subst hplan
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
+        generalize hau : spur.aussen = au
         cases hF with
         | sperre hF' _ =>
           cases hF' with
@@ -155,17 +157,22 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
             rw [heq]
             simpa only [Function.update_self] using hpre
       · subst hueq
+        have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
+        subst hplan
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
+        generalize hau : spur.aussen = au
         cases hF with
         | intern =>
           rw [heq]
           exact hpre
   | antwort _ h =>
-    obtain ⟨_, _, _, rfl⟩ := h
+    obtain ⟨_, _, _, heq⟩ := h
+    rw [heq]
     exact hpre
   | interrupt _ h =>
-    obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, heq⟩ := h
+    rw [heq]
     exact hpre
   | absturz h =>
     exact (absturz_leert_schlange h).2
@@ -174,13 +181,16 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
 theorem e1_kein_besitzer_I (ρ : I.Lauf E_1) (lauf : I.Laeufe E_1 ρ) (t : Nat)
     (s : Zustand Unit Unit Unit Unit Bool Unit) (hzs : ρ.zeit.zustand t = s) :
     (s.sperren ()).besitzer = none := by
+  revert s hzs
   induction t with
   | zero =>
+    intro s hzs
     have h0 := lauf.2.2.2.1
     rw [h0] at hzs
     subst hzs
     rfl
   | succ t ih =>
+    intro s hzs
     have htakt := ρ.zeit.takt t
     cases htakt with
     | wartet _ heq _ =>
@@ -205,7 +215,7 @@ theorem e1_halter : SperrHalterHalten E_1 := by
 theorem akzeptiert_E_1 : Akzeptiert E_1 :=
   ⟨⟨Plattform.x86_64.katalog_wohlgeformt, e1_regel_lokal,
     ⟨Gabbro.Core.Aussen.zulassung_m2 _, e1_aussen_gueltig⟩, e1_fluss,
-    e1_schranken_lokal, e1_sec, e1_domaenen⟩, e1_klauseln,
+    e1_schranken_lokal, e1_abschnitt, e1_domaenen⟩, e1_klauseln,
    ⟨fun ρ _ t op args h => by
       dsimp [kanonischeVerwendung, E_1, Quelltabellen.leer] at h
       exact h.elim,
