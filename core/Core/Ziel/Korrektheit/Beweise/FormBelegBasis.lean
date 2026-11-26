@@ -185,4 +185,27 @@ theorem basisForm_registry_covered (f : BasisForm) :
   · exact ⟨literalEntry⟩
   · exact ⟨binaryEntry⟩
 
+/-- The registry's joint satisfiability statements are inhabited by the existing form proofs, so
+    the premises of every rule in the two entries hold together. -/
+theorem basisForm_jointlySatisfiable (f : BasisForm) :
+    Nonempty (match f with
+      | .lit => LiteralErfuellbar
+      | .binary => BinaryErfuellbar) := by
+  cases f
+  · exact ⟨literal_erfuellbar⟩
+  · exact ⟨binary_erfuellbar⟩
+
+/-- The form's instruction occurs in the witness unit's code at the exact linearisation position
+    that the registry entry assigns to it (`literalForm`, `binaryForm`). This is the unit-level
+    counterpart of `Quellform.Realisiert`. -/
+theorem basisUnit_lit_occurrence :
+    (Ast.Semantik.fragment Ast.Category.unit (basisUnit .lit)).code[0]? = some (.literal 0 1) := by
+  rw [basisUnit_code_lit]
+  rfl
+
+theorem basisUnit_binary_occurrence :
+    (Ast.Semantik.fragment Ast.Category.unit (basisUnit .binary)).code[2]? = some (.binaer .add 0) := by
+  rw [basisUnit_code_binary]
+  rfl
+
 end Gabbro.Core.Ziel.Korrektheit
