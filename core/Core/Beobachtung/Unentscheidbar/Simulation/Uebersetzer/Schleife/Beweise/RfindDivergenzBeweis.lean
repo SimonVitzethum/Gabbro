@@ -13,8 +13,9 @@ open Gabbro.Core.Ast.Semantik
 /-- The pinned divergence obligation holds: a search whose source evaluation is
     total and never zero keeps returning to the loop entry, so no step count
     kills the run. -/
-theorem rfindDivergenz : rfindDivergenzAussage := by
-  intro cfBlk cf a aus frei freiCf freiP
+theorem rfindDivergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
+    (a aus frei freiCf freiP : Nat) :
+    rfindDivergenzAussage cfBlk cf a aus frei freiCf freiP := by
   intro m r hpc ha hm hy hcfBlk hbleib hvBlk hfreiCf hfreiP hP
   constructor
   · intro _
