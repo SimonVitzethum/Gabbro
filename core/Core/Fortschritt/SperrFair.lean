@@ -9,11 +9,16 @@
   whoever owns first discharges the bound with an empty cost list; otherwise the scoped lemmas
   apply on the acquisition-free prefix.
 
+  Meaning change (MK-11, strengthening only): both progress statements now carry the two
+  run premises `SchedulerFair E ρ` and `VerdraengungKehrtZurueck E ρ` plus an explicit
+  admissibility premise `Laeufe E hU ρ`. Everything else is unchanged. Without the scheduler
+  premise the release conclusion is not forced (`halte_gibt_nicht_ab`, the holder never runs).
+
   What this design leaves for Hy4 (pinned below, with proof sketches):
-  * `SperrFreigabeAussage`: `hgibt` from `Akzeptiert` + `HalteSchranken` + hardware fairness.
-    The eligibility half of the checker row now exists (`SperrHalterHalten` in
-    `Core.Annahme.Waechter`: halten-holders stay live, dispatched and geben-offering until
-    hand-off). The `w_*` chain below fixes the exact handover shape the guard must admit.
+  * `SperrFreigabeAussage`: `hgibt` from holder eligibility + `HalteSchranken` + hardware
+    fairness + scheduler fairness (the eligible holder offers `geben` permanently and is
+    therefore stepped). `SperrHalterHalten` in `Core.Annahme.Waechter` keeps holders live,
+    dispatched and geben-offering until hand-off. The `w_*` chain fixes the handover shape.
   * `SperrWarteFairAussage`: the target sentence — `SperrFreigabeAussage` discharges the `hgibt`
     premise of `sperr_warte_schranke_bis` (fuel `i`).
   * `StarkeWarteLaufAussage`: joint satisfiability with a real holder in front (position
@@ -417,11 +422,12 @@ theorem bleibt_bricht_bei_absturz {ρ : Maschine.Lauf E} {l : L} {c : Kontext} {
 def SperrFreigabeAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
-    (l : L) (h : Kontext) (H b : Nat) (s : Zustand L Ort Wert Raum Lok Grund),
+    (hU : Umgebung) (l : L) (h : Kontext) (H b : Nat) (s : Zustand L Ort Wert Raum Lok Grund),
     (∀ t s', b ≤ t → ρ.zeit.zustand t = some s' → (s'.sperren l).besitzer = some h →
       SperrHalterBereit E s' l h) →
     HalteSchranken E ρ → E.schranken.halten l = some H → AbschnittWartefrei E →
     (∀ h', Laeufe E h' ρ → FairLaeufe E.katalog h' ρ.hw) →
+    Laeufe E hU ρ → SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
     ρ.zeit.zustand b = some s → (s.sperren l).besitzer = some h →
     (∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
     ∃ r, b ≤ r ∧
@@ -441,9 +447,10 @@ def SperrFreigabeAussage : Prop :=
 def SperrWarteFairAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E)
-    (l : L) (c : Kontext) (i H a : Nat),
+    (hU : Umgebung) (l : L) (c : Kontext) (i H a : Nat),
     Akzeptiert E → HalteSchranken E ρ → E.schranken.halten l = some H →
     (∀ h', Laeufe E h' ρ → FairLaeufe E.katalog h' ρ.hw) →
+    Laeufe E hU ρ → SchedulerFair E ρ → VerdraengungKehrtZurueck E ρ →
     (∃ s, ρ.zeit.zustand a = some s ∧ (s.sperren l).schlange[i]? = some c) →
     (∀ s, ρ.zeit.zustand a = some s → (s.sperren l).schlange.Nodup) →
     (∀ k, a ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur)) →
