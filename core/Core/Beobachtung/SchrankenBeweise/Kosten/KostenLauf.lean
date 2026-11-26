@@ -45,7 +45,9 @@ private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.l
     KostenGrenzen.uebertrag (ok c) install s.regionLive
   have child : g.RahmenGut { (b.form.operand (s.lokal c)).faden.anfang with fortsetzungen := [] } := by
     cases b <;> try exact g.start []
-    case zugriff z => cases z <;> exact g.start []
+    case zugriff z =>
+      cases z <;> simp only [Befehl.form, Befehl.operand, Zugriffsform.operand]
+      all_goals repeat' first | exact g.start [] | split | unfold Rahmen.zugriffOperand
     case aussen z => cases z <;> exact g.start []
     case faden z =>
       cases z <;> exact g.start []
@@ -54,9 +56,7 @@ private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.l
   split
   all_goals try exact nach_gut ok install 0
   · apply update_rahmen (update_rahmen ok (transfer _)) child
-  · exact update_rahmen ok (transfer _)
   · split
-    · exact update_rahmen ok (transfer _)
     · exact update_rahmen ok (ok c)
     · exact ok
     · exact ok
@@ -111,7 +111,7 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
     unfold laden at loaded
     split at loaded
     · cases loaded
-      exact g.startdaten _ _ _ _ _
+      exact fun _ => g.start p.eingang
     · cases loaded
   | succ t ih =>
     have tick := ρ.zeit.takt t
@@ -138,27 +138,31 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
             obtain ⟨_, _, _, _, protocol, _, rfl⟩ := effect
             cases protocol <;> exact good
           | antwort _ answer =>
-            obtain ⟨_, _, _, rfl⟩ := answer
+            obtain ⟨_, _, _, after⟩ := answer
+            rw [after]
             exact ok
           | interrupt _ interrupt =>
-            obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := interrupt
+            obtain ⟨_, _, _, _, _, _, _, _, _, _, after⟩ := interrupt
+            rw [after]
             exact ok
           | absturz crash =>
             obtain ⟨_, _, _, _, rfl⟩ := crash
-            exact g.startdaten _ _ _ _ _
+            exact fun _ => g.start p.eingang
 
 /-- Every populated loop slot comes from an installer targeting that address in
     the executed fragment, and an installed measure has an owning function. -/
 def kostenSchreiborte (code : List Befehl) : KostenGrenzen where
   zaehler test _ :=
-    (∃ pc src distance, code[pc]? = some (.setzePasszahl src distance) ∧ test = pc + distance) ∨
+    (∃ pc src distance, code[pc]? = some (Befehl.setzePasszahl src distance) ∧ test = pc + distance) ∨
     (∃ pc lo hi ty skip shadow missing,
-      code[pc]? = some (.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1)
-  zaehlerKleiner := fun _ _ _ _ h => h
+      code[pc]? = some (Befehl.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1)
+  zaehlerKleiner := by
+    intro _ _ _ _ origin
+    exact origin
   obergrenze test _ :=
     ∃ pc lo hi ty skip shadow missing,
-      code[pc]? = some (.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1
-  mass name _ := ∃ id slot pc, name = some id ∧ code[pc]? = some (.pruefeMass slot)
+      code[pc]? = some (Befehl.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1
+  mass name _ := ∃ (id : Identifier) (slot pc : Nat), name = some id ∧ code[pc]? = some (Befehl.pruefeMass slot)
 
 /-- Installer provenance holds unconditionally in every frame of every
     admitted fragment run, including frames suspended under nested calls. -/
