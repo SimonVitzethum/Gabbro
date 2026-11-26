@@ -139,7 +139,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have spurEq₂' := h2.2.1
                   have append₂ := h2.2.2.1
                   have stateEq₂ := h2.2.2.2
-                  have aeq := geraete_antwort_eindeutig (d := d) hinv₂ offered₂' offered₂
+                  have aeq := geraete_antwort_eindeutig hinv₂ offered₂' offered₂
                   have hbeob₁ := geraete_antwort_beob_tick (predictor := predictor) hlabel hz₁ hn₁ h1typ
                   have hbeob₂ : schrittBeob ρ₂ predictor t = aussenBeob (d.unit locals) (.antwort a) := by
                     rw [← aeq]
