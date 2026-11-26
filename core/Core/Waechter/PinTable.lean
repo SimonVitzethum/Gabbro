@@ -356,9 +356,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Aussenfrage.ProvenienzTraegtNichtTrivialAussage, 15792455024006385417),
   (`Gabbro.Core.Ast.Semantik.MaskeSimAussage, 1216902672063950490),
   (`Gabbro.Core.Ast.Semantik.PrioritaetFilterAussage, 9260166058713430687),
-  (`Gabbro.Core.Ast.Semantik.SendeLiefertAussage, 4328701168167657756),
+  (`Gabbro.Core.Ast.Semantik.SendeLiefertAussage, 6929482048474240249),
   (`Gabbro.Core.Ast.Semantik.LeiteWirktAussage, 15409793448109244359),
-  (`Gabbro.Core.Ast.Semantik.UnterbrechungAussagen, 15496921824420002604),
+  (`Gabbro.Core.Ast.Semantik.UnterbrechungAussagen, 14614087297708182950),
   (`Gabbro.Core.Beobachtung.SchrankenbindungAussage, 11248178145806084000),
   (`Gabbro.Core.Beobachtung.SchrankenbindungOffenAussage, 5184542549546174202),
   (`Gabbro.Core.Beobachtung.SchrankenSpielraumAussage, 10005478665347018382),
@@ -400,6 +400,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ziel.Korrektheit.ZugriffZielAussage, 15420776952515041741),
   (`Gabbro.Core.Beobachtung.SpeicherGraphKopplungAussage, 1660925615813345088),
   (`Gabbro.Core.Ast.Semantik.TabellenAussagen, 6489623228406276377),
-  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253)]
+  (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253),
+  (`Gabbro.Core.Katalog.AuswahlFair, 0)]
 
 end Gabbro.Core.Waechter
