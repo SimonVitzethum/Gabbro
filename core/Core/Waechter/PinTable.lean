@@ -367,6 +367,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.SchrankenbindungTeilAussage, 8652399169488741678),
   (`Gabbro.Core.Beobachtung.SchrankenbindungOffenTeilAussage, 6173729982041718791),
   (`Gabbro.Core.Annahme.DomaenenTabellenAussage, 15588532784491517986),
+  (`Gabbro.Core.Annahme.DomaenenKohaerenzUnentscheidbarAussage, 0),
   (`Gabbro.Core.Speicher.IriwLitmusAussage, 10738661728212650954),
   (`Gabbro.Core.Speicher.Isa2LitmusAussage, 8482162200641809395),
   (`Gabbro.Core.Speicher.KohaerenzLitmusAussage, 7123152323810584155),
