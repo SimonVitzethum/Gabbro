@@ -14,80 +14,16 @@ open Gabbro.Core.Ast
 
 variable {k : Katalog}
 
-/-- The bare crash statement is false. `Wiederanlauf.daten` is unconstrained, so recovery entry
-    data may install a pending frame in every context. Both the general other-context clause and
-    the post-crash clause of the invariant then fail on the restarted state, even though the
-    cut bound holds and the original state satisfies the invariant. The missing premise is that
-    no recovery frame carries a pending question. -/
-theorem geraete_absturz_invariant_falsch (binding : Binding k) :
-    ¬ GeraeteAbsturzInvariantAussage (k := k) := by
-  intro all
-  let s : State := Zustand.start (fun _ => ({} : Frame)) (fun _ => .ruht)
-    (fun _ => ⟨none, .nutzer, (), fun _ => false, 0, false, []⟩)
-    ⟨fun _ => true, fun _ => 0⟩ (fun _ => 0) (.leer (fun _ => 0))
-  let p : PersistZustand := .leer (fun _ => 0)
-  let q : Frage := binding.question (.read 0x70)
-  let daten : (Nat → UInt8) → Startdaten UInt8 PUnit Frame PUnit := fun _ =>
-    { lokal := fun _ => { pending := some q }
-      status := fun _ => .ruht
-      kerne := fun _ => ⟨none, .nutzer, (), fun _ => false, 0, false, []⟩
-      rechte := ⟨fun _ => true, fun _ => 0⟩ }
-  let w : Wiederanlauf Nat UInt8 PUnit Frame PUnit :=
-    { eintritt := entryContext
-      kern := 0
-      daten := daten
-      initial := fun _ _ => 0 }
-  have hInv : GeraeteInvariantAussage binding s := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · intro c hc
-      refine ⟨?_, ?_, ?_⟩ <;> rfl
-    · intro qq hqq
-      simp only [s, Zustand.start] at hqq
-      cases hqq
-    · intro a ha
-      simp only [s, Zustand.start] at ha
-      cases ha
-    · change List.Forall₂ (fun a q => a.zu q) ([] : List AntwortEreignis) ([] : List FrageEreignis)
-      exact List.Forall₂.nil
-    · rfl
-    · intro hB
-      exfalso
-      have hfun := congrFun hB binding.object
-      simp only [s, Zustand.start, Sicherheit.Buchung.leer, startBuchung, if_true] at hfun
-      cases hfun
-    · intro hne
-      refine ⟨?_, ?_, ?_⟩
-      · rfl
-      · intro c
-        rfl
-      · intro qq hqq
-        simp only [s, Zustand.start] at hqq
-        cases hqq
-  have hcut : ∀ qq ∈ s.fragen, qq.cut < 0 := by
-    intro qq hqq
-    simp only [s, Zustand.start] at hqq
-    cases hqq
-  have hinv' : GeraeteInvariantAussage binding (s.wiederanlauf w 0 p) :=
-    all binding s w 0 p hInv hcut
-  obtain ⟨hothers', _, _, _, _, _, _⟩ := hinv'
-  have hne1 : (.faden 1 : Kontext) ≠ entryContext := by
-    intro heq
-    cases heq
-  have hnone := (hothers' (.faden 1) hne1).1
-  have hsome : ((s.wiederanlauf w 0 p).lokal (.faden 1)).pending = some q := by
-    simp only [Zustand.wiederanlauf, Zustand.start, w, daten]
-  rw [hsome] at hnone
-  exact (Option.some_ne_none q) hnone
-
-/-- With the missing premise the crash preservation statement holds: no recovered frame has a
+/-- The crash preservation statement holds under the unit's declared clearing: the restart
+    applies `w.verwerfen` to every context's entry data, so no recovered frame carries a
     pending question. The remaining clauses follow because all ledgers are carried over, the
     booking is empty, and every recorded question predates the new epoch. -/
 theorem geraete_absturz_invariant_mit_neustart
     {binding : Binding k} {s : State} {w : Wiederanlauf Nat UInt8 PUnit Frame PUnit}
     {t : Nat} {p : PersistZustand}
+    (leer : ∀ l : Frame, (w.verwerfen l).pending = none)
     (inv : GeraeteInvariantAussage binding s)
-    (cut : ∀ q ∈ s.fragen, q.cut < t)
-    (rein : ∀ c, ((w.daten p.dauerhaft).lokal c).pending = none) :
+    (cut : ∀ q ∈ s.fragen, q.cut < t) :
     GeraeteInvariantAussage binding (s.wiederanlauf w t p) := by
   obtain ⟨hothers, hqctx, hactx, hfwd, hrange, hpre, hpost⟩ := inv
   have hbuch : (s.wiederanlauf w t p).buchung.geraet =
@@ -97,10 +33,12 @@ theorem geraete_absturz_invariant_mit_neustart
     simp only [Zustand.wiederanlauf, Zustand.start, Sicherheit.Buchung.leer, startBuchung,
       if_true] at hfun
     cases hfun
+  have leerC (c : Kontext) : ((s.wiederanlauf w t p).lokal c).pending = none :=
+    leer _
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc
     refine ⟨?_, ?_, ?_⟩
-    · simpa only [Zustand.wiederanlauf, Zustand.start] using rein c
+    · exact leerC c
     · simpa only [Zustand.wiederanlauf] using (hothers c hc).2.1
     · have hverbraucht : s.verbraucht c = 0 := (hothers c hc).2.1
       have hcnum : c.nummer ≠ entryContext.nummer := by
@@ -137,11 +75,57 @@ theorem geraete_absturz_invariant_mit_neustart
     refine ⟨?_, ?_, ?_⟩
     · simp only [Zustand.wiederanlauf, Zustand.start, Sicherheit.Buchung.leer]
     · intro c
-      simpa only [Zustand.wiederanlauf, Zustand.start] using rein c
+      exact leerC c
     · intro qq hqq
       have hqq' : qq ∈ s.fragen := by simpa only [Zustand.wiederanlauf] using hqq
       have hqqcut := cut qq hqq'
       change qq.cut < t + 1
       omega
+
+/-- A restart on the concrete Frame machine discards every volatile mark: after each crash
+    step through the unit's own recovery data, no context carries a pending question and
+    both cost-mark stands are empty. The statement is over the real step relation
+    (`AbsturzSchritt` with the unit's `Wiederanlauf`, whose clearing is part of the machine
+    data), never over a separately chosen clearing instance. -/
+def NeustartVerwirftAussage : Prop :=
+  ∀ (E : Einheit PUnit Nat UInt8 PUnit Frame PUnit PUnit PUnit PUnit)
+    (leer : ∀ l : Frame, (E.einrichtung.wiederanlauf.verwerfen l).pending = none),
+    ∀ (region : Strecke) (k : Katalog) (run : HwLauf) (t : Nat)
+      (s s' : State) (spur : SchrittSpur Nat UInt8),
+      AbsturzSchritt region E.einrichtung.wiederanlauf k run t s spur s' →
+      (∀ c, (s'.lokal c).pending = none) ∧
+        ∀ c, E.schranken.durchlaufstand (s'.lokal c) = [] ∧
+          E.schranken.zeitstand (s'.lokal c) = []
+
+/-- The concrete Frame machine discards its volatile marks on every restart: the pending
+    slot is cleared by the unit's restart data, the mark stands by the declared binding. -/
+theorem NeustartVerwirft_erfuellbar : NeustartVerwirftAussage := by
+  intro E leer region k run t s s' spur step
+  obtain ⟨_, rfl⟩ := step.genau
+  refine ⟨?_, ?_⟩
+  · intro c
+    exact leer _
+  · intro c
+    exact ⟨E.schranken.durchlaufstand_nachVerwerfenLeer _ _,
+      E.schranken.zeitstand_nachVerwerfenLeer _ _⟩
+
+/-- The discard is load-bearing: pending questions exist as local state, the device
+    clearing discharges the premise, and entry data without clearing can install a pending
+    question, so the premise cannot be dropped. -/
+theorem NeustartVerwirft_nichtTrivial :
+    (∃ l : Frame, l.pending ≠ none) ∧
+    (∀ l : Frame, (verwerfen l).pending = none) ∧
+      ∃ (w : Wiederanlauf Nat UInt8 PUnit Frame PUnit) (c : Kontext),
+        (((w.daten (fun _ => 0)).lokal c).pending ≠ none) := by
+  let q : Frage := ⟨.hosted, ⟨0, ⟨⟨.hosted, 0⟩, 0⟩, []⟩, [], .read⟩
+  refine ⟨⟨{ pending := some q }, ?_⟩, fun l => rfl, ?_⟩
+  · exact Option.some_ne_none q
+  · let daten : (Nat → UInt8) → Startdaten UInt8 PUnit Frame PUnit := fun _ =>
+      ⟨fun _ => { pending := some q }, fun _ => .ruht,
+        fun _ => ⟨none, .nutzer, (), fun _ => false, 0, false, []⟩,
+        ⟨fun _ => true, fun _ => 0⟩⟩
+    let w : Wiederanlauf Nat UInt8 PUnit Frame PUnit :=
+      ⟨entryContext, 0, daten, fun _ _ => 0, id⟩
+    exact ⟨w, entryContext, Option.some_ne_none q⟩
 
 end Gabbro.Core.Beobachtung
