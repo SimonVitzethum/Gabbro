@@ -15,6 +15,7 @@ module
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Beobachtung.Fluss.Beweise.Gesamt
 public import Core.Ziel.Korrektheit.Zugriff
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragmentBeweis
 
 @[expose] public section
 
@@ -32,12 +33,12 @@ theorem niAkzeptiert_rein (P : Katalog.Plattform) (t : Ast.Unit)
   fragment_nichtinterferent (Ast.Semantik.fragment Ast.Category.unit t) P rein h
 
 /-- THE ACCEPTED ELABORATED UNIT IS NONINTERFERENT (the pinned `NIAkzeptiertAussage`). A frame-only fragment by
-    `niAkzeptiert_rein`; a fragment with an access instruction by the pinned `ZugriffNIFragmentAussage`. -/
-theorem niAkzeptiert (P : Katalog.Plattform) (zugriff : ZugriffNIFragmentAussage) : NIAkzeptiertAussage P := by
+    `niAkzeptiert_rein`; a fragment with an access instruction by `zugriffNIFragment`. -/
+theorem niAkzeptiert (P : Katalog.Plattform) : NIAkzeptiertAussage P := by
   intro t h
   by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
   · exact niAkzeptiert_rein P t rein h
-  · exact zugriff (Ast.Semantik.fragment Ast.Category.unit t) P
+  · exact zugriffNIFragment (Ast.Semantik.fragment Ast.Category.unit t) P
       ⟨Ast.Semantik.fragment_klassenrein Ast.Category.unit t, rein⟩ h
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -260,7 +260,7 @@ program    = { item } ;
 item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | arena | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl
+             | atomicdecl | lockdecl | rcudecl | groupDecl | concurrentdecl | accdecl | walkdecl | entrydecl
              | bootdecl | syscalldecl | targetdecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
 (* The build gate: `gabbro build --testbuild` opens it, its absence is the shipping build, and a
@@ -341,10 +341,10 @@ usedecl    = [ "pub" ] "use" ( path | ident "=" path "::" "[" garglist "]" ) ";"
    and the public names of its declared dependencies. Nothing of an undeclared project and no
    private name of a dependency is visible. A path means the same in a library checked alone and
    linked under any program (`aufloeseK_platz`). *)
-constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constwert ";" ;
+constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constValue ";" ;
 constexpr  = expr ;                    (* evaluable at translation time; no call of a function
                                           with effects, no place on `mut` *)
-constwert  = constexpr | arraylit ;
+constValue = constexpr | arraylit ;
 (* CHANGED lane 111: a const-table literal. It stands ONLY as a `const`
    initializer of array type (`const T : [u32; N] = […]`); the general
    expression reader never reads `[`, so anywhere else it is `P011` by
@@ -428,8 +428,8 @@ typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | struc
              | indexty | stringty     (* lane 261 *)
              | tupletype ;
 tupletype  = "(" typeexpr "," typeexpr { "," typeexpr } ")" ;
-stringty   = stringkopf "max" int ;
-stringkopf = ident ;
+stringty   = stringHead "max" int ;
+stringHead = ident ;
 (* The word `string` -- contextual, NOT reserved (Lean parser): only `string`
    directly followed by `max` takes this arm; anything else -- including a user
    type named `string` -- falls through to the name arm. Lane 261: a bounded
@@ -1473,7 +1473,7 @@ startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §1
    `reset` above. The inline trap has landed (lane 260, the proved template `tor.kind`); the C11 emitter
    refuses by name (`C185`) only a `child` outside the lowered gate+guard+region triple; the model side is the thread machine of the goal theorem (a `child` is a
    `kind` step; witness `spawn_kind_ziel`, THEOREM-MAP §49; the standalone clone machine of THEOREM-MAP §39 was removed with the C backend). No new word: `child` is the
-   `tree` word (§9, `kante`). *)
+   `tree` word (§9, `edge`). *)
 ```
 
 **`start { f, g };` — the hosted thread start** (lane 253; checker rules since fix lane
@@ -2043,8 +2043,8 @@ table      = [ "pub" ] "table" ident [ "space" ident ] [ "count" constexpr ] [ "
     execution, no copy -- so a second ownership mark for the same slots cannot come into being. A mark
    with no minter, no mint execution, or a minter no guarded access exercises, keeps the
    `D026` refusal; a malformed producer falls under `D265`-`D268`. *)
-treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
-kante      = ( "parent" | "child" | "sibling" ) ident ;
+treedecl   = "tree" "{" edge { "," edge } [ "," ] "}" ;
+edge       = ( "parent" | "child" | "sibling" ) ident ;
 (* «B41b»: the edge on which `descendants of` and `ancestors of` run -- ONCE at the table
    (`T001`-`T003`: the field exists, it is `option index into Self`, no edge twice). *)
 occdecl    = "occupied" ident ";" ;
@@ -2060,8 +2060,8 @@ walkdecl   = "walk" ident "levels" constexpr "{"
                "leaf" ":" pred ","
                { invariant }
              "}" ;
-slotdecl   = "slot" "{" [ slotfeld { "," slotfeld } [ "," ] ] "}" ;
-slotfeld   = ident ":" slottype [ "by" "ops" ] ;
+slotdecl   = "slot" "{" [ slotField { "," slotField } [ "," ] ] "}" ;
+slotField  = ident ":" slottype [ "by" "ops" ] ;
 (* `by ops`: this field is written ONLY by the generated operations -- `refcount -= 1` by hand
    is not writable. CHANGED «SG-8»: as shape, the field's carrier is in the `writes` of the
    generated operations and of no other function. *)
@@ -2279,8 +2279,8 @@ device  = [ "pub" ] "device" ident [ "(" params ")" ] "at" space
 mirrors = "mirrors" place "from" place ";" ;       (* ONCE per device, not per transition *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
 regdecl = "reg" ident ":" ( intty [ "wrapping" ] | "bool" ) "@" expr
-          "class" regklasse [ regphasen ]
-          [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
+          "class" registerClass [ registerPhases ]
+          [ "fields" "{" [ registerField { "," registerField } [ "," ] ] "}" ]
           [ "requires" pred [ "else" ident "::" ident ] ]
           [ "depends" "{" [ carrier { "," carrier } [ "," ] ] "}" ] ;
 (* «B26»: the `else` is the FALSIFIER; with it the READ is fallible and must stand in a
@@ -2289,12 +2289,12 @@ regdecl = "reg" ident ":" ( intty [ "wrapping" ] | "bool" ) "@" expr
 (* Lane 140: `depends` names the device-state carriers the register's answer may rest on
    (§10, `D.rtraeger`). A bare carrier only (`N258` refuses `T.feld`); unknown names
    (`N255`) and declared non-carriers (`N257`) fall beside it. *)
-regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
-regphasen = "in" ident { "," regklasse "in" ident } ;
+registerClass = "r" | "w" | "rw" | "w1c" | "rc" ;
+registerPhases = "in" ident { "," registerClass "in" ident } ;
 (* «B18»: a class per STAGE of a declared `order` (`R009`: every stage named exactly once).
    At the access the stage of the mark in Λ decides (`R005`/`R006`); where NO mark of this
    order is in scope, what EVERY stage allows holds. *)
-regfeld = ident "@" bitpos [ "class" regklasse ] ;
+registerField = ident "@" bitpos [ "class" registerClass ] ;
 carrier  = ident [ "." ident ] ;                    (* the head names the carrier; see §10 *)
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
@@ -2410,13 +2410,13 @@ impl fn schreiben(i : index into Zustand, w : u32) -> u32
 
 ```ebnf
 atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
-              [ "publishes" nutzlast ]                          (* G1 *)
+              [ "publishes" payload ]                           (* G1 *)
               [ "acquire" | "release" | "seq" | "relaxed" ]
               [ "observed" "by" ident ] ";" ;
 (* «V9»: `observed by <assume>` -- the other side stands in SILICON; the assumption carries
    the pairing, with a falsifier (`N031`). *)
-publishstmt = place "=" expr "publishes" nutzlast ";" ;
-nutzlast   = "{" placelist "}" | "nothing" ;
+publishstmt = place "=" expr "publishes" payload ";" ;
+payload     = "{" placelist "}" | "nothing" ;
 lockdecl   = [ "pub" ] "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ]
@@ -2424,7 +2424,7 @@ lockdecl   = [ "pub" ] "lock" ident "protects" "{" placelist "}"
 lockstmt   = "locks" [ "shared" ] place block ;
 rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
-gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
+groupDecl  = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
 concurrentdecl = "concurrent" "{" startmember { "," startmember } [ "," ] "}" ";" ;
 startmember = path [ "(" [ expr { "," expr } ] ")" ] ;
@@ -2461,7 +2461,7 @@ group Zustellung over { Endpunkte, Faeden } {
 | `rcu D protects { T } reclaims p` | `observes D` is a **lock without rank** whose witness the reads of `T` require (`H009`); a write of `T` requires a real lock in addition (`H010`); `reclaims` names the return site, which must stand under the writer's lock and not in `observes` (`H011`/`H012`) — all four as `braucht` lists | `D.Lock` (rank `0`, never compared: `observes` derives no `locks` inside it) + `D.braucht`; the **grace period** is an `assume` |
 | `observes D blk` | | `Stmt.locks` on the RCU lock (SUGAR) |
 | `atomic A : τ publishes { p, q } release` | a global whose writes carry the payload; `V001`–`V004` (every publication has an `awaits` with the **same** set) as shape («SG-13») | `D.Glob`, `D.nutzlast g` |
-| `A = e publishes { p, q };` | `{ p, q } = nutzlast(A)`; `writes A` | `Stmt.publish g e payload hp hw hL`; theorem `publish_paart` |
+| `A = e publishes { p, q };` | `{ p, q } = payload(A)`; `writes A` | `Stmt.publish g e payload hp hw hL`; theorem `publish_paart` |
 | `let x = A awaits { p, q };` | the same set | `Block.awaits`; theorem `awaits_paart`. The awaits-then-act gap (a load that rebinds clean and is never revalidated) is named in §16.2 item 10 |
 | `let x = A exchange update(v) { … } …;` | read–compute–write as one statement | `Block.exchange` |
 | `acquire` `release` `seq` `relaxed` | the memory order — **the meaning of the publication is the memory model**, assumption A10 (`assume c11_release_acquire_*`), §16 (2) | none |
