@@ -113,8 +113,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         dsimp only [rK]
         change P.length = LR.length + 3
         dsimp only [P, K]
-        rw [List.length_append, kopieLaenge]
-        omega, Nat.add_zero]
+        rw [List.length_append, kopieLaenge], Nat.add_zero]
     have hrEntrya : rEntry.temp (frei + 0) = some (natVal a) := hrKa
     have hrEntrym1 : rEntry.temp (frei + 1) = some (natVal m) := hrKm1
     have hrEntrym2 : rEntry.temp (frei + 2) = some (natVal m) := hrKm2
@@ -128,18 +127,25 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           obtain ⟨vv, hvv, hvne⟩ := hvor y (by omega) hy2
           intro hzy
           apply hvne
-          rw [hvv, hzy])
+          have heq : Part.some vv = Part.some 0 := by
+            rw [← hvv]
+            exact hzy
+          exact Part.some.injective heq)
     have hbleibE := laufBleibtVorEnde S rEntry kE rE hrunE hpcE
     have hrunEfull : (Schritt (P ++ S))^[kE] (some (mitPc LR.length rK)) = some (mitPc P.length rE) := by
       have hs := laufMitPc P S [] hvS rEntry kE hbleibE
+      rw [hrunE] at hs
       rw [hmitEntry] at hs
       simpa only [List.append_nil] using hs
     have hrunTotal : (Schritt (P ++ S))^[kLR + 3 + kE] (some r) = some (mitPc P.length rE) := by
-      rw [Function.iterate_add_apply, Function.iterate_add_apply, hrunLRfull, hrunKfull, hrunEfull]
+      rw [show kLR + 3 + kE = kE + (3 + kLR) by omega, Function.iterate_add_apply,
+        Function.iterate_add_apply, hrunLRfull, hrunKfull, hrunEfull]
     refine ⟨kLR + 3 + kE, mitPc P.length rE, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · simpa only [hblock] using hrunTotal
-    · change P.length + S.length = (P ++ S).length
-      rw [List.length_append]
+    · rw [hblock]
+      exact hrunTotal
+    · rw [hblock]
+      simp only [mitPc, List.length_append]
+      omega
     · change rE.temp aus = some (natVal v)
       exact hausE
     · intro s hs hsa
