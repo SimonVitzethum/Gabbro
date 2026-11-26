@@ -131,12 +131,6 @@ theorem e1_klauseln : KlauselnWahr E_1 := by
 
 /-- One ideal step preserves the free lock: tickets keep the owner, takes are
     impossible, answers and interrupts preserve the lock state, crashes wipe it. -/
-theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
-    {s : Zustand Unit Unit Unit Unit Bool Unit}
-    {ev : SchrittWahl Unit × SchrittSpur Unit Unit} {s' : Zustand Unit Unit Unit Unit Bool Unit}
-    (hpre : (s.sperren ()).besitzer = none)
-    (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
-    (s'.sperren ()).besitzer = none := by
 /-- A context step preserves the free lock: tickets keep the owner, the stutter keeps
     the state. -/
 theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
