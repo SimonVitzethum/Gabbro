@@ -34,7 +34,7 @@ theorem einrichtung_verwerfen_id (scope : Scope) (eintritte : Kontext → Option
 /-- The elaborated restart entry starts with an empty continuation stack. -/
 theorem einrichtung_daten_tiefe (scope : Scope) (eintritte : Kontext → Option Nat)
     (plan : Speicherplan) (m : Nat → UInt8) (c : Kontext) :
-    ((einrichtung scope eintritte plan).wiederanlauf.daten m).lokal c |>.fortsetzungen.length =
+    (((einrichtung scope eintritte plan).wiederanlauf.daten m).lokal c).fortsetzungen.length =
       0 :=
   rfl
 
