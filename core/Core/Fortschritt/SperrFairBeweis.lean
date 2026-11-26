@@ -84,6 +84,9 @@ theorem spur_kein_absturz_aus_hw {L Ort Wert Raum Lok Grund Bedingung Wahl F : T
     ∀ k, b ≤ k → ρ.zeit.spur k ≠ some (.absturz, absturzSpur) := by
   intro k hk hcon
   have htakt := ρ.zeit.takt k
+  generalize ρ.zeit.zustand k = s at htakt
+  generalize ρ.zeit.spur k = sp at htakt hcon
+  generalize ρ.zeit.zustand (k + 1) = s' at htakt
   cases htakt with
   | wartet label _ _ =>
     rw [label] at hcon
@@ -93,15 +96,18 @@ theorem spur_kein_absturz_aus_hw {L Ort Wert Raum Lok Grund Bedingung Wahl F : T
     | schritt h =>
       cases h with
       | kontext _ _ _ _ =>
-        have heq := Option.some.inj (label.symm.trans hcon)
+        rw [label] at hcon
+        have heq := Option.some.inj hcon
         have hfst := congrArg Prod.fst heq
         cases hfst
       | antwort _ _ =>
-        have heq := Option.some.inj (label.symm.trans hcon)
+        rw [label] at hcon
+        have heq := Option.some.inj hcon
         have hfst := congrArg Prod.fst heq
         cases hfst
       | interrupt _ _ =>
-        have heq := Option.some.inj (label.symm.trans hcon)
+        rw [label] at hcon
+        have heq := Option.some.inj hcon
         have hfst := congrArg Prod.fst heq
         cases hfst
       | absturz hab =>
