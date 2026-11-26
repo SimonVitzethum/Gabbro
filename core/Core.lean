@@ -376,6 +376,7 @@ public import Core.Linken.Offen
 public import Core.Linken.OffenSchluss
 public import Core.Linken.Relativ
 public import Core.Linken.RelativSchritt
+public import Core.Linken.RelativBindeRegion
 public import Core.Linken.RelativBefehl
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 meta import Core.Waechter.Check

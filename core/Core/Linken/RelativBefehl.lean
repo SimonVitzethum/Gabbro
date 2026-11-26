@@ -1,6 +1,7 @@
 module
 
 public import Core.Linken.RelativSchritt
+public import Core.Linken.RelativBindeRegion
 
 @[expose] public section
 
@@ -14,10 +15,6 @@ open Gabbro.Core.Katalog
 
 /-- Relocation keeps the measure. -/
 theorem frameZurueck_mass (off : Nat) (r : Rahmen) : (frameZurueck off r).mass = r.mass :=
-  rfl
-
-/-- Returning a frame is the frame. -/
-theorem pure_rahmen_eq (r : Rahmen) : (pure r : Id Rahmen) = r :=
   rfl
 
 /-- Setting a pass counter commutes with relocation. -/
@@ -406,11 +403,9 @@ theorem auswerten_projektion (off : Nat) (b : Befehl) (r : Rahmen) (live : Nat â
     simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, schrittLokal_proj, hpc, Rahmen.installSchema, frameZurueck_temp, frameZurueck_lokale, frameZurueck_rueckgabe, frameZurueck_stopp, globale_proj, funktionAktuell_proj, frameZurueck_mass, arrivalRegions_proj, platform_proj, environment_proj]
   | waehleUmgebung =>
     simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, umgebung_proj, hpc, frameZurueck_temp, frameZurueck_lokale, frameZurueck_rueckgabe, frameZurueck_stopp, globale_proj, funktionAktuell_proj, frameZurueck_mass, arrivalRegions_proj, platform_proj, environment_proj]
-  | bindeRegion =>
-    have hpc0 : (r.pc - off) + off = r.pc := by omega
-    simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, frameZurueck_lokale, arrivalRegions_proj, platform_proj, borrowsRegion_proj, hpc0]
-    trace_state
-    sorry
+  | bindeRegion receiver init =>
+    simp only [Befehl.auswerten, Id.run, pure_rahmen_eq]
+    exact bindeRegion_proj off r hpc receiver init live
   | zugriff =>
     simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, zugriff_proj, hpc]
   | faden =>
@@ -423,6 +418,8 @@ theorem auswerten_projektion (off : Nat) (b : Befehl) (r : Rahmen) (live : Nat â
     simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, weiter_proj, hpc]
   | leiteLeitung =>
     simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, weiter_proj, hpc]
+  | aussen =>
+    simp only [Befehl.auswerten, Id.run, pure_rahmen_eq, Rahmen.weiter, weiter_proj, hpc]
 
 /-- A relocated step commutes with the original step. -/
 theorem nach_projektion_kommutiert (off : Nat) (c : Kontext) (b : Befehl) (s : Zustand)
