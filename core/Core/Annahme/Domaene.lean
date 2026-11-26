@@ -16,6 +16,14 @@
   `Core/Annahme/Lokal.lean`; this file keeps the run-level statements, the witnesses and
   the collection root.
 
+  Strengthened checker (MK-17, designer decision 2026-11-26): the plan the unit carries is the
+  finite `Maschine.DomaenenTabelle`; `pruefeDomaenenTab` decides every coherence condition of
+  `tabKohaerent` on it, and `DomaenenTabelle.wohlgeformt` is an independent structural condition
+  on the finite declaration. Correctness, completeness and equivalence of that line over finite
+  tables are proved in `DomaeneBeweise/Pruefer.lean`; the function-based plan below survives only
+  as the total-lookup embedding (`tabellePlan`), and a coherence condition that escapes the finite
+  table is a proved user obligation in `DomaeneBeweise/Unentscheidbar.lean`.
+
   Design decisions (designer input, 2026-11-25, MK-17b: `RegelIsolation` is a checker row
   in `Lokal`, head-gated since the rule table covers every form but only heads step):
   * No new `Befehl` constructors (MK-04 owns `Befehl`): domains live beside the
