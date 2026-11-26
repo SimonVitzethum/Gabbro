@@ -37,26 +37,16 @@ theorem spracheinheit_lauftransport (P : Katalog.Plattform) (B : FormBeleg) (E :
     exact sim
   · exact fun h => ⟨rfl, rfl, h⟩
 
-/-- The existing fragment proof covers a successful link when every input module has the proved classes.
-    Linking preserves this premise by concatenation. -/
-theorem ideal_verlinkte_einheit (zugriff : ZugriffZielAussage)
-    (plan : Linken.Bauplan) (p : Ast.Semantik.Fragment) (h : Linken.linke plan = some p)
-    (klassen : ∀ m ∈ plan.module, m.fragment.KlassenRein) :
-    Maschine.I.Bestimmt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system ∧
-    Maschine.I.Fortschritt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system := by
-  unfold Linken.linke at h
-  split at h
-  · cases h
-    exact ideal_fragment_einheit zugriff _ plan.plattform (Linken.verknuepfte_klassenrein plan klassen)
-  · cases h
-
-/-- The outstanding ideal leg for accepted linked units. Keeping the acceptance premise here allows a proof
-    using either the link checks and acceptance, or ideal rules for classes beyond the existing fragment proof. -/
+/-- The ideal leg for accepted linked units. -/
 def IdealVerlinkteEinheitAussage : Prop :=
   ∀ (plan : Linken.Bauplan) (p : Ast.Semantik.Fragment), Linken.linke plan = some p →
     Annahme.Akzeptiert (p.einheit plan.plattform) →
     Maschine.I.Bestimmt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system ∧
     Maschine.I.Fortschritt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system
+
+/-- The linker enforces source origin and concatenation preserves the classes proved for that origin. -/
+theorem ideal_verlinkte_einheit (zugriff : ZugriffZielAussage) : IdealVerlinkteEinheitAussage :=
+  fun plan p h _ => ideal_fragment_einheit zugriff p plan.plattform (Linken.linke_klassenrein h)
 
 theorem IdealVerlinkteEinheitAussage.erfuellbar :
     ∃ (plan : Linken.Bauplan) (p : Ast.Semantik.Fragment), Linken.linke plan = some p ∧

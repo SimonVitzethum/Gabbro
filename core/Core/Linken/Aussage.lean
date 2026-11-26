@@ -34,17 +34,16 @@ theorem linkAkzeptanz : LinkAkzeptanzAussage :=
     through into the next module. -/
 def modulDef : Modul :=
   { name := "a"
-    fragment := ((Fragment.einzel
-      (Befehl.definiere mainName [] none 0 2 false [] none)).anhaengen
-      (Fragment.einzel Befehl.rueckVoid)).anhaengen
-      (Fragment.einzel Befehl.ende)
+    inhalt := .bibliothek ⟨[], .step
+      (.function mainName mainName_direct [] none (by intro _ h; cases h)
+        none (.braces .done) List.nodup_nil (by intro h; cases h) none) .done⟩
     exporte := ["main"]
     importe := [] }
 
 /-- The calling module: calls the function `main` defined in the other module. -/
 def modulCall : Modul :=
   { name := "b"
-    fragment := Fragment.einzel (Befehl.rufe mainName [] none)
+    inhalt := .quelle (.statement []) ⟨[], .directCall ⟨mainName, mainName_direct, []⟩⟩
     exporte := []
     importe := ["main"] }
 
@@ -85,9 +84,9 @@ theorem beispielLinke : linke beispielPlan = some beispielFragment :=
 theorem beispielZwei : beispielPlan.module.length = 2 :=
   rfl
 
-/-- The example code is the four instructions. -/
+/-- The example code is the elaborated instructions. -/
 theorem beispielCode : beispielFragment.code =
-    [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende,
+    [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende,
       Befehl.rufe mainName [] none] := by
   rfl
 
@@ -99,7 +98,7 @@ theorem beispielKlauseln : beispielFragment.klauseln = .leer := by
 theorem beispielGuard (b : Befehl) (present : b ∈ beispielFragment.code) (frame : Rahmen) :
     b.guard frame = none := by
   simp only [beispielCode, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl | rfl | rfl <;> rfl
 
 /-- Every instruction of the example is frame-only. -/
 theorem beispielRein (b : Befehl) (present : b ∈ beispielFragment.code) : b.Privat := by
@@ -120,7 +119,8 @@ theorem link_erfuellbar : LinkErfuellbarAussage := by
     exact List.mem_cons_self
   · refine ⟨[], none, ?_⟩
     rw [beispielCode]
-    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+      (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)))
 
 /-- Linking succeeds exactly when the declarative check holds, with the concatenated fragments. -/
 theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
@@ -131,6 +131,16 @@ theorem linke_eq_some {plan : Bauplan} {frag : Fragment} (h : linke plan = some 
     exact ⟨hb, (Option.some_inj.mp h).symm⟩
   · rw [if_neg hb] at h
     exact nomatch h
+
+/-- Every successful link uses the source elaboration whose classes are already proved. -/
+theorem linke_klassenrein {plan : Bauplan} {frag : Fragment} (h : linke plan = some frag) :
+    frag.KlassenRein := by
+  obtain ⟨hok, rfl⟩ := linke_eq_some h
+  have hquellen : plan.module.all Modul.hatQuelle = true := by
+    simp only [bauplanOk, Bool.and_eq_true] at hok
+    tauto
+  exact verknuepfte_klassenrein plan fun m hm =>
+    m.klassenrein_aus_quelle (List.all_eq_true.mp hquellen m hm)
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
@@ -214,14 +224,14 @@ theorem modulDef_klauseln : modulDef.fragment.klauseln = .leer :=
 theorem modulDef_guard (b : Befehl) (present : b ∈ modulDef.fragment.code) (frame : Rahmen) :
     b.guard frame = none := by
   have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende] := rfl
+      [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende] := rfl
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> rfl
+  rcases present with rfl | rfl | rfl | rfl <;> rfl
 
 /-- The defining module uses only frame-only instructions. -/
 theorem modulDef_rein (b : Befehl) (present : b ∈ modulDef.fragment.code) : b.Privat := by
   have hc : modulDef.fragment.code =
-      [Befehl.definiere mainName [] none 0 2 false [] none, Befehl.rueckVoid, Befehl.ende] := rfl
+      [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende] := rfl
   simp only [hc, List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl <;> first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
@@ -233,8 +243,8 @@ theorem modulDef_akzeptiert : Akzeptiert (modulDef.fragment.einheit .x86_64) := 
 /-- Two modules with the same name: the link check refuses, although each part
     alone is accepted. The duplicate name is one of the refused incompatibilities. -/
 def doppelPlan : Bauplan :=
-  { module := [{ name := "a", fragment := modulDef.fragment, exporte := ["main"], importe := [] },
-               { name := "a", fragment := modulDef.fragment, exporte := [], importe := ["main"] }]
+  { module := [{ name := "a", inhalt := modulDef.inhalt, exporte := ["main"], importe := [] },
+               { name := "a", inhalt := modulDef.inhalt, exporte := [], importe := ["main"] }]
     abhaengigkeiten := []
     plattform := .x86_64
     einstieg := "a" }

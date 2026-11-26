@@ -40,10 +40,10 @@ theorem fragB_code : fragB.code = [.literal 0 5, .literal 1 0, .zurueckSprung 3]
 
 /-- The two modules carry no interface: the point is control flow, not calls. -/
 def modulA : Modul :=
-  { name := "a", fragment := fragA, exporte := [], importe := [] }
+  { name := "a", inhalt := .roh fragA, exporte := [], importe := [] }
 
 def modulB : Modul :=
-  { name := "b", fragment := fragB, exporte := [], importe := [] }
+  { name := "b", inhalt := .roh fragB, exporte := [], importe := [] }
 
 /-- The witness plan: A linked before B, entry at A. -/
 def planAB : Bauplan :=
