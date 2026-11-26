@@ -64,7 +64,7 @@ theorem measurePrologue_kostenEinrichtung {u : Ast.Unit} {name : Identifier}
     rw [trace.frame]
     exact good
   have running := trace.aktiv active
-  exact ⟨r, trace, lookup, install, trace.walk.schritt ⟨_, running.1, running.2, lookup, rfl⟩,
+  refine ⟨r, trace, lookup, install, trace.walk.schritt ⟨_, running.1, running.2, lookup, rfl⟩,
     KostenGrenzen.auswerten atWrite install.gueltig _, ?_⟩
   have read : r.zahl 0 = some ⟨m.lo, m.hi, m.expression.wert env⟩ := by
     rw [Rahmen.zahl, operand]
@@ -239,7 +239,7 @@ theorem whileBounded_kostenEinrichtung_am {u : Ast.Unit} {lo hi : Int}
     [.zurueckSprung (test.code.length + inner.code.length + 1)] ++ post.code
   have layout : (programm u).code = pre.code ++ (expr 0 bound).code ++ (setup :: tail) := by
     simpa only [stmt, Fragment.anhaengen, Fragment.einzel, setup, tail, inner, test,
-      List.append_assoc, List.singleton_append] using code
+      List.append_assoc, List.singleton_append, List.cons_append] using code
   obtain ⟨r, trace, operand⟩ :=
     expr_ergebnis_typ_am 0 bound env entry typed active pre.code (setup :: tail) position
       (layout ▸ checked)
@@ -277,26 +277,26 @@ theorem forRange_kostenEinrichtung_am {u : Ast.Unit} {low lowHi highLo high : In
   let setup := Befehl.forAnfang 0 1 index (inner.code.length + 4) uses.1 (uses.2 && handler.isNone)
   let tail := [forInstruction inner handler] ++ inner.code ++
     [.forNaechster (inner.code.length + 1) index, .blockEnde 1] ++ post.code
-  let prefix := pre.code ++ (expr 0 lower).code
-  have layout : (programm u).code = prefix ++ ((expr 1 upper).code ++ (setup :: tail)) := by
+  let earlierCode := pre.code ++ (expr 0 lower).code
+  have layout : (programm u).code = earlierCode ++ ((expr 1 upper).code ++ (setup :: tail)) := by
     cases useCase : BracedBlock.rangeUses name body with
     | mk shadows writes =>
-      simpa only [stmt, useCase, Fragment.anhaengen, Fragment.einzel, prefix,
+      simpa only [stmt, useCase, Fragment.anhaengen, Fragment.einzel, earlierCode,
         setup, tail, inner, index, uses, List.append_assoc, List.singleton_append, List.cons_append,
         List.nil_append] using code
   obtain ⟨mid, lowTrace, lowValue⟩ :=
     expr_ergebnis_typ_am 0 lower env entry typed active pre.code
       ((expr 1 upper).code ++ (setup :: tail)) position (layout ▸ checked)
   rw [← layout] at lowTrace
-  have layoutUpper : (programm u).code = prefix ++ (expr 1 upper).code ++ (setup :: tail) := by
+  have layoutUpper : (programm u).code = earlierCode ++ (expr 1 upper).code ++ (setup :: tail) := by
     rw [List.append_assoc, ← layout]
-  have middle : mid.pc = prefix.length := lowTrace.position.trans List.length_append.symm
+  have middle : mid.pc = earlierCode.length := lowTrace.position.trans List.length_append.symm
   obtain ⟨r, highTrace, highValue⟩ :=
-    expr_ergebnis_typ_am 1 upper env mid (lowTrace.traegt typed) (lowTrace.aktiv active) prefix
+    expr_ergebnis_typ_am 1 upper env mid (lowTrace.traegt typed) (lowTrace.aktiv active) earlierCode
       (setup :: tail) middle (layoutUpper ▸ checked.after lowTrace.walk)
   rw [← layoutUpper] at highTrace
   have atSetup : r.pc = pre.code.length + ((expr 0 lower).code.length + (expr 1 upper).code.length) := by
-    rw [highTrace.position, prefix, List.length_append, Nat.add_assoc]
+    rw [highTrace.position, earlierCode, List.length_append, Nat.add_assoc]
   have lowRetained := (highTrace.lower 0 (Nat.zero_lt_succ _)).trans lowValue
   refine ⟨r, lowTrace.walk.trans highTrace.walk, ?_,
     forRange_kostenEinrichtung name ordinary lower upper static handler body pre post r table atSetup
