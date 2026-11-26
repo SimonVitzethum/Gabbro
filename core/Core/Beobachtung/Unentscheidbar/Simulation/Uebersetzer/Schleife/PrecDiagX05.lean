@@ -93,9 +93,12 @@ theorem precPaarPaarWert (cgBlk : List Befehl) (aus frei y i a : Nat)
     simpa only [List.length_append, paarBerechnungLaenge] using hpcEnd
   obtain ⟨j2, r1, hj2k, hrunC, hrun1, hpc1⟩ :=
     randAusEndePrefix paar1 paar2 hlocal1 hlen1 hlen2 r k rEnd hpc hk' hpcEnd'
+  have hrun1' : (Schritt (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)))^[j2]
+      (some r) = some r1 := by
+    simpa only [paar1] using hrun1
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
     paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i rfl hy hi
-      haF1 hbF1 j2 r1 hrun1 hpc1
+      haF1 hbF1 j2 r1 hrun1' hpc1
   admit
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
