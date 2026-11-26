@@ -43,9 +43,9 @@ theorem precExitLauf (cgBlk : List Befehl) (aus frei j : Nat) (r : Rahmen)
   have eJump' : (Schritt (precSchleife cgBlk aus frei))^[1] (some rC) = some rEnd := by
     rw [eJump]
     congr 1
-    rw [hpcC]
-    change 7 + (cgBlk.length + 92) = cgBlk.length + 99
-    omega
+    rw [show rC.pc + (cgBlk.length + 92) = cgBlk.length + 99 by
+      rw [hpcC]
+      omega]
   refine ⟨rEnd, ?_, ?_, ?_, hlokC, hrueckC, hstoppC⟩
   · rw [show (8 : Nat) = 1 + 7 by omega, Function.iterate_add_apply, hrunC', eJump']
   · change cgBlk.length + 99 = (precSchleife cgBlk aus frei).length
@@ -77,7 +77,9 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   intro j i k v r hpc ha hk hy hi haus hcgf hcg hvCg hv
   induction k generalizing j i r v with
   | zero =>
-    have hvi : v = i := by simpa only [precFolgeVon] using hv
+    have hvi : v = i := by
+      have h' : Part.some i = Part.some v := by simpa only [precFolgeVon] using hv
+      exact (Part.some_injective h').symm
     subst v
     obtain ⟨rEnd, hrun, hpcEnd, hpres, hlok, hrueck, hstopp⟩ :=
       precExitLauf cgBlk aus frei j r hpc hy hk
@@ -94,20 +96,20 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       precEinSchritt cgBlk cg a aus frei freiCg j (j + (k + 1)) i v1 r
         hpc ha hk hy hi hylt haus hcgf hcg hvCg hv1
     have hr1limit : r1.temp (frei + 1) = some (natVal ((j + 1) + k)) := by
-      rw [hpres1 (frei + 1) (by omega) (by omega)]
+      rw [hpres1 (frei + 1) (by omega) (by omega) (by omega) (by omega) (by omega)]
       rw [hk]
       congr 1
       omega
     have hr1a : r1.temp (frei + 0) = some (natVal a) := by
-      rw [hpres1 (frei + 0) (by omega) (by omega)]
+      rw [hpres1 (frei + 0) (by omega) (by omega) (by omega) (by omega) (by omega)]
       exact ha
     obtain ⟨kRest, rEnd, hrunRest, hpcEnd, hrEndaus, hpresRest, hlokRest, hrueckRest, hstoppRest⟩ :=
-      ih (j + 1) v1 v1 r1 hpc1 hr1a hr1limit hr1y hr1aus haus hcgf hcg hvCg hvRest
+      ih (j + 1) v1 v1 r1 hpc1 hr1a hr1limit hr1y hr1aus hvRest
     refine ⟨kRest + kEin, rEnd, ?_, hpcEnd, hrEndaus, ?_, ?_, ?_, ?_⟩
     · rw [Function.iterate_add_apply, hrun1, hrunRest]
     · intro s hs hne
       rw [hpresRest s hs hne]
-      exact hpres1 s hs hne
+      exact hpres1 s (by omega) (by omega) (by omega) hne (by omega) (by omega)
     · exact hlokRest.trans hlok1
     · exact hrueckRest.trans hrueck1
     · exact hstoppRest.trans hstopp1
@@ -134,6 +136,6 @@ theorem precSchleifeVorwaerts (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
   rw [evalPrecAlsFolge, hcf] at hv
   simp only [Part.bind_some] at hv
   exact precFolgeVonLauf cgBlk cg a aus frei freiCg 0 v0 k v r
-    hpc ha hk hcounter hi hausFrei hfreiCg hcg hvCg hv
+    hpc ha (by simpa only [Nat.zero_add] using hk) hcounter hi hausFrei hfreiCg hcg hvCg hv
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
