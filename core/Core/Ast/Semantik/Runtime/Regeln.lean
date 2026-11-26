@@ -1,6 +1,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
+public import Core.Ast.Semantik.Runtime.Atom.Fussabdruck
 public import Core.Ast.Semantik.Runtime.Praedikat
 
 @[expose] public section
@@ -203,16 +204,16 @@ theorem Befehl.nach_initial (b : Befehl) (c : Kontext) (s : Zustand) :
     (b.nach c s).initial = s.initial := rfl
 
 /-- The write footprint is sound against the frame transfer: outside it, memory content is
-    unchanged. Vacuous today (every footprint is empty); MK-04 proves the conditional from
-    the memory rules. -/
+    unchanged. The frame transfer touches only the acting frame, so this holds for every footprint; the footprint of
+    an access instruction is sound against the step it takes (`Befehl.plan_schreibt_fussabdruck`). -/
 theorem Befehl.fussabdruck_treu (b : Befehl) (c : Kontext) (s : Zustand) (z : Zelle)
-    (_ : z ∉ b.schreibFussabdruck) : (b.nach c s).initial z = s.initial z :=
+    (_ : b.schreibtMoeglich z = false) : (b.nach c s).initial z = s.initial z :=
   congrFun (b.nach_initial c s) z
 
 /-- Preservation across the frame transfer for predicates whose observed cells the command
     does not write. -/
 theorem Praedikat.gilt_nach (q : Praedikat) (b : Befehl) (c : Kontext) (s : Zustand)
-    (h : ∀ z ∈ q.beobachtet, z ∉ b.schreibFussabdruck) : q.gilt s → q.gilt (b.nach c s) := by
+    (h : ∀ z ∈ q.beobachtet, b.schreibtMoeglich z = false) : q.gilt s → q.gilt (b.nach c s) := by
   intro hq
   exact q.haelt_stabil _ _ (fun z mem => (b.fussabdruck_treu c s z (h z mem)).symm) hq
 

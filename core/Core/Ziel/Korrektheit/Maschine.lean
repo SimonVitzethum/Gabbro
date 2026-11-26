@@ -24,6 +24,7 @@ module
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ast.Semantik.Pflichten
 public import Core.Ast.Semantik.Runtime.Atom.Rein
+public import Core.Ziel.Korrektheit.Zugriff
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 public import Core.Verfeinerung.Formen.Familie
 public import Core.Maschine.Schritte
@@ -114,9 +115,11 @@ def IdealAkzeptierteEinheitAussage : Prop :=
     Maschine.I.Bestimmt (einheitVon P t).einrichtung (einheitVon P t).system ∧
     Maschine.I.Fortschritt (einheitVon P t).einrichtung (einheitVon P t).system
 
-theorem ideal_akzeptierte_einheit : IdealAkzeptierteEinheitAussage := by
-  intro P t
-  have rein := Ast.Semantik.fragment_rein Ast.Category.unit t
+/-- The statement for a unit whose fragment is frame-only. -/
+theorem ideal_akzeptierte_einheit_rein (P : Katalog.Plattform) (t : Ast.Unit)
+    (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein) :
+    Maschine.I.Bestimmt (einheitVon P t).einrichtung (einheitVon P t).system ∧
+    Maschine.I.Fortschritt (einheitVon P t).einrichtung (einheitVon P t).system := by
   exact ⟨Maschine.I.bestimmt_aus_kopfregeln _ _ (fun i s c hk =>
       Ast.Semantik.Befehl.bestimmt i
         (rein i (Ast.Semantik.kopf_mem (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk))),
@@ -129,5 +132,16 @@ theorem ideal_akzeptierte_einheit : IdealAkzeptierteEinheitAussage := by
         · intro t' s c w plans u hk _ _
           exact absurd (rein i (Ast.Semantik.kopf_mem
             (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h)⟩
+
+
+/-- `I` IS DETERMINATE AND MAKES PROGRESS FOR EVERY ELABORATED UNIT. A frame-only fragment by the template of its classes
+    (`ideal_akzeptierte_einheit_rein`), a fragment with an access instruction by the pinned statements of
+    `ZugriffZielAussage` (the composed determinacy and the liveness of the memory model). -/
+theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) : IdealAkzeptierteEinheitAussage := by
+  intro P t
+  by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
+  · exact ideal_akzeptierte_einheit_rein P t rein
+  · have klassenrein := Ast.Semantik.fragment_klassenrein Ast.Category.unit t
+    exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩, fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
 
 end Gabbro.Core.Ziel.Korrektheit
