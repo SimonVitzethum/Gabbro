@@ -63,7 +63,6 @@ private theorem KostenGrenzen.ruf (ok : g.RahmenGut r) (name : Identifier)
       g.Felder k.zaehler k.obergrenzen k.funktion k.mass := ok.2
   unfold Rahmen.ruf
   cases bind <;> simp only [Id.run]
-  cases bind <;> simp only [Id.run]
   all_goals repeat' first | exact ok | split
   all_goals
     refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
