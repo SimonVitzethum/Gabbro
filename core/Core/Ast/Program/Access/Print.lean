@@ -42,6 +42,10 @@ def Access.printPieces : Access before after → List PrintedToken
       [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
       [printComma] ++ signedPieces marker ++ [printComma, mode.print, printSemicolon]
 
+  | .veroeffentliche region _ _ index value mode =>
+    [printPublishWord, region.binding.name.print, printComma] ++ index.printPieces ++ [printComma] ++
+      value.printPieces ++ [printComma, mode.print, printSemicolon]
+
 theorem ModeReads.print (mode : AccessMode) (more : List Token) :
     ModeReads (mode.print.value :: more) mode more := by
   cases mode
@@ -63,6 +67,7 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
   have hpCas : printCasWord.value = keyword "cas" := rfl
   have hpFetchAdd : printFetchAddWord.value = keyword "fetch_add" := rfl
   have hpAwait : printAwaitWord.value = keyword "await" := rfl
+  have hpPublish : printPublishWord.value = keyword "publish" := rfl
   have signed_printReads : ∀ (number : Int) (tail : List Token),
       SignedReads ((signedPieces number).map PrintedToken.value ++ tail) number tail := by
     intro number tail
@@ -167,5 +172,15 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
       hpSemi] using
       (AccessReads.erwarte name ordinary written valid region visible receiverOrdinary
         typeRead indexRead markerRead modeRead)
+
+  | veroeffentliche region visible receiverOrdinary index value mode =>
+    have modeRead := ModeReads.print mode (semicolon :: rest)
+    have valueRead := value.printReads (minimum := 0)
+      (rest := comma :: mode.print.value :: semicolon :: rest) noOperatorAtComma
+    have indexRead := index.printReads (minimum := 0)
+      (rest := comma :: (value.printTokens ++ comma :: mode.print.value :: semicolon :: rest)) noOperatorAtComma
+    simpa only [Access.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpPublish, hpName, hpComma, hpSemi] using
+      (AccessReads.veroeffentliche region visible receiverOrdinary indexRead valueRead modeRead)
 
 end Gabbro.Core.Ast

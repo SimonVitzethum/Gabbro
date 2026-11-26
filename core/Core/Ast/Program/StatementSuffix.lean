@@ -97,6 +97,12 @@ theorem AccessReads.consumes (read : AccessReads scope input tree rest) : rest <
         typeRead.consumes
     exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
 
+  | veroeffentliche region visible receiverOrdinary indexRead valueRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans valueRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    exact ((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+
 local macro "statement_suffix" recursor:ident read:term : tactic =>
   `(tactic|
     refine $recursor

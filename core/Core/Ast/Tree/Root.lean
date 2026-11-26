@@ -388,5 +388,11 @@ inductive Access : Scope → Scope → Type where
       (receiverOrdinary : ordinaryLocal region.binding.name)
       (index : Expr scope (.int lo hi)) (marker : Int) (mode : AccessMode) :
       Access scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- `mem publish region, index, value, mode;` writes the operand into the cell as a release publication. It
+      binds nothing. -/
+  | veroeffentliche (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (value : Expr scope (.int valueLo valueHi)) (mode : AccessMode) :
+      Access scope scope
 
 end Gabbro.Core.Ast

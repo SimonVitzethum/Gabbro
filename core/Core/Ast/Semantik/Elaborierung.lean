@@ -74,6 +74,10 @@ def accessCode : Access before after → Fragment
       (.einzel (.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))).anhaengen
       (.einzel (.bindeWert 0 written.type false)))
 
+  | .veroeffentliche region _ _ index value mode =>
+    ((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (.zugriff (.veroeffentliche region.index 0 1 mode.modus)))
+
 mutual
 /-- Record whether the range index is shadowed or written in its body. -/
 def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × Bool

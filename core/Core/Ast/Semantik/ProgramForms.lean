@@ -98,6 +98,7 @@ def accessForm (scope : Scope) (result : Option (Ty .value)) :
       .holeUndAddiere 0 region.index 0 1 written.type mode.modus
     | .erwarte _ _ written _ region _ _ _ marker mode =>
       .erwarte 0 region.index 0 marker written.type mode.modus
+    | .veroeffentliche region _ _ _ _ mode => .veroeffentliche region.index 0 1 mode.modus
   position := fun ⟨_, form⟩ => match form with
     | .load _ _ _ _ _ _ _ index _ => (expr 0 index).code.length
     | .store _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
@@ -107,6 +108,7 @@ def accessForm (scope : Scope) (result : Option (Ty .value)) :
     | .holeUndAddiere _ _ _ _ _ _ _ index betrag _ =>
       (expr 0 index).code.length + (expr 1 betrag).code.length
     | .erwarte _ _ _ _ _ _ _ index _ _ => (expr 0 index).code.length
+    | .veroeffentliche _ _ _ index value _ => (expr 0 index).code.length + (expr 1 value).code.length
 
 def accessJoint : Prop :=
   ∀ platform start, ∃ (ctx : StatementContext), ∃ a, ((fun ctx => accessForm ctx.1 ctx.2) ctx).ErfuellbarAm platform start a

@@ -3,13 +3,14 @@
   Subject:   THE PRODUCTIONS OF THE ACCESS STATEMENTS (MK-04b). An access statement is the head word `mem` and one access
              form. Surface syntax (SYNTAX.md, "Memory access statements"):
 
-                  statement += "mem" ( load | store | swap | cas | fetch_add | await ) ;
+                  statement += "mem" ( load | store | swap | cas | fetch_add | await | publish ) ;
                   load       = "load" ident ":" type "=" region "," index "," mode ";" ;
                   store      = "store" region "," index "," value "," mode ";" ;
                   swap       = "swap" ident ":" type "=" region "," index "," value "," mode ";" ;
                   cas        = "cas" ident ":" type "=" region "," index "," expected "," new "," mode ";" ;
                   fetch_add  = "fetch_add" ident ":" type "=" region "," index "," amount "," mode ";" ;
                   await      = "await" ident ":" type "=" region "," index "," marker "," mode ";" ;
+                  publish    = "publish" region "," index "," value "," mode ";" ;
                   mode       = "na" | "rlx" | "ra" | "sc" ;
 
              `region` is the name of an owned-region local, `index` and `value` are integer expressions. The head
@@ -44,6 +45,9 @@ def printSwapWord : PrintedToken := printProgramWord 's' ['w', 'a', 'p'] (by dec
 def printCasWord : PrintedToken := printProgramWord 'c' ['a', 's'] (by decide) (by
   intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl <;> decide)
+def printPublishWord : PrintedToken := printProgramWord 'p' ['u', 'b', 'l', 'i', 's', 'h'] (by decide) (by
+  intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
 def printAwaitWord : PrintedToken := printProgramWord 'a' ['w', 'a', 'i', 't'] (by decide) (by
   intro c member; simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl <;> decide)
@@ -151,5 +155,13 @@ inductive AccessReads (scope : Scope) : List Token → AccessStatement scope →
       ModeReads modeInput mode (semicolon :: rest) →
       AccessReads scope (keyword "await" :: .word name.val :: colon :: typeInput)
         ⟨_, .erwarte name ordinary written valid region visible receiverOrdinary index marker mode⟩ rest
+
+  | veroeffentliche (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name) :
+      ExprReads scope 0 indexInput (index : Expr scope (.int lo hi)) (comma :: valueInput) →
+      ExprReads scope 0 valueInput (value : Expr scope (.int valueLo valueHi)) (comma :: modeInput) →
+      ModeReads modeInput mode (semicolon :: rest) →
+      AccessReads scope (keyword "publish" :: .word region.binding.name.val :: comma :: indexInput)
+        ⟨_, .veroeffentliche region visible receiverOrdinary index value mode⟩ rest
 
 end Gabbro.Core.Ast
