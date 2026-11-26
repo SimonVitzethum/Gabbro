@@ -23,6 +23,7 @@ namespace Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
 
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast
+open Gabbro.Core.Aussenfrage
 
 /-- Every present integer value in the temporary map lies in the joined interval. -/
 def TempSatInt (code : List Befehl) (temp : Nat → Option Dynamisch) : Prop :=
@@ -112,6 +113,21 @@ theorem unbekanntInt_mem (code : List Befehl) (slot : Nat) (b : Befehl)
   refine ⟨b, hmem, ?_⟩
   simp only [hb]
 
+/-- An outside question poisons its answer slot for integers: the answer value is unknown. -/
+theorem aussenFrage_poisonInt (code : List Befehl) (ziel : Nat)
+    (operation : Gabbro.Core.Katalog.AussenOperation) (args : List Nat)
+    (hmem : Befehl.aussen (.frage ziel operation args) ∈ code) :
+    slotUnbekanntInt code ziel = true := by
+  apply unbekanntInt_mem code ziel _ _ hmem
+  simp only [beitragInt, schreibtTemp, List.mem_cons_self, if_true]
+
+/-- A consumed outside answer poisons its target slot for integers. -/
+theorem aussenVerbrauche_poisonInt (code : List Befehl) (ziel : Nat)
+    (hmem : Befehl.aussen (.verbrauche ziel) ∈ code) :
+    slotUnbekanntInt code ziel = true := by
+  apply unbekanntInt_mem code ziel _ _ hmem
+  simp only [beitragInt, schreibtTemp, List.mem_cons_self, if_true]
+
 /-- A poisoned integer slot has a top lookup. -/
 theorem umgebungInt_unbekannt (code : List Befehl) (slot : Nat)
     (h : slotUnbekanntInt code slot = true) : umgebungInt code slot = none := by
@@ -189,6 +205,21 @@ theorem unbekanntText_mem (code : List Befehl) (slot : Nat) (b : Befehl)
 theorem umgebungText_unbekannt (code : List Befehl) (slot : Nat)
     (h : slotUnbekanntText code slot = true) : umgebungText code slot = none := by
   simp only [umgebungText_eq, h]
+
+/-- An outside question poisons its answer slot for text lengths. -/
+theorem aussenFrage_poisonText (code : List Befehl) (ziel : Nat)
+    (operation : Gabbro.Core.Katalog.AussenOperation) (args : List Nat)
+    (hmem : Befehl.aussen (.frage ziel operation args) ∈ code) :
+    slotUnbekanntText code ziel = true := by
+  apply unbekanntText_mem code ziel _ _ hmem
+  simp only [beitragText, schreibtTemp, List.mem_cons_self, if_true]
+
+/-- A consumed outside answer poisons its target slot for text lengths. -/
+theorem aussenVerbrauche_poisonText (code : List Befehl) (ziel : Nat)
+    (hmem : Befehl.aussen (.verbrauche ziel) ∈ code) :
+    slotUnbekanntText code ziel = true := by
+  apply unbekanntText_mem code ziel _ _ hmem
+  simp only [beitragText, schreibtTemp, List.mem_cons_self, if_true]
 
 /-- A static text contribution is covered by a present lookup. -/
 theorem umgebungText_beitrag (code : List Befehl) (slot : Nat) (b : Befehl) (lo hi : Nat)

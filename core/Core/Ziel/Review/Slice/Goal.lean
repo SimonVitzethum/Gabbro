@@ -18,9 +18,9 @@
     excluded from the step-level flow rule, MK-13). GAP N.
   * bounds: HYPOTHESIS `SchrankenAkzeptiertAussage P` — the leg is open (M9). GAP B.
   * progress (no hang + class progress): HYPOTHESIS `FortschrittAkzeptiertAussage` —
-    the     scheduler premise `SchedulerFortschrittVoraussetzung` is open, and the
-    composability leg needs `Rein` (else `ZugriffKomponierbarAussage` — now proved as
-    `zugriffKomponierbar`, but not yet wired into `einheit_fortschrittsfelder`). The slice
+    closed for accepted elaborated units by `fortschritt_akzeptiert`: the scheduler duties
+    hold for every fragment (`schedulerFortschrittVoraussetzung`), and the head-based
+    composability leg (`komponierbar_koepfe`) covers access heads without `Rein`. The slice
     passes the two run premises (`SchedulerFair`, `VerdraengungKehrtZurueck`) through. GAP F.
   * the wait-free section row: PROVED from acceptance (`Akzeptiert` contains
     `AbschnittWartefrei`); vacuous in content while no lock instruction exists (M2).

@@ -114,6 +114,24 @@ theorem FortschrittAkzeptiertAussage.erfuellbar :
     einheitVon_fair_lauf_erfuellbar Plattform.x86_64 trivialUnit trivial_akzeptiert
   exact ⟨Plattform.x86_64, trivialUnit, H, ρ, trivial_akzeptiert, run, fair, sched, ret⟩
 
+/-- The premises of the selection statement hold jointly: a fair, scheduler-fair,
+    preemption-free run of an accepted unit has a matched ideal run with the same environment. -/
+theorem SchedulerFortschrittVoraussetzungAussage.erfuellbar :
+    ∃ (P : Plattform) (t : Ast.Unit) (H : Umgebung)
+      (ρ : Maschine.Lauf (einheitVon P t)) (η : Maschine.I.Lauf (einheitVon P t)),
+      Annahme.Akzeptiert (einheitVon P t) ∧ Maschine.Laeufe (einheitVon P t) H ρ ∧
+        FairLaeufe (einheitVon P t).katalog H ρ.hw ∧ Maschine.SchedulerFair (einheitVon P t) ρ ∧
+        Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ ∧
+        Maschine.I.Laeufe (einheitVon P t) η ∧ Maschine.I.Laufabgleich ρ η ∧ η.umgebung = H := by
+  obtain ⟨H, ρ, run, fair, sched, ret⟩ :=
+    einheitVon_fair_lauf_erfuellbar Plattform.x86_64 trivialUnit trivial_akzeptiert
+  have pflicht : Maschine.I.SimPflichten (einheitVon Plattform.x86_64 trivialUnit) :=
+    (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit trivialUnit) Plattform.x86_64).mit_formen
+      (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit trivialUnit) Plattform.x86_64)
+  obtain ⟨η, valid, matched, _, environment⟩ := Maschine.I.laufabgleich pflicht.abgleich run
+  exact ⟨Plattform.x86_64, trivialUnit, H, ρ, η, trivial_akzeptiert, run, fair, sched, ret,
+    valid, matched, environment⟩
+
 /-- Scheduler fairness is load-bearing: without it a context hangs although the run is
     admissible, the history is hardware-fair, and no preemption ever occurs. Feeds: the
     starvation run `hang_B` over an admissible implementation run. -/
