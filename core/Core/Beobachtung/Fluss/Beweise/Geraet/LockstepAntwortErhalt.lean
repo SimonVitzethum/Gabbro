@@ -200,9 +200,10 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hn2buchung : n₂.buchung = s₂.buchung := by rw [stateEq₂]; rfl
                   have hn1naechste : n₁.naechsteAntwort = (s₁.antwort a).naechsteAntwort := by
                     rw [stateEq₁]
+                    rfl
                   have hn2naechste : n₂.naechsteAntwort = (s₂.antwort a).naechsteAntwort := by
-                    have h := congrArg Zustand.naechsteAntwort stateEq₂
-                    simpa only [aeq] using h
+                    rw [stateEq₂]
+                    rfl
                   have hnaPost : ∀ c, AntwortSicht (d.unit locals) n₁ c = AntwortSicht (d.unit locals) n₂ c := by
                     intro c
                     unfold AntwortSicht
