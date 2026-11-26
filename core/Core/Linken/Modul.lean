@@ -12,13 +12,49 @@ open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Katalog
 
-/-- A linked module: its name, its source fragment, the names it exports and the names it imports.
-    The full source of every module is present; nothing is hidden. -/
+/-- Source inputs are elaborated by the linker. Raw fragments remain available to the seal and
+    open-module analyses, which also reason about malformed code. -/
+inductive ModulInhalt where
+  | roh (fragment : Fragment)
+  | quelle (category : Category) (tree : category.Tree)
+  | bibliothek (tree : Ast.Unit)
+  | mitInvarianten (unit : UnitMitInvarianten)
+
+/-- A module and its declared interface. -/
 structure Modul where
   name : String
-  fragment : Fragment
+  inhalt : ModulInhalt
   exporte : List String
   importe : List String
+
+/-- Elaborate source inputs, preserving every field of the resulting fragment. A library body
+    receives the existing module seal terminator without a synthetic call to `main`. -/
+def Modul.fragment (m : Modul) : Fragment :=
+  match m.inhalt with
+  | .roh p => p
+  | .quelle category tree => Semantik.fragment category tree
+  | .bibliothek tree => (unitBody tree.2).anhaengen (.einzel .ende)
+  | .mitInvarianten u => programmMitInvarianten u
+
+/-- Only the source paths can participate in a successful link. -/
+def Modul.hatQuelle (m : Modul) : Bool :=
+  match m.inhalt with
+  | .roh _ => false
+  | _ => true
+
+theorem Modul.klassenrein_aus_quelle (m : Modul) (h : m.hatQuelle = true) :
+    m.fragment.KlassenRein := by
+  obtain ⟨name, inhalt, exporte, importe⟩ := m
+  cases inhalt with
+  | roh p => cases h
+  | quelle category tree => exact fragment_klassenrein category tree
+  | bibliothek tree =>
+    have hbody : (unitBody tree.2).KlassenRein :=
+      (Fragment.klassenrein_anhaengen_iff _ _).mp
+        ((Fragment.klassenrein_anhaengen_iff _ _).mp (programm_klassenrein tree)).1 |>.1
+    exact (Fragment.klassenrein_anhaengen_iff _ _).mpr
+      ⟨hbody, (Fragment.klassenrein_einzel_iff _).mpr (Or.inl (Or.inl rfl))⟩
+  | mitInvarianten u => exact programm_klassenrein u.baum
 
 /-- A declarative build file: the modules, the dependency edges, the target platform and the entry. -/
 structure Bauplan where
@@ -191,13 +227,13 @@ def kontrollflussAbgeschottet (plan : Bauplan) : Bool :=
 def annahmenKompatibel (plan : Bauplan) : Bool :=
   plan.module.all fun m => klauselnLeer m.fragment
 
-/-- The declarative link check: names unique, imports resolved, entry and edges valid,
+/-- The declarative link check: source origin, names unique, imports resolved, entry and edges valid,
     defined functions unique, every call resolved with a fitting signature, every export
     defined, no module carries written clauses, and control flow is sealed: no
     fall-through out of a non-final module, every static jump target inside its own
     module. -/
 def bauplanOk (plan : Bauplan) : Bool :=
-  modulNamenEindeutig plan && exporteEindeutig plan && einstiegVorhanden plan &&
+  plan.module.all Modul.hatQuelle && modulNamenEindeutig plan && exporteEindeutig plan && einstiegVorhanden plan &&
     importeGedeckt plan && abhaengigkeitenOk plan &&
     definitionenEindeutig plan && aufrufeGedeckt plan && exporteDefiniert plan &&
     annahmenKompatibel plan && kontrollflussAbgeschottet plan
@@ -207,8 +243,7 @@ def verknuepfteFragmente (plan : Bauplan) : Fragment :=
   plan.module.foldl (fun acc m => acc.anhaengen m.fragment) Fragment.leer
 
 /-- Appending preserves the two classes, so the linked whole is in the two classes once every module's fragment
-    is. The premise is per module; no link check derives it (see `linker_akzeptiert_aus_guard_transfer`, which
-    likewise takes a frame-only premise). -/
+    is. -/
 theorem foldl_anhaengen_klassenrein (acc : Fragment) (ms : List Modul)
     (hacc : acc.KlassenRein) (hmod : ∀ m ∈ ms, m.fragment.KlassenRein) :
     (ms.foldl (fun a m => a.anhaengen m.fragment) acc).KlassenRein := by
@@ -226,7 +261,7 @@ theorem verknuepfte_klassenrein (plan : Bauplan)
     (verknuepfteFragmente plan).KlassenRein :=
   foldl_anhaengen_klassenrein Fragment.leer plan.module Fragment.klassenrein_leer hmod
 
-/-- Linking: resolve imports, append fragments, keep names unique. Returns `none` when the
+/-- Linking: elaborate source modules, resolve imports and append fragments. Returns `none` when the
     declarative check fails; the linked whole program is then checked as one unit. -/
 def linke (plan : Bauplan) : Option Fragment :=
   if bauplanOk plan then some (verknuepfteFragmente plan) else none

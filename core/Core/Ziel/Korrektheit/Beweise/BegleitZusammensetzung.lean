@@ -96,14 +96,8 @@ theorem beleg_gedeckt : FormenGedecktAussage Plattform.x86_64 beleg := by
 
 /-- The two defining modules of the example plan are accepted on their own. -/
 theorem modulDef_akzeptiert :
-    Annahme.Akzeptiert (Linken.modulDef.fragment.einheit Plattform.x86_64) := by
-  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf Linken.modulDef.fragment Plattform.x86_64 rfl
-    Linken.modulDef_rein ?_
-  intro b present frame
-  change b ∈ ([Ast.Semantik.Befehl.definiere Ast.Semantik.mainName [] none 0 2 false [] none,
-    Ast.Semantik.Befehl.rueckVoid, Ast.Semantik.Befehl.ende] : List Ast.Semantik.Befehl) at present
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-  rcases present with rfl | rfl | rfl <;> rfl
+    Annahme.Akzeptiert (Linken.modulDef.fragment.einheit Plattform.x86_64) :=
+  Linken.modulDef_akzeptiert
 
 theorem modulCall_akzeptiert :
     Annahme.Akzeptiert (Linken.modulCall.fragment.einheit Plattform.x86_64) := by

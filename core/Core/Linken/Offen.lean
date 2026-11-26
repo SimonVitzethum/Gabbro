@@ -113,7 +113,7 @@ def gegenFragment : Fragment :=
 
 /-- The counterexample module: dividing by zero at its entry. -/
 def gegenModul : Modul :=
-  { name := "gegen", fragment := gegenFragment, exporte := [], importe := [] }
+  { name := "gegen", inhalt := .roh gegenFragment, exporte := [], importe := [] }
 
 /-- An outside start for the entry state: no assignment, no regions, no input, empty view. -/
 def gegenStart : AussenStart :=
