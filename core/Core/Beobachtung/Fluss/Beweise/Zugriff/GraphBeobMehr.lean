@@ -82,19 +82,28 @@ theorem aussenBeob_filter_nil
   | dma q a =>
     simp only [aussenBeob, List.filter_cons]
     cases a with
-    | read t o c => simp only [SB, Bool.false_eq_true, if_false]
-    | write t o b => simp only [SB, Bool.false_eq_true, if_false]
-    rw [filter_sichtbar_nil _ _ (by rfl), List.nil_append]
+    | read t o c =>
+      simp only [SB, Bool.false_eq_true, if_false]
+      exact filter_sichtbar_nil _ _ (by rfl)
+    | write t o b =>
+      simp only [SB, Bool.false_eq_true, if_false]
+      exact filter_sichtbar_nil _ _ (by rfl)
   | geraet q a | interrupt c irq e | seite q =>
     rw [aussenBeob]
     rfl
   | persistenz pe =>
-    cases pe <;> simp only [aussenBeob]
-    · exact filter_sichtbar_nil _ _ (by rfl)
-    · exact filter_sichtbar_nil _ _ (by rfl)
-    · exact filter_sichtbar_nil _ _ (by rfl)
-    · rfl
-    · rfl
-    · rfl
+    cases pe with
+    | write addr value =>
+      rw [aussenBeob]
+      exact filter_sichtbar_nil _ _ (by rfl)
+    | durable w =>
+      rw [aussenBeob]
+      exact filter_sichtbar_nil _ _ (by rfl)
+    | discard w =>
+      rw [aussenBeob]
+      exact filter_sichtbar_nil _ _ (by rfl)
+    | flush range | fence | crash =>
+      rw [aussenBeob]
+      rfl
 
 end Gabbro.Core.Beobachtung
