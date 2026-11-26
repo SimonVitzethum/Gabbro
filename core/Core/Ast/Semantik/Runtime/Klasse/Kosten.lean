@@ -111,6 +111,7 @@ theorem FuehrtAus.sperren_erhalt {L Ort Wert Raum Lok Grund Bedingung : Type} [D
   | verbinde _ _ => rfl
   | beende _ => rfl
   | wechsle _ _ _ _ => rfl
+  | maskiere _ _ | prioritaet _ | sende _ _ | leite _ _ _ => rfl
 
 /-- A full step whose plan is no lock action keeps every lock owner: the protocol action keeps
     the lock table (`FuehrtAus.sperren_erhalt`), the form interior keeps it
