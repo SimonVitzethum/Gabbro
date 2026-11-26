@@ -53,11 +53,12 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         cases hF
         case sperre _ _ =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-            simp only [hziel]
+            generalize hg : s'.graph = g at hziel
+            rw [hziel]
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
             ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
             fun hoffen q hmem hepo hant => ?_⟩
-          simp only [hziel] at hmem hepo hant ⊢
+          rw [hziel] at hmem hepo hant ⊢
           exact hoffen q hmem hepo hant
       · obtain rfl := (List.cons.inj hpeq).1
         subst hueq
@@ -67,6 +68,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         obtain ⟨_, au⟩ := spur
         cases hF
         case intern =>
+          generalize hg : s'.graph = g at hziel
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
             rw [hziel]
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
