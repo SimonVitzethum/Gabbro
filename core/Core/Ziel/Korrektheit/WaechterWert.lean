@@ -188,7 +188,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
     have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
         basis).bind alsGanzzahl = none := by
       simp only [Befehl.auswerten, htemp, Rahmen.schreibe, Function.update_self,
-        eq_self_iff_true, if_true, Option.bind_none]
+        eq_self_iff_true, if_true, Option.bind_none, bind, Option.bind, pure]
     rw [hnone] at hg
     cases hg
   | some d =>
@@ -197,7 +197,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
       have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
           basis).bind alsGanzzahl = none := by
         simp only [Befehl.auswerten, htemp, hwd, Rahmen.schreibe, Function.update_self,
-          eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+          eq_self_iff_true, if_true, Option.bind_some, Option.bind_none, bind, Option.bind, pure]
       rw [hnone] at hg
       cases hg
     | some values =>
@@ -206,7 +206,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
         have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
             basis).bind alsGanzzahl = none := by
           simp only [Befehl.auswerten, htemp, hwd, hindex, Rahmen.schreibe,
-            Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+            Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none, bind, Option.bind, pure]
         rw [hnone] at hg
         cases hg
       | some index =>
@@ -215,7 +215,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
           have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
               basis).bind alsGanzzahl = none := by
             simp only [Befehl.auswerten, htemp, hwd, hindex, if_pos hneg, Rahmen.schreibe,
-              Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+              Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none, bind, Option.bind, pure]
           rw [hnone] at hg
           cases hg
         case neg =>
@@ -223,7 +223,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
           case pos =>
             simp only [Befehl.auswerten, htemp, hwd, hindex, if_neg hneg, dif_pos hbound,
               Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true,
-              Option.bind_some, alsGanzzahl] at hg
+              Option.bind_some, alsGanzzahl, bind, Option.bind, pure] at hg
             cases hg
             exact liesArray_wertSat code basis count lo hi hmem
               values[index.zahl.wert.toNat]'hbound L H hlook
@@ -232,7 +232,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
                 basis).bind alsGanzzahl = none := by
               simp only [Befehl.auswerten, htemp, hwd, hindex, if_neg hneg, dif_neg hbound,
                 Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true,
-                Option.bind_some, Option.bind_none]
+                Option.bind_some, Option.bind_none, bind, Option.bind, pure]
             rw [hnone] at hg
             cases hg
 
