@@ -77,7 +77,7 @@ theorem Plattform.zaehlerZeile_unterstuetzt (p : Plattform) :
     p.ziel.unterstuetzt p.zaehlerZeile.trap := by
   cases p <;>
     simp only [Plattform.zaehlerZeile, Plattform.ziel, ZielDaten.unterstuetzt] <;>
-    decide
+    omega
 
 def laderStart {α : Type} (starts : List α) (i : Nat) : Option α := starts[i]?
 
