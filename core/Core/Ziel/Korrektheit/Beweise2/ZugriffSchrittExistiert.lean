@@ -60,10 +60,17 @@ end ZugriffSchritt
 
 open Gabbro.Core.Ast.Semantik
 
-/-- The pinned liveness statement is false: a checker-refused update form at the plain mode is still a
-    possible head, and with authority its granted ideal step records an event the memory model cannot
-    append. The missing premise is `z.wohlgeformt`. -/
-theorem zugriffSchrittExistiert_widerlegt : ¬ ZugriffSchrittExistiertAussage := by
+/-- The liveness statement WITHOUT the `z.wohlgeformt` premise is false: a checker-refused update form
+    at the plain mode is still a possible head, and with authority its granted ideal step records an
+    event the memory model cannot append. This makes the premise of the pinned statement informative. -/
+theorem zugriffSchrittExistiert_nichtTrivial :
+    ¬ (∀ (p : Fragment) (platform : Katalog.Plattform) (z : Zugriffsform) (s : Zustand) (c : Kontext),
+        (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) → s.SpeicherGut →
+          ∃ (w : PUnit.{1}) (plan : Plan) (u : Zustand)
+            (es : List (SpeicherAkteur Zelle × Etikett Zelle Int)) (g : SpeicherGraph Zelle Int),
+            (Befehl.zugriff z).ideal c s w [plan] u ∧
+              Speicherfolge s.initial (.kontext c) s.graph
+                (plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert) es g) := by
   intro h
   let z : Zugriffsform := .tausche 0 0 0 0 (Ast.Ty.int 0 0) .na
   let p : Fragment := Fragment.einzel (.zugriff z)

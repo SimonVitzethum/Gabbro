@@ -46,17 +46,19 @@ def ZugriffIdealBestimmtAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform), p.MitZugriff →
     Maschine.I.Bestimmt (p.einheit platform).einrichtung (p.einheit platform).system
 
-/-- **The memory model offers a read to every access head.** In a consistent complete memory, an access instruction at the
-    head of a context has an ideal step whose labels the memory model can append: some value is readable (the
-    liveness of the memory model; the initial write of a location is materialised lazily and a read of a location with a
-    coherent write exists). Difficulty: mittel. Sketch: for a load, an update or the confirming observation take the
-    modification-order maximal write of the cell visible to the context (`Initialisierung` supplies the initial write if
-    there is none) as the reads-from source, and extend `rf`, `mo` and the events accordingly (`Speicherfolge.cons`);
-    a store extends `mo` at the end. The plan is `Wirkungsklasse.plan` at that value, the authority decision is the
-    state's. -/
+/-- **The memory model offers a read to every well-formed access head.** In a consistent complete memory, a
+    well-formed access instruction at the head of a context has an ideal step whose labels the memory model can append:
+    some value is readable (the liveness of the memory model; the initial write of a location is materialised lazily and
+    a read of a location with a coherent write exists). `z.wohlgeformt` is a premise and not a theorem of the state: an
+    update at the plain mode records an `rmw` event that no consistent memory accepts; the checker's admission line
+    `pruefeZugriffsform` refuses exactly those forms, so no admitted program loses the guarantee. Difficulty: mittel.
+    Sketch: for a load, an update or the confirming observation take the modification-order maximal write of the cell
+    visible to the context (`Initialisierung` supplies the initial write if there is none) as the reads-from source, and
+    extend `rf`, `mo` and the events accordingly (`Speicherfolge.cons`); a store extends `mo` at the end. The plan is
+    `Wirkungsklasse.plan` at that value, the authority decision is the state's. -/
 def ZugriffSchrittExistiertAussage : Prop :=
   ∀ (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform) (z : Ast.Semantik.Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext),
-    (p.einheit platform).system.kopf s c = some (Ast.Semantik.Befehl.zugriff z) → s.SpeicherGut →
+    (p.einheit platform).system.kopf s c = some (Ast.Semantik.Befehl.zugriff z) → s.SpeicherGut → z.wohlgeformt →
       ∃ (w : PUnit.{1}) (plan : Ast.Semantik.Plan) (u : Ast.Semantik.Zustand)
         (es : List (SpeicherAkteur Ast.Semantik.Zelle × Gabbro.Core.Speicher.Etikett Ast.Semantik.Zelle Int))
         (g : SpeicherGraph Ast.Semantik.Zelle Int),
@@ -85,11 +87,27 @@ theorem mitZugriff_erfuellbar : ∃ p : Ast.Semantik.Fragment, p.MitZugriff :=
   ⟨_, Ast.Semantik.Fragment.einzel_zugriff_mitZugriff
     (.lade 0 0 0 (Ast.Ty.int 0 0) Gabbro.Core.Speicher.Modus.na)⟩
 
+/-- **The checker's admission verdict on a fragment gives well-formedness to every access head.** The verdict is
+    `Befehl.platformAllowed` over the whole code (the line `pruefeZugriffsform` for an access); a head is a member of the
+    code (`kopf_mem`), so the head's form passes the line. This is how a user of the liveness statement obtains its
+    `z.wohlgeformt` premise from the admission and never carries it as a free hypothesis. -/
+theorem zugriff_wohlgeformt_aus_erlaubt (p : Ast.Semantik.Fragment) (platform : Katalog.Plattform)
+    (z : Ast.Semantik.Zugriffsform) (s : Ast.Semantik.Zustand) (c : Kontext)
+    (erlaubt : p.code.all (Ast.Semantik.Befehl.platformAllowed platform) = true)
+    (head : (p.einheit platform).system.kopf s c = some (Ast.Semantik.Befehl.zugriff z)) :
+    z.wohlgeformt := by
+  have mem : Ast.Semantik.Befehl.zugriff z ∈ p.code := Ast.Semantik.kopf_mem (code := p.code) head
+  have ok := (List.all_eq_true.mp erlaubt) (Ast.Semantik.Befehl.zugriff z) mem
+  change Ast.Semantik.pruefeZugriffsform z = true at ok
+  exact ok
+
 /-- **Every head of a fragment of the two classes has a step that composes with the protocol**, from the liveness of the
     memory model. A frame-only head steps by its template (`Befehl.vollzug`); an access head steps by the step the memory
-    model offers (`ZugriffSchrittExistiertAussage`), which composes with the protocol (`zugriffKomponierbar`). -/
+    model offers (`ZugriffSchrittExistiertAussage`), which composes with the protocol (`zugriffKomponierbar`). The
+    liveness premise is derived from the checker's admission verdict `erlaubt`, not carried as a free hypothesis. -/
 theorem komponierbar_koepfe (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
-    (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
+    (platform : Katalog.Plattform) (klassenrein : p.KlassenRein)
+    (erlaubt : p.code.all (Ast.Semantik.Befehl.platformAllowed platform) = true) :
     ∀ i t s c, (p.einheit platform).system.kopf s c = some i → s.SpeicherGut →
       ∃ w plan u spur s', ((p.einheit platform).system.regel i).ideal c s w [plan] u ∧
         FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s' := by
@@ -98,15 +116,17 @@ theorem komponierbar_koepfe (existiert : ZugriffSchrittExistiertAussage) (p : As
   · exact ⟨(), Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s,
       (i.ideal_privat privat c s () [Ast.Semantik.plan] (i.nach c s)).2 ⟨rfl, rfl⟩, i.vollzug _ t c s⟩
   · subst same
-    obtain ⟨w, plan, u, es, g, step, folge⟩ := existiert p platform z s c head memory
+    have wf := zugriff_wohlgeformt_aus_erlaubt p platform z s c erlaubt head
+    obtain ⟨w, plan, u, es, g, step, folge⟩ := existiert p platform z s c head memory wf
     obtain ⟨spur, s', run⟩ := Ast.Semantik.zugriffKomponierbar p platform z t s c w plan u es g head step folge
     exact ⟨w, plan, u, spur, s', step, run⟩
 
 /-- **`I.Fortschritt` for a fragment of the two classes, from the liveness of the memory model.** -/
 theorem fortschritt_klassenrein (existiert : ZugriffSchrittExistiertAussage) (p : Ast.Semantik.Fragment)
-    (platform : Katalog.Plattform) (klassenrein : p.KlassenRein) :
+    (platform : Katalog.Plattform) (klassenrein : p.KlassenRein)
+    (erlaubt : p.code.all (Ast.Semantik.Befehl.platformAllowed platform) = true) :
     Maschine.I.Fortschritt (p.einheit platform).einrichtung (p.einheit platform).system :=
   Maschine.I.fortschritt_aus_koepfen _ _ (Ast.Semantik.Fragment.fertig p platform)
-    (fun b => b.regelFortschritt p platform) (komponierbar_koepfe existiert p platform klassenrein)
+    (fun b => b.regelFortschritt p platform) (komponierbar_koepfe existiert p platform klassenrein erlaubt)
 
 end Gabbro.Core.Ziel.Korrektheit
