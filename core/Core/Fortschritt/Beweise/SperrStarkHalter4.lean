@@ -79,20 +79,20 @@ theorem lockStatisch4_sperr {s : Zustand Unit Unit Unit Unit Bool Unit} {c : Kon
   cases hss with
   | ticket =>
     simp only [Function.update_self, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
-    exact ⟨hlock.1, fun d hd => Or.elim hd hlock.2 (fun hdc => hdc ▸ hs)⟩
+    exact ⟨hlock.1, fun d hd => Or.elim hd (fun hd => hlock.2 d hd) (fun hdc => hdc ▸ hs)⟩
   | nehmen hn =>
     obtain ⟨r, hs0, hnext⟩ := nimmt_inv hn
-    rw [← hnext]
+    rw [hs0, hnext]
     simp only [Function.update_self]
     exact ⟨hs, hlock.2⟩
   | geben hg =>
     obtain ⟨q, hs0, hnext⟩ := gibt_abgeben hg
-    rw [← hnext]
+    rw [hs0, hnext]
     cases q with
     | nil => simp only [SperrZustand.abgeben, Function.update_self]
     | cons d rest =>
       simp only [SperrZustand.abgeben, Function.update_self]
-      exact ⟨hlock.2 d (by simp [hs0]), fun e he => hlock.2 e (by simp [hs0, he])⟩
+      exact ⟨hlock.2 d (by simp), fun e he => hlock.2 e (by simp at he; exact he)⟩
 
 /-- A context step keeps the invariant: the rule only changes the lock, never dispatch, masks
     or liveness; after a crash no static context is dispatched, so no rule can fire. -/
@@ -170,18 +170,18 @@ theorem e4_absturz_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
       s spur s') (hinv : inv4 s) : inv4 s' := by
   have hclear := absturz_leert_schlange (l := ()) h
   refine ⟨⟨by rw [hclear.2]; trivial, by rw [hclear.1]; intro c hc; cases hc⟩, Or.inr ⟨?_, ?_, hclear.2, hclear.1⟩⟩
-  · intro k
-    obtain ⟨_, rfl⟩ := h.genau
-    simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, wDatenGesperrt4, dispatch4, E_4]
   · intro c hc k'
     obtain ⟨_, rfl⟩ := h.genau
     rcases hc with rfl | rfl | rfl
-  all_goals
-    by_cases hk' : k' = 0
-    · subst k'
-      simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, A, B, C4]
-    · simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, A, B, C4,
-        Function.update_of_ne hk']
+    all_goals
+      by_cases hk' : k' = 0
+      · subst k'
+        simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, A, B, C4]
+      · simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, A, B, C4,
+          Function.update_of_ne hk']
+  · intro k
+    obtain ⟨_, rfl⟩ := h.genau
+    simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, wDatenGesperrt4, dispatch4, E_4]
 
 /-- One ideal step preserves the invariant. -/
 theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
