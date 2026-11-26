@@ -157,7 +157,7 @@ theorem schreibePoison_erfuellt (code : List Befehl) (frame : Rahmen) (slot : Na
     rw [hfort] at hk
     exact h.2.2 k hk
 
-/-- The common epilogue of a context step whose plan is internal: the frame transfer
+/-- The common epilogue of a context step whose plan has a still action: the frame transfer
     already preserves the invariant and the protocol step touches neither frames nor locks. -/
 theorem kontextEpilog (p : Fragment) (platform : Plattform)
     (s u : Ast.Semantik.Zustand) (c : Kontext) (t : Nat)
@@ -166,23 +166,22 @@ theorem kontextEpilog (p : Fragment) (platform : Plattform)
     (huF : ∀ c', RahmenErfuellt p.code (u.lokal c'))
     (huS : u.sperren = s.sperren)
     (hs : ∀ l, (((s.sperren) l).besitzer) = none)
-    (hplan : plan.aktion = .intern)
+    (hplan : plan.aktion.Still)
     (hfa : FuehrtAus (p.einheit platform).einrichtung t c s u plan.aktion sperren aussen v)
     (heq : s' = { v with graph := s'.graph }) :
     (∀ c', RahmenErfuellt p.code ((s'.lokal) c')) ∧
       (∀ l, (((s'.sperren) l).besitzer) = none) := by
-  rw [hplan] at hfa
-  cases hfa with
-  | intern =>
-      rw [heq]
-      refine ⟨?_, ?_⟩
-      · intro c'
-        show RahmenErfuellt p.code (u.lokal c')
-        exact huF c'
-      · intro l
-        show (((((u.sperren) l).besitzer)) = none)
-        rw [huS]
-        exact hs l
+  obtain ⟨_, _, lokal, locks, _⟩ := hfa.still_erhaelt hplan
+  rw [heq]
+  refine ⟨?_, ?_⟩
+  · intro c'
+    change RahmenErfuellt p.code (v.lokal c')
+    rw [lokal]
+    exact huF c'
+  · intro l
+    change (v.sperren l).besitzer = none
+    rw [locks, huS]
+    exact hs l
 
 /-- A refused outside question halts only the acting frame. -/
 theorem verweigertErhaelt (p : Fragment)
@@ -232,7 +231,8 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
               have ideal' : b.ideal c s w [plan] u := ideal
               rcases Classical.em b.Privat with hpriv | hnpriv
               · obtain ⟨same, after⟩ := (b.ideal_privat hpriv c s w [plan] u).1 ideal'
-                cases same
+                have hplanEq := (List.cons.inj same).1
+                subst hplanEq
                 have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
                   intro c'
                   rw [after]
@@ -246,7 +246,7 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                   · rw [Function.update_of_ne heq2]
                     exact ihR c'
                 have huS : u.sperren = s.sperren := by rw [after]; rfl
-                have hplan : Semantik.plan.aktion = .intern := rfl
+                have hplan := (b.privat_still_leer hpriv (s.lokal c)).1
                 exact kontextEpilog p platform s u c t _ _ _ v _ huF huS ihS hplan hfa heq
               · have h1 : ∀ form, b ≠ .zugriff form := by
                   intro form heq2
@@ -277,9 +277,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                         rw [hU]
                         exact verweigertErhaelt p s c c' _ ihR
                       have huS : u.sperren = s.sperren := by rw [hU]; rfl
-                      have hplan : plan.aktion = .intern := by
+                      have hplan : plan.aktion.Still := by
                         rw [hpe]
-                        rfl
+                        trivial
                       exact kontextEpilog p platform s u c t plan _ _ v _ huF huS ihS hplan hfa heq
                     · have hpe : plan =
                           (Befehl.aussen
@@ -317,9 +317,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                           rw [hother]
                           exact ihR c'
                       have huS : u.sperren = s.sperren := by rw [hU]; rfl
-                      have hplan : plan.aktion = .intern := by
+                      have hplan : plan.aktion.Still := by
                         rw [hpe]
-                        rfl
+                        trivial
                       exact kontextEpilog p platform s u c t plan _ _ v _ huF huS ihS hplan hfa heq
                 | verbrauche ziel =>
                     simp only [Befehl.ideal, Befehl.form, Schrittform.ideal,
@@ -367,9 +367,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                         have huS : u.sperren = s.sperren := by
                           rw [hUn]
                           rfl
-                        have hplan : plan.aktion = .intern := by
+                        have hplan : plan.aktion.Still := by
                           rw [hpe]
-                          rfl
+                          trivial
                         exact kontextEpilog p platform s u c t plan _ _ v _
                           huF huS ihS hplan hfa heq
                     | some a =>
@@ -399,9 +399,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                               rw [hU]
                               simp only [Schrittform.verbraucheNach, hna, hg, htr,
                                 if_true, if_false, Zustand.verbrauche]
-                            have hplan : plan.aktion = .intern := by
+                            have hplan : plan.aktion.Still := by
                               rw [hpe]
-                              rfl
+                              trivial
                             exact kontextEpilog p platform s u c t plan _ _ v _
                               huF huS ihS hplan hfa heq
                           | none =>
@@ -425,9 +425,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                               rw [hU]
                               simp only [Schrittform.verbraucheNach, hna, hg, htr,
                                 if_true, if_false, Zustand.verbrauche]
-                            have hplan : plan.aktion = .intern := by
+                            have hplan : plan.aktion.Still := by
                               rw [hpe]
-                              rfl
+                              trivial
                             exact kontextEpilog p platform s u c t plan _ _ v _
                               huF huS ihS hplan hfa heq
                         · have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
@@ -449,9 +449,9 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                           have huS : u.sperren = s.sperren := by
                             rw [hU]
                             simp only [Schrittform.verbraucheNach, hna, hg, if_true, if_false]
-                          have hplan : plan.aktion = .intern := by
+                          have hplan : plan.aktion.Still := by
                             rw [hpe]
-                            rfl
+                            trivial
                           exact kontextEpilog p platform s u c t plan _ _ v _
                             huF huS ihS hplan hfa heq
           | antwort _ h =>
