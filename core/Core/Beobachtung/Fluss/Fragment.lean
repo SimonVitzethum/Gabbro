@@ -373,16 +373,16 @@ theorem stummer_schritt_koppelt
                       subst hspur₂
                       rcases f.plan_privat_aktion privat (vor.lokal c) with hL | ⟨v1, a1, hL⟩ | ⟨g1, hL⟩ |
                         ⟨v2, k2, hL⟩ | ⟨l3, k3, p3, hL⟩
-                      · rw [hL] at aktion₁
+                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
-                        rw [hR] at aktion₂
+                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
-                      · rw [hL] at aktion₁
+                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
-                        rw [hR] at aktion₂
+                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
@@ -392,9 +392,9 @@ theorem stummer_schritt_koppelt
                           rw [kerneEq]
                         rw [hc]
                         by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                      · rw [hL] at aktion₁
+                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
-                        rw [hR] at aktion₂
+                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
@@ -404,16 +404,16 @@ theorem stummer_schritt_koppelt
                           rw [kerneEq]
                         rw [hc]
                         by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
-                      · rw [hL] at aktion₁
+                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
-                        rw [hR] at aktion₂
+                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         rfl
-                      · rw [hL] at aktion₁
+                      · rw [(List.cons.inj transfer₁.1).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
-                        rw [hR] at aktion₂
+                        rw [(List.cons.inj htrans₂.1).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
