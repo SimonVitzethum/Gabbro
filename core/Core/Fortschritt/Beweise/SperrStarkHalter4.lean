@@ -54,7 +54,8 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
       obtain ⟨_, _, _, _, hF, _, hziel⟩ := haus
-      have hss : (s.sperren ()).Gibt c _ := by
+      generalize hev : spur.aussen = evs at hF
+      have hss : (s.sperren ()).Gibt c ((s.sperren ()).abgeben) := by
         -- the give plan carries a release step; extract it from the executed action
         obtain ⟨_, _, _, _, hF', _⟩ := haus
         have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
@@ -80,7 +81,7 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     rw [heq]
     exact hpre
   | interrupt _ h =>
-    obtain ⟨_, _, _, _, _, _, _, _, _, hstate⟩ := h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, hstate⟩ := h
     rw [hstate]
     simpa only [Zustandseintritt] using hpre
   | absturz h =>
@@ -99,22 +100,15 @@ theorem e4_kein_besitzer_I (ρ : I.Lauf E_4) (lauf : I.Laeufe E_4 ρ) (t : Nat)
     exact rfl
   | succ t ih =>
     intro s hzs
-    cases hzk : ρ.zeit.zustand t with
-    | none =>
-      cases htakt : ρ.zeit.takt t with
-      | wartet heq _ => rw [heq] at hzk; cases hzk
-      | schritt _ step => rw [hzk] at step; cases step
-    | some zt =>
-      cases htakt : ρ.zeit.takt t with
-      | wartet heq _ =>
-        rw [heq] at hzs
-        exact ih _ rfl
-      | schritt _ step =>
-        have hzt : ρ.zeit.zustand (t + 1) = s := hzs
-        rw [hzk] at step
-        have hfrei := ih _ rfl
-        cases step with
-        | _ => exact e4_I_schritt_erhaelt_frei hfrei (by simpa only [show t + 1 = Nat.succ t by rfl] using step)
+    cases ρ.zeit.takt t with
+    | wartet _ heq _ =>
+      rw [heq] at hzs
+      exact ih _ hzs
+    | schritt _ step =>
+      have hpre := ih _ rfl
+      have hpost := e4_I_schritt_erhaelt_frei hpre step
+      rw [hzs] at hpost
+      exact hpost
 
 theorem e4_halter : SperrHalterHalten E_4 := by
   intro ρ lauf t l h hown
