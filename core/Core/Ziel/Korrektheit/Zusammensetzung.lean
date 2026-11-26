@@ -20,7 +20,7 @@
 -/
 module
 
-public import Core.Ziel.Korrektheit.EinheitHerkunft
+public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Katalog.Erfuellbar
 public import Core.Linken.Modul

@@ -386,6 +386,7 @@ public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Alle
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise2.ZielAusTeilen
 public import Core.Ziel.Korrektheit.Beweise2.ZielNI
+public import Core.Ziel.Korrektheit.Beweise2.EinheitHerkunft
 public import Core.Linken.Modul
 public import Core.Linken.Aussage
 public import Core.Ziel.Review.Slice.Fragment
