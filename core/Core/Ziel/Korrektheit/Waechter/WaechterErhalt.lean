@@ -411,6 +411,8 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
     have hbf := hrein _ hmem
     simp only [keinFremdzugriff] at hbf
     cases hbf
+  | aussen _form =>
+    exact transfer_unveraendert code frame live _ hmem h rfl rfl
   | maskiere vektor aus =>
     exact transfer_unveraendert code frame live _ hmem h rfl rfl
   | prioritaet grenze =>
