@@ -210,8 +210,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       induction A with
                       | nil => exact List.Forall₂.nil
                       | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
-                    exact List.rel_append (by simpa only [L₁, L₂, NiedrigeBeob] using
-                      (geraeteKopplung_kopplung hkopp).1) reflA
+                    exact List.rel_append (by simpa only [L₁, L₂] using hcov) reflA
                   have hn1lokal : n₁.lokal = s₁.lokal := by rw [stateEq₁]; rfl
                   have hn2lokal : n₂.lokal = s₂.lokal := by rw [stateEq₂]; rfl
                   have hn1status : n₁.status = s₁.status := by rw [stateEq₁]; rfl
