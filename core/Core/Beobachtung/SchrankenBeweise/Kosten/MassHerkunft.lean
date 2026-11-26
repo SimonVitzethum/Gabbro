@@ -55,6 +55,7 @@ private theorem access_ohneMass (a : Access before after) : OhneMass (accessCode
   cases a <;> simp only [accessCode, Fragment.anhaengen, Fragment.einzel]
   all_goals
     apply_rules [OhneMass.append, expr_ohneMass, OhneMass.single]
+  all_goals
     intro slot same
     cases same
 
@@ -76,12 +77,14 @@ private theorem braced_ohneMass (tree : BracedBlock result before) :
         Fragment.einzel]
        try split
        all_goals
-         apply_rules [OhneMass.nil, OhneMass.append, expr_ohneMass, args_ohneMass,
-           option_ohneMass, OhneMass.single]
+         apply_rules [option_ohneMass, args_ohneMass, expr_ohneMass, OhneMass.nil, OhneMass.append,
+           OhneMass.single]
+       all_goals
          intro slot same
          cases same)
 
-private theorem OhneMass.not_at (free : OhneMass code) (atPC : code[pc]? = some (.pruefeMass slot)) :
+private theorem OhneMass.not_at {code : List Befehl} (free : OhneMass code)
+    (atPC : code[pc]? = some (.pruefeMass slot)) :
     False :=
   free slot (List.mem_iff_getElem?.mpr ⟨pc, atPC⟩)
 
@@ -89,7 +92,9 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
     (atPC : (unitBody source).code[pc]? = some (.pruefeMass slot)) :
     ∃ (name : Identifier) (kern : FunktionsKern) (m : Measure kern.koerper.1)
       (pre post : List Befehl),
-      name ∈ alleFunktionen source ∧ kern.mass = some m ∧
+      name ∈ alleFunktionen source ∧
+      (((alleFunktionen source).map Subtype.val).Nodup → findeKern source name = some kern) ∧
+      kern.mass = some m ∧
       (unitBody source).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   induction source generalizing pc with
@@ -102,6 +107,11 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
       | function name ordinary params result valid measure body distinct returns effects =>
         let code := functionCode result measure body
         let header := functionInstruction before name params result measure.isSome code (declaredEffects effects)
+        have headerFree : OhneMass [header] := by
+          apply OhneMass.single
+          intro slot same
+          dsimp only [header, functionInstruction] at same
+          cases same
         have restFree : OhneMass ((bracedBlock body).code ++ [.rueckVoid]) :=
           .append (braced_ohneMass body) (.single (fun _ same => by cases same))
         have layout : (decl (.function name ordinary params result valid measure body distinct returns effects)).code =
@@ -111,43 +121,58 @@ private theorem mass_imRumpf (source : UnitBody before after) {pc slot : Nat}
         by_cases prolog : pc < ([header] ++ (measurePrologue measure).code).length
         · rw [List.getElem?_append_left prolog] at localPC
           cases measure with
-          | none => exact False.elim ((OhneMass.append (.single (fun _ h => by cases h)) .nil).not_at localPC)
+          | none => exact False.elim (OhneMass.not_at (.append headerFree .nil) localPC)
           | some m =>
             have splitCode : [header] ++ (measurePrologue (some m)).code =
                 ([header] ++ (expr 0 m.expression).code) ++ [.pruefeMass 0] := by
               simp only [measurePrologue, Fragment.anhaengen, Fragment.einzel, List.append_assoc]
             rw [splitCode] at localPC
             have free : OhneMass ([header] ++ (expr 0 m.expression).code) :=
-              .append (.single (fun _ h => by cases h)) (expr_ohneMass 0 m.expression)
+              .append headerFree (expr_ohneMass 0 m.expression)
             by_cases earlier : pc < ([header] ++ (expr 0 m.expression).code).length
             · rw [List.getElem?_append_left earlier] at localPC
-              exact False.elim (free.not_at localPC)
+              exact False.elim (OhneMass.not_at free localPC)
             · have bound := (List.getElem?_eq_some_iff.mp localPC).1
               have position : pc = [header].length + (expr 0 m.expression).code.length := by
                 simp only [List.length_append, List.length_singleton] at earlier bound ⊢
                 omega
               have zeroSlot : slot = 0 := by
-                rw [List.getElem?_append_right (Nat.le_of_not_gt earlier), ← List.length_append] at localPC
-                  <;> simp only [position, List.length_append, Nat.sub_self, List.getElem?_cons_zero,
-                    Option.some.injEq, Befehl.pruefeMass.injEq] at localPC
-                exact localPC.symm
+                rw [List.getElem?_append_right (Nat.le_of_not_gt earlier)] at localPC
+                have offset : pc - ([header] ++ (expr 0 m.expression).code).length = 0 := by
+                  rw [List.length_append, position, Nat.sub_self]
+                rw [offset, List.getElem?_cons_zero] at localPC
+                cases localPC
+                rfl
               refine ⟨name, ⟨⟨_, _, body⟩, some m⟩, m, [header],
                 ((bracedBlock body).code ++ [.rueckVoid]) ++ (unitBody rest).code,
-                List.mem_cons_self, rfl, ?_, position, zeroSlot⟩
-              simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
+                List.mem_cons_self, ?_, rfl, ?_, position, zeroSlot⟩
+              · intro _
+                simp only [findeKern, beq_self_eq_true, ite_true]
+              · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
         · rw [List.getElem?_append_right (Nat.le_of_not_gt prolog)] at localPC
-          exact False.elim (restFree.not_at localPC)
+          exact False.elim (OhneMass.not_at restFree localPC)
       | constant _ _ _ _ value _ _ =>
-        exact False.elim ((OhneMass.append (expr_ohneMass 0 value)
-          (.single (fun _ same => by cases same))).not_at localPC)
+        exact False.elim (OhneMass.not_at (atPC := localPC)
+          (.append (expr_ohneMass 0 value) (.single (fun _ same => by cases same))))
       | record | tagged | table | effectGroup | environment =>
-        exact False.elim ((OhneMass.single (fun _ same => by cases same)).not_at localPC)
+        exact False.elim (OhneMass.not_at (atPC := localPC) (.single (fun _ same => by cases same)))
     · have outside := Nat.le_of_not_gt inside
       change ((decl first).code ++ (unitBody rest).code)[pc]? = _ at atPC
       rw [List.getElem?_append_right outside] at atPC
-      obtain ⟨name, kern, m, pre, post, mem, declared, layout, position, zeroSlot⟩ := ih atPC
-      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, declared, ?_, ?_, zeroSlot⟩
+      obtain ⟨name, kern, m, pre, post, mem, found, declared, layout, position, zeroSlot⟩ := ih atPC
+      refine ⟨name, kern, m, (decl first).code ++ pre, post, ?_, ?_, declared, ?_, ?_, zeroSlot⟩
       · cases first <;> first | exact List.mem_cons_of_mem _ mem | exact mem
+      · intro unique
+        cases first with
+        | function fn ordinary params result valid measure body distinct returns effects =>
+          have separated := List.nodup_cons.mp unique
+          rw [findeKern]
+          split
+          · rename_i same
+            have equal : fn.val = name.val := by simpa only [beq_iff_eq] using same
+            exact False.elim (separated.1 (equal.symm ▸ List.mem_map_of_mem Subtype.val mem))
+          · exact found separated.2
+        | _ => exact found unique
       · simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
       · simp only [List.length_append]
         omega
@@ -159,20 +184,22 @@ theorem programm_pruefeMass_herkunft {u : Ast.Unit} {pc slot : Nat}
     (atPC : (programm u).code[pc]? = some (.pruefeMass slot)) :
     ∃ (name : Identifier) (kern : FunktionsKern) (m : Measure kern.koerper.1)
       (pre post : List Befehl),
-      name ∈ alleFunktionen u.2 ∧ kern.mass = some m ∧
+      name ∈ alleFunktionen u.2 ∧
+      (((alleFunktionen u.2).map Subtype.val).Nodup → findeKern u.2 name = some kern) ∧
+      kern.mass = some m ∧
       (programm u).code = pre ++ (measurePrologue (some m)).code ++ post ∧
       pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 := by
   change (((unitBody u.2).code ++ [.starte mainName]) ++ [.ende])[pc]? = _ at atPC
   rw [List.append_assoc] at atPC
   by_cases within : pc < (unitBody u.2).code.length
   · rw [List.getElem?_append_left within] at atPC
-    obtain ⟨name, kern, m, pre, post, mem, declared, layout, position, zeroSlot⟩ := mass_imRumpf u.2 atPC
-    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, declared, ?_, position, zeroSlot⟩
+    obtain ⟨name, kern, m, pre, post, mem, found, declared, layout, position, zeroSlot⟩ := mass_imRumpf u.2 atPC
+    refine ⟨name, kern, m, pre, post ++ [.starte mainName, .ende], mem, found, declared, ?_, position, zeroSlot⟩
     simp only [programm, Fragment.anhaengen, Fragment.einzel, layout, List.append_assoc,
       List.singleton_append]
   · rw [List.getElem?_append_right (Nat.le_of_not_gt within)] at atPC
     have free : OhneMass ([.starte mainName] ++ [.ende]) :=
       .append (.single (fun _ h => by cases h)) (.single (fun _ h => by cases h))
-    exact False.elim (free.not_at atPC)
+    exact False.elim (OhneMass.not_at free atPC)
 
 end Gabbro.Core.Beobachtung
