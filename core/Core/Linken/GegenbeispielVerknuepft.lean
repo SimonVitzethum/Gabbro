@@ -185,12 +185,77 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) w0 [plan0] u0).1 ideal'
         cases same
         cases after
-        have hakt : Semantik.plan.aktion = .intern := rfl
         obtain ⟨rahmen, _, sperren, v, fuehrt, _, hstate⟩ := aus
-        rw [hakt] at fuehrt
-        generalize hau : spur0.2 = au at fuehrt
-        cases fuehrt with
-        | intern =>
+        rcases b.plan_privat_aktion hPriv ((ρ.zeit.zustand t).lokal eintritt) with hL|⟨v1,a1,hL⟩|⟨g1,hL⟩|⟨v2,k2,hL⟩|⟨l3,k3,p3,hL⟩
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .intern := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | intern =>
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
+          · rw [hstate]
+            simp only [Befehl.nach, hEqL, hEqR]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqS]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqK]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
+              ← Befehl.nach_regionLive]
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .maskiere v1 a1 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | maskiere _ _ =>
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
+          · rw [hstate]
+            simp only [Befehl.nach, hEqL, hEqR]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqS]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqK]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
+              ← Befehl.nach_regionLive]
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .prioritaet g1 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | prioritaet _ =>
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
+          · rw [hstate]
+            simp only [Befehl.nach, hEqL, hEqR]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqS]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqK]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
+              ← Befehl.nach_regionLive]
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .sende v2 k2 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | sende _ _ =>
+          refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
+          · rw [hstate]
+            simp only [Befehl.nach, hEqL, hEqR]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqS]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqK]
+          · rw [hstate]
+            simp only [Befehl.nach, hEqF, hFrPre]
+          · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
+              ← Befehl.nach_regionLive]
+        · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .leite l3 k3 p3 := hL
+          rw [hR] at fuehrt
+          generalize hau : spur0.2 = au at fuehrt
+          cases fuehrt with
+          | leite _ _ _ =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
             simp only [Befehl.nach, hEqL, hEqR]
