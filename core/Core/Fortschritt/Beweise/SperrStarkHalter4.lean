@@ -195,7 +195,7 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
             rw [Function.update_self]
             cases c <;> simp only [Option.some.injEq, reduceCtorEq]
           · rw [Zustandseintritt, Function.update_of_ne hk']
-            exact hnach.1 C4 statisch4_C4 k'
+            exact hnach.1 C4 statisch4_C k'
       · simpa only [Zustandseintritt] using hnach.2.1
       · simpa only [Zustandseintritt] using hnach.2.2
   | absturz h =>
