@@ -186,7 +186,7 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
   | kontext normal bereit regel aus =>
     obtain ⟨i, _, hideal⟩ := regel
     cases i
-    rename_i plan _ ustate
+    rename_i ustate plan _
     change e4RegelIdeal c s w [plan] ustate at hideal
     rcases hideal with ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
