@@ -71,7 +71,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hmitPc1 : mitPc (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)).length r1_0 = r1 := by
     rw [paarBerechnungLaenge]
     show { r1 with pc := 44 + 0 } = r1
-    rw [show (44 : Nat) + 0 = r1.pc by rw [hpc1, paarBerechnungLaenge]]
+    rw [show (44 : Nat) + 0 = r1.pc by omega]
   obtain ⟨k2, r2, hrun2, hpc2, hr2p, hpres2, hlok2, hrueck2, hstopp2⟩ :=
     paarVorwaerts (frei + 0) (frei + 4) (frei + 5) (frei + 20) r1_0 a (Nat.pair y i)
       hr1_0pc hr1_0a hr1_0q (by omega) (by omega)
@@ -84,13 +84,14 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     have hshift := laufMitPc (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))
       (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) cgBlk hvPaar2
       r1_0 k2 hbleib2
+    rw [paarBerechnungLaenge] at hshift
     simpa only [hmitPc1, hrun2] using hshift
   let r2_0 : Rahmen := { r2 with pc := 0 }
   have hr2_0pc : r2_0.pc = 0 := rfl
   have hr2_0p : r2_0.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) := hr2p
   have hmitPc2 : mitPc 88 r2_0 = mitPc 44 r2 := by
-    show { r2 with pc := 44 + (88 + 0) } = { r2 with pc := 44 + r2.pc }
-    rw [hpc2, paarBerechnungLaenge]
+    show { r2 with pc := 88 + 0 } = { r2 with pc := 44 + r2.pc }
+    rw [hpc2]
     omega
   obtain ⟨k3, r3, hrun3, hpc3, hr3aus, hpres3, hlok3, hrueck3, hstopp3⟩ :=
     hcgNr (Nat.pair a (Nat.pair y i)) r2_0 hr2_0pc hr2_0p v hv
@@ -110,8 +111,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   refine ⟨k3 + k2 + k1, mitPc 88 r3, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [Function.iterate_add_apply, Function.iterate_add_apply, hprefix1, hprefix2, hprefix3]
   · simp only [mitPc]
-    rw [hpc3]
-    exact precRumpfLaenge cgBlk aus frei
+    rw [hpc3, precRumpfLaenge]
   · change r3.temp aus = some (natVal v)
     exact hr3aus
   · intro s hs hne
