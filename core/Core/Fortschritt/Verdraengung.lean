@@ -44,7 +44,7 @@ def wDatenV : Startdaten Unit Unit Bool Unit :=
 
 def wEinrichtungV : Einrichtung Unit Unit Unit Unit Bool Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨A, 0, fun _ => wDatenV, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨A, 0, fun _ => wDatenV, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 /-- The initial state. -/
 def zV0 : Zustand Unit Unit Unit Unit Bool Unit :=
