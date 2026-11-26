@@ -82,6 +82,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
           rw [← Option.some.inj lab] at impl
           cases impl with
           | kontext keinAbsturz₁ bereit₁ regel₁ aus₁ =>
+            rename_i eventK uK planK
             obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
               (by intro h; rw [hz₁] at h; cases h.1)
             have hvEq : v₁ = s₁ := Option.some.inj (hv₁.symm.trans hz₁)
@@ -89,7 +90,7 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
             obtain ⟨binding, access, required, target, ruleEq, hbind⟩ := geraete_rule_binding locals d
             subst binding
             obtain ⟨kopf₁, plan', hplans', rule₁'⟩ := geraete_kontext_regel ruleEq regel₁
-            let uL := u₁
+            let uL := uK
             obtain ⟨quell, hepoche, hgeliefert, hkerne, hstatus⟩ :=
               (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
             obtain ⟨hfragen, hverlauf, hantworten, hverbraucht, hverworfen⟩ :=
