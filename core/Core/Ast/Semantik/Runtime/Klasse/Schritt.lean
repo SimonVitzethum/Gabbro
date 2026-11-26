@@ -136,16 +136,19 @@ def Wirkungsklasse.Lesewert (k : Wirkungsklasse) (v : Int) : Prop :=
 
 /-- **The authority a step of the class needs at the pre-state** (`Zustand.befugt`, `Zustand.fragenBefugt`): the right
     on the ledger for the cell of a load or store (both rights for an atomic update), and the handles of
-    the question and the device authority of a register access for a question. The frame-only classes, the
-    fence, the interrupt-control classes and the lock actions need none: a fence orders but accesses
-    nothing, and a lock action that
+    the question and the device authority of a register access for a question. An update additionally needs an
+    atomic mode: an `rmw` event at `na` is recorded by no consistent memory (`Wohlgeformt.rmw_nicht_na`), so the
+    checker's form line `pruefeZugriffsform` refuses exactly the updates whose class is `.rmw .na`; the step of
+    such a form therefore takes its refusal branch and halts the frame with a named reason, instead of hanging
+    on an event no memory extension accepts. The frame-only classes, the fence, the interrupt-control classes
+    and the lock actions need none: a fence orders but accesses nothing, and a lock action that
     the protocol does not allow does not execute, it waits or never runs. -/
 def Wirkungsklasse.befugt : Wirkungsklasse → Operand → Zustand → Kontext → Prop
   | .lokal, _o, _s, _c => True
   | .ruf, _o, _s, _c => True
   | .lesen _m, o, s, c => s.befugt c o.ort .lesen
   | .schreiben _m, o, s, c => s.befugt c o.ort .schreiben
-  | .rmw _m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben
+  | .rmw m, o, s, c => s.befugt c o.ort .lesen ∧ s.befugt c o.ort .schreiben ∧ m ≠ .na
   | .zaun _m, _o, _s, _c => True
   | .sperre _a, _o, _s, _c => True
   | .frage, o, s, c => ∃ q : Frage, o.frage = some q ∧ s.fragenBefugt c q

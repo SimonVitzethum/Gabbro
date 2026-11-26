@@ -170,3 +170,9 @@ rules('grammatik/Grammatik/Bausteine/Arena/Struktur', [
 rules('grammatik/Grammatik/Zielsatz/Atomar', [
     (r'^CallSite\w*$', 'CallSite'),
 ])
+
+# The computable guard checker: analysis, transfer, value and preservation modules
+# get a folder of their own (room for the 20-entry limit).
+rules('core/Core/Ziel/Korrektheit', [
+    (r'^Waechter', 'Waechter'),
+])

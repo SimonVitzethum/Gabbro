@@ -273,7 +273,7 @@ theorem Schrittform.ideal_befugt {ι : Type} {E : Klasseneinheit ι} {f : ι} {F
       refine ⟨fun x hx => (List.not_mem_nil hx).elim, fun l hl => ?_⟩
       have hl' := List.mem_singleton.1 hl
       subst hl'
-      exact ⟨Schrittform.befugt_ort emb g.1, fun _ => Schrittform.befugt_ort emb g.2⟩
+      exact ⟨Schrittform.befugt_ort emb g.1, fun _ => Schrittform.befugt_ort emb g.2.1⟩
   | zaun m =>
     rcases step with ⟨_, same, _⟩ | ⟨_, v, _, same, _⟩
     · exact Befugt.privat (List.cons.inj same).1

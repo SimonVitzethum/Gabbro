@@ -30,7 +30,7 @@ theorem precCheckLauf (r : Rahmen) (frei s k : Nat)
       rC.pc = 7 ∧
       rC.temp (frei + 6) = some (precBoolWert s k) ∧
       rC.temp (frei + 7) = some (natVal k) ∧
-      (∀ t, t < frei → rC.temp t = r.temp t) ∧
+      (∀ t, t ≠ frei + 6 → t ≠ frei + 7 → rC.temp t = r.temp t) ∧
       rC.lokale = r.lokale ∧ rC.rueckgabe = r.rueckgabe ∧ rC.stopp = r.stopp := by
   have kk0 : (kopie (frei + 6) (frei + 2))[0]? = some (.binden nameX (frei + 2)) := by
     simp only [kopie, List.getElem?_cons_zero]
@@ -138,12 +138,12 @@ theorem precCheckLauf (r : Rahmen) (frei s k : Nat)
   · change Function.update r2.temp (frei + 6) (some (precBoolWert s k)) (frei + 7) = _
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (7 : Nat) ≠ 6))]
     exact hr2k
-  · intro t ht
+  · intro t ht6 ht7
     show Function.update r2.temp (frei + 6) (some (precBoolWert s k)) t = r.temp t
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+    rw [updateMiss _ _ _ _ ht6]
     show Function.update r1.temp (frei + 7) (some (natVal k)) t = r.temp t
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+    rw [updateMiss _ _ _ _ ht7]
     show Function.update r.temp (frei + 6) (some (natVal s)) t = r.temp t
-    rw [updateMiss _ _ _ _ (ltNeAdd ht)]
+    rw [updateMiss _ _ _ _ ht6]
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
