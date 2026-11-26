@@ -236,7 +236,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rw [hmitP]
       exact hkS
     have hpcEndPS : rEnd.pc = P.length + S.length :=
-      hpcEnd.trans (List.length_append P S)
+      hpcEnd.trans (@List.length_append Befehl P S)
     obtain ⟨rS, hrunS, hpcS, hEqEnd⟩ :=
       rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEndPS
     let Q := (L ++ R) ++ cfBlk
@@ -249,7 +249,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       dsimp only [P]
       rw [List.length_append]
     have hpcP_Q' : rP.pc = (Q ++ I).length :=
-      hpcP_Q.trans (List.length_append Q I).symm
+      hpcP_Q.trans (@List.length_append Befehl Q I).symm
     obtain ⟨jI, rQ, hjIk, hrunIcomp, hrunQ, hpcQ⟩ :=
       randAusEndePrefix Q I hLRc hlenQ hlenI r jP rP hpc hrunP hpcP_Q'
     have hlenL : 0 < L.length := by
@@ -265,7 +265,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       dsimp only [Q]
       rw [List.length_append]
     have hpcQ_LR' : rQ.pc = (L ++ R ++ cfBlk).length :=
-      hpcQ_LR.trans (List.length_append (L ++ R) cfBlk).symm
+      hpcQ_LR.trans (@List.length_append Befehl (L ++ R) cfBlk).symm
     have hrunQ' : (Schritt (L ++ R ++ cfBlk))^[jI] (some r) = some rQ := by
       simpa only [Q] using hrunQ
     obtain ⟨jC, rLR, hjCk, hrunCcomp, hrunLR, hpcLR⟩ :=
