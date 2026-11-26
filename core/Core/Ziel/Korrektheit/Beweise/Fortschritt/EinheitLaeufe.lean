@@ -51,53 +51,56 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
 
-/-- No lock-taking step exists for elaborated units: every plan is the private one. -/
+/-- No lock-taking step exists for elaborated units: a frame-only head forces the private plan,
+    an access head the internal action (`Zugriffsform.ideal_aktion_intern`), so no step plans a lock. -/
 theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit} {plan : Ast.Semantik.Plan}
     {l : Nat} {a : Maschine.SperrAktion}
     (h : (einheitVon P t).system.ISchritt c s w [plan] u)
     (hsperre : plan.aktion = Aktion.sperre l a) : False := by
   obtain ⟨i, kopf, ideal⟩ := h
-  have hpriv : i.Privat :=
-    Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
-  have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w [plan] u).mp ideal
-  have hplan : plan = Ast.Semantik.plan := (List.cons.inj same.1).1
-  subst hplan
-  cases hsperre
+  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) i
+      (Ast.Semantik.kopf_mem kopf) with hpriv | ⟨z, same⟩
+  · have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w [plan] u).mp ideal
+    have hplan : plan = Ast.Semantik.plan := (List.cons.inj same.1).1
+    subst hplan
+    cases hsperre
+  · subst same
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z ideal
+    rw [hakt] at hsperre
+    cases hsperre
 
-/-- Every ready context of an elaborated unit offers a complete protocol step. -/
-theorem einheitVon_bereit_vollzug (P : Katalog.Plattform) (t : Ast.Unit)
+/-- Every ready context of an elaborated unit offers a complete protocol step. A frame-only head
+    steps by its template (`Befehl.vollzug`); an access head by the step the memory model offers
+    (`ZugriffSchrittExistiertAussage`), composed with the protocol (`zugriffKomponierbar`). -/
+theorem einheitVon_bereit_vollzug (existiert : ZugriffSchrittExistiertAussage)
+    (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s : Ast.Semantik.Zustand} (tick : Nat)
+    (memory : s.SpeicherGut)
     (h : Maschine.I.Bereit (E := einheitVon P t) s c) :
     ∃ w plan u spur s', (einheitVon P t).system.ImplSchritt c s w [plan] u ∧
       Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s' := by
   obtain ⟨w, plans, u, ischritt⟩ := h
   obtain ⟨i, kopf, ideal⟩ := ischritt
-  have hpriv : i.Privat :=
-    Ast.Semantik.fragment_rein Ast.Category.unit t i (Ast.Semantik.kopf_mem kopf)
-  have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
-  obtain ⟨rfl, rfl⟩ := same
-  refine ⟨w, Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s, ⟨i, kopf, ?_⟩, ?_⟩
-  · exact (Ast.Semantik.Befehl.impl_privat i hpriv c s w [Ast.Semantik.plan]
-      (i.nach c s)).mpr ⟨rfl, rfl⟩
-  · exact Ast.Semantik.Befehl.vollzug _ i tick c s
+  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) i
+      (Ast.Semantik.kopf_mem kopf) with hpriv | ⟨z, same⟩
+  · have same := (Ast.Semantik.Befehl.ideal_privat i hpriv c s w plans u).mp ideal
+    obtain ⟨rfl, rfl⟩ := same
+    refine ⟨w, Ast.Semantik.plan, i.nach c s, ⟨[], []⟩, i.nach c s, ⟨i, kopf, ?_⟩, ?_⟩
+    · exact (Ast.Semantik.Befehl.impl_privat i hpriv c s w [Ast.Semantik.plan]
+        (i.nach c s)).mpr ⟨rfl, rfl⟩
+    · exact Ast.Semantik.Befehl.vollzug _ i tick c s
+  · subst same
+    obtain ⟨w', plan, u', es, g, step, folge⟩ :=
+      existiert (Ast.Semantik.fragment Ast.Category.unit t) P z s c kopf memory
+    obtain ⟨spur, s', run⟩ :=
+      Ast.Semantik.zugriffKomponierbar (Ast.Semantik.fragment Ast.Category.unit t) P z tick s c
+        w' plan u' es g kopf step folge
+    exact ⟨w', plan, u', spur, s', ⟨Ast.Semantik.Befehl.zugriff z, kopf, step⟩, run⟩
 
-/-- Every implementation step of an elaborated unit carries the private plan:
-    the rule at the head is frame-only, so its step forces `[Semantik.plan]`. -/
-theorem einheitVon_plan_privat (P : Katalog.Plattform) (t : Ast.Unit)
-    {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
-    {plan : Ast.Semantik.Plan}
-    (h : (einheitVon P t).system.ImplSchritt c s w [plan] u) :
-    plan = Ast.Semantik.plan := by
-  obtain ⟨b, kopfB, implB⟩ := h
-  have hpriv : b.Privat :=
-    Ast.Semantik.fragment_rein Ast.Category.unit t b (Ast.Semantik.kopf_mem kopfB)
-  have hstep := (Ast.Semantik.Befehl.impl_privat b hpriv c s w [plan] u).1 implB
-  exact (List.cons.inj hstep.1).1
-
-/-- Every instruction step of an elaborated unit is frame-only: the rule forces
-    the private plan, whose action is `intern`, so the post-state agrees with the
-    pre-state on cores and status. -/
+/-- Every instruction step of an elaborated unit plans the internal action — the private plan for a
+    frame-only head, the class plan for an access head (`Zugriffsform.ideal_aktion_intern`) — so the
+    post-state agrees with the pre-state on cores and status. -/
 theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
     {plan : Ast.Semantik.Plan} {spur : Maschine.SchrittSpur Ast.Semantik.Zelle Int}
@@ -106,25 +109,40 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
   obtain ⟨b, kopfB, ideal⟩ := regel
-  have hpriv : b.Privat :=
-    Ast.Semantik.fragment_rein Ast.Category.unit t b (Ast.Semantik.kopf_mem kopfB)
-  have hideal :=
-    (Ast.Semantik.Befehl.ideal_privat b hpriv c s w [plan] u).mp ideal
-  have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
-  have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
-  have hakt : plan.aktion = .intern := by rw [planEq]; rfl
-  obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
-  generalize haussen : spur.aussen = aussen at fuaus
-  rw [hakt] at fuaus
-  cases fuaus with
-  | intern =>
-    have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
-    have statusEq : s'.status = s.status := by rw [seq, ueq]; rfl
-    exact ⟨kerneEq, statusEq⟩
+  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) b
+      (Ast.Semantik.kopf_mem kopfB) with hpriv | ⟨z, same⟩
+  · have hideal :=
+      (Ast.Semantik.Befehl.ideal_privat b hpriv c s w [plan] u).mp ideal
+    have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
+    have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
+    have hakt : plan.aktion = .intern := by rw [planEq]; rfl
+    obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
+    generalize haussen : spur.aussen = aussen at fuaus
+    rw [hakt] at fuaus
+    cases fuaus with
+    | intern =>
+      have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
+      have statusEq : s'.status = s.status := by rw [seq, ueq]; rfl
+      exact ⟨kerneEq, statusEq⟩
+  · subst same
+    have hschritt : (Ast.Semantik.Befehl.zugriff z).form.zugriffsschritt c s [plan] u :=
+      (Ast.Semantik.Zugriffsform.ideal_iff z c s w [plan] u).1 ideal
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z ideal
+    have hstatus : u.status = s.status := by
+      rcases hschritt with ⟨_, _, rfl⟩ | ⟨_, v, _, _, rfl⟩ <;> rfl
+    obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
+    generalize haussen : spur.aussen = aussen at fuaus
+    rw [hakt] at fuaus
+    cases fuaus with
+    | intern =>
+      have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
+      have statusEq : s'.status = s.status := by rw [seq]; exact hstatus
+      exact ⟨kerneEq, statusEq⟩
 
-/-- Every implementation step of an elaborated unit is frame-only: the rule forces
-    the private plan, whose action is `intern`, so the post-state agrees with the
-    pre-state on cores and status. -/
+/-- Every implementation step of an elaborated unit plans the internal action — the private plan for a
+    frame-only head, the class plan for an access head (`Zugriffsform.ideal_aktion_intern` over the
+    ideal the implementation step carries) — so the post-state agrees with the pre-state on cores
+    and status. -/
 theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     {c : Maschine.Kontext} {s u : Ast.Semantik.Zustand} {w : PUnit}
     {plan : Ast.Semantik.Plan} {spur : Maschine.SchrittSpur Ast.Semantik.Zelle Int}
@@ -133,21 +151,36 @@ theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     (aus : Maschine.FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     s'.kerne = s.kerne ∧ s'.status = s.status := by
   obtain ⟨b, kopfB, implB⟩ := regel
-  have hpriv : b.Privat :=
-    Ast.Semantik.fragment_rein Ast.Category.unit t b (Ast.Semantik.kopf_mem kopfB)
-  have hideal :=
-    (Ast.Semantik.Befehl.impl_privat b hpriv c s w [plan] u).1 implB
-  have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
-  have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
-  have hakt : plan.aktion = .intern := by rw [planEq]; rfl
-  obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
-  generalize haussen : spur.aussen = aussen at fuaus
-  rw [hakt] at fuaus
-  cases fuaus with
-  | intern =>
-    have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
-    have statusEq : s'.status = s.status := by rw [seq, ueq]; rfl
-    exact ⟨kerneEq, statusEq⟩
+  rcases (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) b
+      (Ast.Semantik.kopf_mem kopfB) with hpriv | ⟨z, same⟩
+  · have hideal :=
+      (Ast.Semantik.Befehl.impl_privat b hpriv c s w [plan] u).1 implB
+    have planEq : plan = Ast.Semantik.plan := (List.cons.inj hideal.1).1
+    have ueq : u = Ast.Semantik.Befehl.nach b c s := hideal.2
+    have hakt : plan.aktion = .intern := by rw [planEq]; rfl
+    obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
+    generalize haussen : spur.aussen = aussen at fuaus
+    rw [hakt] at fuaus
+    cases fuaus with
+    | intern =>
+      have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
+      have statusEq : s'.status = s.status := by rw [seq, ueq]; rfl
+      exact ⟨kerneEq, statusEq⟩
+  · subst same
+    have idealB : (Ast.Semantik.Befehl.zugriff z).ideal c s w [plan] u := implB
+    have hschritt : (Ast.Semantik.Befehl.zugriff z).form.zugriffsschritt c s [plan] u :=
+      (Ast.Semantik.Zugriffsform.ideal_iff z c s w [plan] u).1 idealB
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z idealB
+    have hstatus : u.status = s.status := by
+      rcases hschritt with ⟨_, _, rfl⟩ | ⟨_, v, _, _, rfl⟩ <;> rfl
+    obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
+    generalize haussen : spur.aussen = aussen at fuaus
+    rw [hakt] at fuaus
+    cases fuaus with
+    | intern =>
+      have kerneEq : s'.kerne = s.kerne := by rw [seq]; exact rahmen.kerne
+      have statusEq : s'.status = s.status := by rw [seq]; exact hstatus
+      exact ⟨kerneEq, statusEq⟩
 
 /-- An answer arrival touches no core state: neither dispatch nor status moves. -/
 theorem einheitVon_antwort_erhaelt {a : Katalog.AntwortEreignis}

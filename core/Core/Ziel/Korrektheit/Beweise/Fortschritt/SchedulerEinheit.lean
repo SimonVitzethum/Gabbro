@@ -89,8 +89,11 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
         have hlive : (η.zeit.zustand t'').status c = .laeuft :=
           (opened.2 t'' ht'').2.1
         have hcrash := crashfrei t'' ht''
+        have hgut : s.SpeicherGut := by
+          rw [hseq]
+          exact Maschine.I.speicher_gut_im_lauf valid t''
         obtain ⟨w, plan, u, spur, s', himpl, haus⟩ :=
-          einheitVon_bereit_vollzug P t t'' (bereitAlle t'' ht'')
+          einheitVon_bereit_vollzug existiert P t t'' hgut (bereitAlle t'' ht'')
         rw [← hseq] at himpl haus hlive
         exact ⟨s, hs, ⟨kstar, hd⟩, hlive, hcrash, w, plan, u, spur, s', himpl, haus⟩
       have opportunities : ∀ m, a ≤ m → ∃ t'', m ≤ t'' ∧ ∃ k,
