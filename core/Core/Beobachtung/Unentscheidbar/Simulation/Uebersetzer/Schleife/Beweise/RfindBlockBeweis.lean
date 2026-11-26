@@ -128,7 +128,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           intro hzy
           apply hvne
           rw [hvv] at hzy
-          exact hvne (Option.some.inj hzy))
+          exact hvne (Part.some_injective hzy))
     have hbleibE := laufBleibtVorEnde S rEntry kE rE hrunE hpcE
     have hrunEfull : (Schritt (P ++ S))^[kE] (some (mitPc LR.length rK)) = some (mitPc P.length rE) := by
       have hs := laufMitPc P S [] hvS rEntry kE hbleibE
@@ -144,7 +144,8 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     · change P.length + rE.pc = (rfindBlk cfBlk ein aus frei freiL).length
       rw [hpcE]
       change P.length + S.length = (rfindBlk cfBlk ein aus frei freiL).length
-      rw [hblock, List.length_append]
+      rw [hblock]
+      simp only [List.length_append]
     · change rE.temp aus = some (natVal v)
       exact hausE
     · intro s hs hsa
@@ -155,7 +156,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       dsimp only [rK, rLR0]
       rw [updateMiss _ s (frei + 2) _ (by omega)]
       change rLR.temp s = r.temp s
-      rw [hpresLR s (by omega) (by omega)]
+      rw [hpresLR s (by omega) (by omega) (by omega)]
     · change rE.lokale = r.lokale
       rw [hlokE]
       change (mitPc LR.length rK).lokale = r.lokale
@@ -226,7 +227,8 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       change LR.length + rKRef.pc = P.length
       rw [hpcKref]
       dsimp only [P, K, LR]
-      rw [List.length_append, List.length_append, kopieLaenge]
+      rw [kopieLaenge]
+      simp only [List.length_append]
     let rEntry : Rahmen := { rB with pc := 0 }
     have hmitP : mitPc P.length rEntry = rB := by
       show { rB with pc := P.length + 0 } = rB
@@ -277,12 +279,12 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       have heq : Part.some ((Nat.unpair n).1) = Part.some a := by
         change Part.some ((Nat.unpair n).1) = Part.some a at haEval
         exact haEval
-      exact Option.some.inj heq
+      exact Part.some_injective heq
     have hmUn : (Nat.unpair n).2 = m := by
       have heq : Part.some ((Nat.unpair n).2) = Part.some m := by
         change Part.some ((Nat.unpair n).2) = Part.some m at hmEval
         exact hmEval
-      exact Option.some.inj heq
+      exact Part.some_injective heq
     have hnRev : Nat.pair a m = n := by
       rw [← haUn, ← hmUn]
       exact Nat.pair_unpair n
@@ -304,7 +306,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       dsimp only [rKRef, rLR0]
       rw [updateMiss _ s (frei + 2) _ (by omega)]
       change rLR.temp s = r.temp s
-      rw [hpresLRr s (by omega) (by omega)]
+      rw [hpresLRr s (by omega) (by omega) (by omega)]
     · rw [hEqEnd]
       change rS.lokale = r.lokale
       rw [hlokS]
