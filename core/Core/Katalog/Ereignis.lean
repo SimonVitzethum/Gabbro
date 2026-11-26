@@ -57,6 +57,28 @@ def unterbrechungen (m : Maske) : Unterbrechung → Eintritt
 theorem nmi_unabhaengig (m : Maske) :
     unterbrechungen { m with normale := true } .nmi = unterbrechungen m .nmi := rfl
 
+/-- The per-platform counter row: the bound register and the trap line the hardware raises
+    when a cycle counter reaches the bound. Every current row carries a 32-bit bound register
+    and raises trap line 32 at priority 0, a line every row supports. -/
+structure ZaehlerZeile where
+  schranke : Nat
+  trap : Unterbrechung
+  deriving DecidableEq, Repr
+
+/-- The counter row of each platform (a named hardware assumption the program selects, never
+    one it writes). -/
+def Plattform.zaehlerZeile : Plattform → ZaehlerZeile
+  | .x86_64 => ⟨4294967295, .maskierbar 32 0⟩
+  | .aarch64 => ⟨4294967295, .maskierbar 32 0⟩
+  | .riscv64 => ⟨4294967295, .maskierbar 32 0⟩
+
+/-- Every platform row supports its own trap line. -/
+theorem Plattform.zaehlerZeile_unterstuetzt (p : Plattform) :
+    p.ziel.unterstuetzt p.zaehlerZeile.trap := by
+  cases p <;>
+    simp only [Plattform.zaehlerZeile, Plattform.ziel, ZielDaten.unterstuetzt] <;>
+    omega
+
 def laderStart {α : Type} (starts : List α) (i : Nat) : Option α := starts[i]?
 
 /-- Byte and entry observations at an image loader's boundary. Entry addresses are image data. -/

@@ -2,9 +2,9 @@
   File:      core/Core/Ast/Semantik/Runtime/Unterbrechung/Beweise.lean
   Subject:   Proofs for the MK-20 statements: the kernel facts, the flow instances and, for every
              statement, the joint satisfiability of its scenario (`_erfuellbar`) and a model element
-             that violates it or its informativeness witness (`_nichtTrivial`). The two open duties
-             (`SendeLiefertAussage`, `ZaehlerUmlaufAussage`) have witnesses on both sides but no
-             proof; their decomposition is in the designer's report.
+             that violates it or its informativeness witness (`_nichtTrivial`). The fairness
+             duties (`SendeLiefertAussage`, `ZaehlerUmlaufAussage`) are proved in `BeweiseFair`,
+             together with their satisfiability witnesses; the negative legs stay here.
 -/
 module
 
@@ -234,12 +234,6 @@ theorem prioritaetFilter_nichtTrivial :
     ∃ (m : Maske) (v p : Nat), unterbrechungen m (.maskierbar v p) = .handler :=
   ⟨⟨false, 0, false, false⟩, 0, 0, by decide⟩
 
-/-- The premises of `SendeLiefertAussage` hold jointly: a raise exists. -/
-theorem sendeLiefert_erfuellbar :
-    ∃ (run : HwLauf) (t vektor kern i : Nat),
-      (run.angebot t).interrupts[i]? = some (.erhoben kern (.maskierbar vektor 0)) :=
-  ⟨stummLauf, 0, 0, 0, 0, rfl⟩
-
 /-- The model represents the lost send: a raise that is never selected. Only the checker (with
     the selection-fairness row) excludes it. -/
 theorem sendeLiefert_nichtTrivial :
@@ -296,12 +290,6 @@ theorem debugTreffer_nichtTrivial :
       ∀ (t' : Nat) (id : Nat × Nat),
         (hw.angebot t').interruptAuswahl ≠ some (kern, id, irq) :=
   ⟨stummLauf, 0, (.maskierbar 0 0), rfl, fun t' id => stumm_keine_auswahl t' id⟩
-
-/-- The premises of `ZaehlerUmlaufAussage` hold jointly: the reference run counts. -/
-theorem zaehlerUmlauf_erfuellbar :
-    ∃ (h : Katalog.Umgebung) (run : HwLauf) (t kern umlauf : Nat), (run.angebot t).cycles = umlauf := by
-  refine ⟨Katalog.Umgebung.referenz Plattform.x86_64.katalog 1 (fun _ _ => AussenSicht.leer),
-    Katalog.Umgebung.referenzLauf Plattform.x86_64.katalog 1 (fun _ _ => AussenSicht.leer), 7, 0, 7, rfl⟩
 
 /-- The model represents the silent counter: cycles pass without any raise. -/
 theorem zaehlerUmlauf_nichtTrivial :

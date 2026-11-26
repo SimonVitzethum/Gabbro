@@ -12,9 +12,11 @@
              `InterruptSignal`, `unterbrechungErhalten` (proved in `SchrankenBeweise/Leicht`).
              All new statements sit under the single pinned root `UnterbrechungAussagen`; each carries
              `_erfuellbar` (the model represents the scenario) and `_nichtTrivial` (the model
-             represents the error too — only the checker excludes it), proved in `Beweise`.
-             Two duties stay open as pinned statements (`SendeLiefertAussage`, `ZaehlerUmlaufAussage`);
-             their decomposition into independent proof units is in the designer's report.
+             represents the error too — only the checker excludes it), proved in `Beweise` and
+             `BeweiseFair`. The two fairness duties (`SendeLiefertAussage` over the named row
+             `AuswahlFair`, `ZaehlerUmlaufAussage` over the counter row `ZaehlerZeile` with
+             `ZaehlerLebendigAussage`) are proved in `BeweiseFair`; their decomposition into
+             independent proof units is in the designer's report.
 -/
 module
 
@@ -54,15 +56,17 @@ def PrioritaetFilterAussage : Prop :=
   ∀ (m : Maske) (vektor p : Nat), p < m.minimum →
     unterbrechungen m (.maskierbar vektor p) = .ausstehend
 
-/-- **A sent interrupt is selected for delivery** (OPEN, packet of `Befehl.sendeUnterbrechung`).
-    A raised vector on a fair hardware history is eventually selected with its origin.
-    Difficulty: mittel. Sketch: strengthen `FairLaeufe` with a selection-fairness row for raised
-    interrupts (every raise is selected infinitely often); then the conclusion is that row at the
-    raise cut. Without the row the statement is false: a conformant run may starve a raised
-    interrupt forever (`sendeLiefert_nichtTrivial`). -/
+/-- **A sent interrupt is selected for delivery** (proved as `sendeLiefert`, packet of
+    `Befehl.sendeUnterbrechung`). A raised vector on a selection-fair hardware history is
+    eventually selected with its origin: the conclusion is the named platform row `AuswahlFair`
+    at the raise cut. Without the row the statement is false: a conformant run may starve a
+    raised interrupt forever (`sendeLiefert_nichtTrivial`). -/
 def SendeLiefertAussage : Prop :=
-  ∀ (run : HwLauf) (t vektor kern : Nat) (i : Nat),
+  ∀ (h : Katalog.Umgebung) (run : HwLauf) (t vektor kern : Nat) (i : Nat),
+    AuswahlFair h run →
     (run.angebot t).interrupts[i]? = some (.erhoben kern (.maskierbar vektor 0)) →
+    kern < h.kernzahl →
+    h.ziel.unterstuetzt (.maskierbar vektor 0) →
     ∃ (t' : Nat) (id : Nat × Nat),
       t ≤ t' ∧ (run.angebot t').interruptAuswahl = some (kern, id, (.maskierbar vektor 0)) ∧
         run.interruptUrsprung t' id kern (.maskierbar vektor 0)
@@ -90,15 +94,17 @@ def DebugTrefferAussage : Prop :=
       (hw.angebot 0).interrupts[0]? = some (.erhoben kern irq) ∧
       (hw.angebot 1).interruptAuswahl = some (kern, (0, 0), irq)
 
-/-- **A counter that reaches its bound raises its trap line** (OPEN, no packet: debug-side duty).
-    When the cycle counter of an offer reaches the programmed bound, the hardware raises a
-    supported trap line on that core. Difficulty: mittel-schwer. Sketch: pin the counter row
-    (bound register, trap line) per platform; the raise is a catalogue event of that row, and
-    selection follows from `SendeLiefertAussage` once the raise is recorded. A history may let
-    the counter pass without any raise (`zaehlerUmlauf_nichtTrivial`). -/
+/-- **A counter that reaches its bound raises its trap line** (proved as `zaehlerUmlauf`,
+    no packet: debug-side duty). When the cycle counter of an offer reaches the bound register
+    of the platform's counter row, the row's trap line — a supported line on every platform —
+    is raised on that core at a later cut, under the row's liveness (`ZaehlerLebendigAussage`).
+    A history may let the counter pass without any raise (`zaehlerUmlauf_nichtTrivial`). -/
 def ZaehlerUmlaufAussage : Prop :=
-  ∀ (h : Katalog.Umgebung) (run : HwLauf) (t kern umlauf : Nat),
-    (run.angebot t).cycles = umlauf →
+  ∀ (p : Plattform) (h : Katalog.Umgebung) (run : HwLauf) (t kern : Nat),
+    ZaehlerLebendigAussage p h run →
+    h.ziel = p.ziel →
+    kern < h.kernzahl →
+    (run.angebot t).cycles = p.zaehlerZeile.schranke →
     ∃ (t' : Nat) (irq : Unterbrechung), t ≤ t' ∧ h.ziel.unterstuetzt irq ∧
       ∃ (i : Nat), (run.angebot t').interrupts[i]? = some (.erhoben kern irq)
 
