@@ -88,7 +88,6 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
-    have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
       rw [hziel]
@@ -106,7 +105,6 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
-    have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
       rw [hziel]
@@ -155,7 +153,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
     cases hF
     rw [hziel]
-    refine ⟨hlock, ?_⟩
+    refine ⟨hlock_u, ?_⟩
     rcases hcrash with hvor | hnach
     · exact Or.inl (vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) (by rw [hueq]; rfl) (by rw [hueq]; rfl) hvor))
     · exact Or.inr ⟨by intro d hd k'; simpa only using hnach.1 d hd k', hnach.2.2.1, hnach.2.2.2⟩
@@ -179,7 +177,7 @@ theorem e4_absturz_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
     simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, wDatenGesperrt4, dispatch4, E_4]
   · intro c hc k'
     obtain ⟨_, rfl⟩ := h.genau
-  rcases hc with rfl | rfl | rfl
+    rcases hc with rfl | rfl | rfl
   all_goals
     by_cases hk' : k' = 0
     · subst k'
