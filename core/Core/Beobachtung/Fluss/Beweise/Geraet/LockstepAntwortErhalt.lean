@@ -204,6 +204,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hn2naechste : n₂.naechsteAntwort = (s₂.antwort a).naechsteAntwort := by
                     rw [stateEq₂]
                     rw [aeq]
+                    rfl
                   have hnaPost : ∀ c, AntwortSicht (d.unit locals) n₁ c = AntwortSicht (d.unit locals) n₂ c := by
                     intro c
                     unfold AntwortSicht
