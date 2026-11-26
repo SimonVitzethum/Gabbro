@@ -15,7 +15,9 @@ variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F}
 private theorem fortschritt_aus_schrittfolge {ρ : Maschine.Lauf E} {η : Lauf E} {entry : Kontext}
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
     (regeln : ∀ f, Gabbro.Core.Ideal.RegelFortschritt E.system f)
-    (komponierbar : ∀ f, RegelKomponierbar E.einrichtung E.system f)
+    (komponierbar : ∀ i t s c, E.system.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', (E.system.regel i).ideal c s w [plan] u ∧
+        FuehrtSchrittAus E.einrichtung t c s u plan spur s')
     (eindeutig : ∀ s c, Bereit (E := E) s c → ¬ E.system.fertig s c ∧ ∀ b, ¬ E.system.blockiert s c b)
     (slot : ∀ t, ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some entry ∧ η.hw.gelegenheit t k)
     (dispatch : ∀ t k c, ((η.zeit.zustand t).kerne k).laeuft = some c → c = entry)
@@ -201,9 +203,10 @@ theorem fortschritt_erfuellbar :
     apply fortschritt_aus_schrittfolge
     · exact fun _ _ h => (Option.some_ne_none () h).elim
     · exact fun _ x c _ => Or.inl ⟨(), [plan], update c x, rfl, rfl⟩
-    · intro f t x c w plans u _ _ rule
-      obtain ⟨rfl, rfl⟩ := rule
-      exact ⟨plan, label.2, update c x, rfl, execute t c x⟩
+    · intro f t x c _ _
+      refine ⟨(), plan, update c x, label.2, update c x, ?_, ?_⟩
+      · exact ⟨rfl, rfl⟩
+      · exact execute t c x
     · exact fun _ _ _ => ⟨id, fun _ => id⟩
     · intro t
       rw [idealState t, (protocol t).1, matched.hardware]

@@ -114,7 +114,9 @@ theorem Laufabgleich.fortschritt_am_angebot (h : Laufabgleich ρ η) (run : Laeu
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw)
     (fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c)
     (regeln : ∀ i, Gabbro.Core.Ideal.RegelFortschritt E.system i)
-    (komponierbar : ∀ i, RegelKomponierbar E.einrichtung E.system i)
+    (komponierbar : ∀ i t s c, E.system.kopf s c = some i → s.SpeicherGut →
+      ∃ w plan u spur s', (E.system.regel i).ideal c s w [plan] u ∧
+        FuehrtSchrittAus E.einrichtung t c s u plan spur s')
     {kern t : Nat} {c : Kontext} (physical : kern < η.umgebung.kernzahl)
     (dispatch : ∀ i, t ≤ i → ∀ s, ρ.zeit.zustand i = some s →
       (s.kerne kern).laeuft = some c ∧ s.status c = .laeuft) :
@@ -133,7 +135,7 @@ theorem Laufabgleich.fortschritt_am_angebot (h : Laufabgleich ρ η) (run : Laeu
     rw [← shared]
     exact (dispatch i after s load).2
   refine ⟨i, after, ?_⟩
-  rcases fortschritt_im_lauf run fertig regeln komponierbar i c running ⟨kern, dispatched⟩ with
+  rcases fortschritt_im_lauf_koepfen run fertig regeln komponierbar i c running ⟨kern, dispatched⟩ with
     crash | done | blocked | enabled | withheld
   · exact Or.inl crash
   · exact Or.inr (Or.inl done)
