@@ -318,10 +318,10 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             pending₂A ready₂A sameQuestion₂A
                         let uR := setFrame s₂ c (geraete_consume_rahmen s₂ c d.binding access answer₂A target)
                         have hbeob₁ : schrittBeob ρ₁ predictor t = [] :=
-                          geraete_consume_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
+                          geraete_consume_beob_tick (predictor := predictor) (required := required) hlabel hz₁ hn₁ aus₁
                             hplans' rfl kopf₁ hbuchung₁.symm hstatus₁
                         have hbeob₂ : schrittBeob ρ₂ predictor t = [] :=
-                          geraete_consume_beob_tick (predictor := predictor)
+                          geraete_consume_beob_tick (predictor := predictor) (required := required)
                             (by simpa using lab₂) hz₂ hn₂ aus₂a hplansA' rfl kopf₂
                             hbuchung₂.symm hstatus₂
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
