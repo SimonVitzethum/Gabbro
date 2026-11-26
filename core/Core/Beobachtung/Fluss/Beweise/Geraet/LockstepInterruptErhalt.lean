@@ -131,7 +131,7 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                 | kontext _ bereit₂ _ _ =>
                     exact (geraete_interrupt_schliesst_kontext_aus (E := E) gueltig wahl₂ bereit₂).elim
                 | antwort _ hAnt =>
-                    have hdelivered := hAnt.1.2.1
+                    have hdelivered := hAnt.1.2.1.1
                     rw [hAnt.1.1] at hdelivered
                     exact (geraete_interrupt_schliesst_antwort_aus gueltig wahl₂ hdelivered).elim
                 | absturz crash₂ =>
@@ -181,7 +181,7 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                     let L₂ := NiedrigeBeob.praefix E ρ₂ predictor t
                     let A := aussenBeob E (.interrupt kern irq .handler)
                     have hlenP : L₁.length = L₂.length := by
-                      simpa only [L₁, L₂, NiedrigeBeob] using hlen
+                      simpa only [L₁, L₂, E, NiedrigeBeob] using hlen
                     have happLen : (L₂ ++ A).length = (L₁ ++ A).length := by
                       simp only [List.length_append, hlenP]
                     have ht : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A :=
@@ -191,12 +191,12 @@ theorem geraete_interrupt_erhalt (locals : Umgebung scope) (d : Denotation k sco
                       have hc := (geraeteKopplung_kopplung hkopp).1
                       simp only [NiedrigeBeob] at hc
                       rw [hlenP] at hc
-                      simpa only [L₁, L₂, List.take_length] using hc
+                      simpa only [L₁, L₂, E, List.take_length] using hc
                     have reflA : List.Forall₂ (EreignisAequiv E.fluss.freigabe) A A := by
                       induction A with
                       | nil => exact List.Forall₂.nil
                       | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
-                    exact List.rel_append (by simpa only [L₁, L₂] using hcov) reflA
+                    exact List.rel_append (by simpa only [L₁, L₂, E] using hcov) reflA
                   · intro v w hv hw
                     obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                     obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
