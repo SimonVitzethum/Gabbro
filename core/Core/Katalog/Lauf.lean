@@ -138,6 +138,30 @@ structure FairLaeufe (k : Katalog) (h : Umgebung) (run : HwLauf) : Prop where
 theorem FairLaeufe.konform (fair : FairLaeufe k h run) : run.konform k h :=
   ⟨fair.politik, fair.gueltig⟩
 
+/-- **Selection fairness: the named hardware row for raised interrupts.** Every raised
+    interrupt on a supported line of a live core is eventually selected with its origin
+    (the raise cut and position it comes from). This row is bound to the catalogue
+    environment `h`, never a free parameter, and it lives only in the progress leg:
+    `FairLaeufe` and `Laeufe` never assume it. -/
+def AuswahlFair (h : Umgebung) (run : HwLauf) : Prop :=
+  ∀ (t i kern : Nat) (irq : Unterbrechung),
+    (run.angebot t).interrupts[i]? = some (.erhoben kern irq) →
+    kern < h.kernzahl →
+    h.ziel.unterstuetzt irq →
+    ∃ (t' : Nat) (id : Nat × Nat),
+      t ≤ t' ∧ (run.angebot t').interruptAuswahl = some (kern, id, irq) ∧
+        run.interruptUrsprung t' id kern irq
+
+/-- **Counter liveness: the row behind the counter bound.** When the cycle counter of an
+    offer reaches the bound register of the platform row, the hardware raises the row's
+    trap line on that core at a later cut. -/
+def ZaehlerLebendigAussage (p : Plattform) (h : Umgebung) (run : HwLauf) : Prop :=
+  ∀ (hziel : h.ziel = p.ziel) (t kern : Nat),
+    kern < h.kernzahl →
+    (run.angebot t).cycles = p.zaehlerZeile.schranke →
+    ∃ (t' i : Nat),
+      t ≤ t' ∧ (run.angebot t').interrupts[i]? = some (.erhoben kern p.zaehlerZeile.trap)
+
 /-- Runtime identity for an issued question. It is independent of the external handle and scope. -/
 structure FrageEreignis where
   cut : Nat
