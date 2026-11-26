@@ -71,28 +71,26 @@ theorem precPaarPaarWert (cgBlk : List Befehl) (aus frei y i a : Nat)
     rEnd.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) ∧
       (∀ s, s < frei + 10 → s ≠ aus → s ≠ frei + 4 → s ≠ frei + 5 → rEnd.temp s = r.temp s) ∧
       rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
-  let paar1 := paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
-  let paar2 := paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
   have haF1 : frei + 2 < frei + 10 := by omega
   have hbF1 : aus < frei + 10 := by omega
-  have hlen1 : 0 < paar1.length := by dsimp only [paar1]; rw [paarBerechnungLaenge]; omega
-  have hlen2 : 0 < paar2.length := by dsimp only [paar2]; rw [paarBerechnungLaenge]; omega
-  have hlocal1 : BleibtImBlock paar1 := by
-    dsimp only [paar1]
+  have hlen1 : 0 < (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)).length := by dsimp only [(paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))]; rw [paarBerechnungLaenge]; omega
+  have hlen2 : 0 < (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)).length := by dsimp only [(paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))]; rw [paarBerechnungLaenge]; omega
+  have hlocal1 : BleibtImBlock (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)) := by
+    dsimp only [(paarBerechnung (frei + 2) aus (frei + 4) (frei + 10))]
     exact bleibtImBlockPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
-  have hlocal2 : BleibtImBlock paar2 := by
-    dsimp only [paar2]
+  have hlocal2 : BleibtImBlock (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) := by
+    dsimp only [(paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))]
     exact bleibtImBlockPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
-  have hv2 : VerschiebbaresProgramm paar2 := by
-    dsimp only [paar2]
+  have hv2 : VerschiebbaresProgramm (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) := by
+    dsimp only [(paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))]
     exact verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
-  have hk' : (Schritt (paar1 ++ paar2))^[k] (some r) = some rEnd := by
-    simpa only [paar1, paar2] using hk
-  have hpcEnd' : rEnd.pc = (paar1 ++ paar2).length := by
-    dsimp only [paar1, paar2]
+  have hk' : (Schritt ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)) ++ (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))))^[k] (some r) = some rEnd := by
+    simpa only [(paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)), (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))] using hk
+  have hpcEnd' : rEnd.pc = ((paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)) ++ (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))).length := by
+    dsimp only [(paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)), (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20))]
     simpa only [List.length_append, paarBerechnungLaenge] using hpcEnd
   obtain ⟨j2, r1, hj2k, hrunC, hrun1, hpc1⟩ :=
-    randAusEndePrefix paar1 paar2 hlocal1 hlen1 hlen2 r k rEnd hpc hk' hpcEnd'
+    randAusEndePrefix (paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)) (paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)) hlocal1 hlen1 hlen2 r k rEnd hpc hk' hpcEnd'
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
     paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i rfl hy hi
       haF1 hbF1 j2 r1 hrun1 hpc1
