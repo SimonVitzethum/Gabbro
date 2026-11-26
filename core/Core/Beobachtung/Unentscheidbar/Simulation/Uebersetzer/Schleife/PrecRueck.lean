@@ -266,6 +266,7 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hlenP : 0 < P.length := by
     dsimp only [P]
     rw [List.length_append, precPaarEinsLaenge, precPaarZweiLaenge]
+    omega
   have hlocalP : BleibtImBlock P := by
     dsimp only [P]
     exact bleibtImBlockAppend (precPaarEins aus frei) (precPaarZwei aus frei)
@@ -278,7 +279,8 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     dsimp only [P]
     rw [List.length_append, precPaarEinsLaenge, precPaarZweiLaenge]
   obtain ⟨j1, r2, hj1k, hrunC1, hrun12, hpc2⟩ :=
-    randAusEndePrefix P cgBlk hlocalP hlenP hlenCg r k rEnd hpc hkC hpcEndC
+    randAusEndePrefix P cgBlk hlocalP hlenP hlenCg r k rEnd hpc hkC
+      (by simpa only [List.length_append] using hpcEndC)
   have hkdecomp : (Schritt (P ++ cgBlk))^[k] (some r) =
       (Schritt (P ++ cgBlk))^[k - j1] ((Schritt (P ++ cgBlk))^[j1] (some r)) := by
     rw [← Function.iterate_add_apply]
