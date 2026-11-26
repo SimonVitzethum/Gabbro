@@ -91,10 +91,6 @@ private theorem kopf_position {code : List Befehl} (head : kopf code s c = some 
       case some => cases head
       case none => exact ⟨⟨hstop, hreturn⟩, head⟩
 
-theorem KostenGrenzen.startdaten (g : KostenGrenzen) (scope : Scope)
-    (entries : Kontext → Option Nat) (core : Option Nat) (P : Plattform) (regions : List Strecke)
-    (d : Kontext) : g.RahmenGut ((startdaten scope entries core P regions).lokal d) :=
-  g.start scope
 
 /-- At every observed cut, all active and saved frames obey the cost limits if the
     three installing instructions have valid operands and site metadata. -/
@@ -135,7 +131,7 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
           | kontext _ _ rule effect =>
             obtain ⟨b, head, instruction⟩ := rule
             obtain ⟨active, lookup⟩ := kopf_position head
-            have good := ideal_gut ok (installs t _ _ _ before ok active lookup) instruction
+            have good := ideal_gut (w := PUnit.unit) ok (installs t _ _ _ before ok active lookup) instruction
             obtain ⟨_, _, _, _, protocol, _, rfl⟩ := effect
             cases protocol <;> exact good
           | antwort _ answer =>
@@ -185,7 +181,7 @@ theorem kostenSchreiborte_lauf (p : Fragment) (P : Plattform)
       ⟨(before.lokal c).pc, lower, upper, ty, skip, shadow, missing, head, rfl⟩
     exact ⟨Or.inr origin, origin⟩
   case pruefeMass slot =>
-    intro id _ named _ _
-    exact ⟨id, slot, (before.lokal c).pc, named, head⟩
+    intro id _ _ _ _
+    exact ⟨id, slot, (before.lokal c).pc, rfl, head⟩
 
 end Gabbro.Core.Ast.Semantik
