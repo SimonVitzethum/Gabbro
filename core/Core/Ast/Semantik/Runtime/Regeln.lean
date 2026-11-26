@@ -56,6 +56,19 @@ theorem Befehl.privat_von_kein_zugriff {b : Befehl} (h : ∀ form, b ≠ .zugrif
     | exact absurd rfl (h' _)
     | exact absurd rfl (h'' _)
 
+/-- **The plan of a frame-only instruction does not read the frame**: its operand is an immediate
+    (or empty), so two frames give the same plan. Access instructions read the frame. -/
+theorem Befehl.plan_privat_unabhaengig (b : Befehl) (h : b.Privat) (r₁ r₂ : Rahmen) (v : Int) :
+    b.plan r₁ v = b.plan r₂ v := by
+  cases b with
+  | zugriff form =>
+    cases form <;> simp [Befehl.klasse, Befehl.Privat, Zugriffsform.klasse] at h
+  | faden form =>
+    cases form <;> simp [Befehl.klasse, Befehl.Privat, Fadenform.klasse] at h
+  | aussen form =>
+    cases form <;> simp [Befehl.klasse, Befehl.Privat, AussenfrageformKlasse] at h
+  | _ => rfl
+
 /-- A frame-only instruction transfers its frame by its evaluation at the instruction boundary, whatever the
     memory returned. -/
 theorem Befehl.uebertrag_privat (b : Befehl) (h : b.Privat) (r : Rahmen) (live : Nat → Bool) (v : Int) :
