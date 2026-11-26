@@ -234,6 +234,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Rf
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIteration
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIterationRun
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindDivergenzBeweis
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Beweise.RfindKonvergenzBeweis
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
