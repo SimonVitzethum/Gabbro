@@ -240,6 +240,7 @@ public import Core.Ast.Semantik.Runtime.Klasse.Beweise.SpeicherPrivat
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherfolge
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sicherheit
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Speicherbein
+public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Sperrwortbein
 public import Core.Ast.Semantik.Runtime.Klasse.Beweise.Gesamt
 public import Core.Ast.Semantik.Runtime.Klasse.Ankunft
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Aussagen
