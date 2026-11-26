@@ -73,6 +73,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.DomaenenPlan.wohlgeformt,
     `Gabbro.Core.Annahme.DomaenenPlan.erlaubt,
     `Gabbro.Core.Annahme.pruefeDomaenen,
+    `Gabbro.Core.Maschine.DomaenenTabelle.wohlgeformt,
     `Gabbro.Core.Annahme.FremdeZelle,
     `Gabbro.Core.Annahme.FremdeFrage,
     `Gabbro.Core.Annahme.SpurRespektiert,

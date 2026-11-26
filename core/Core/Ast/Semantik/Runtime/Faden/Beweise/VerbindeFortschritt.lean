@@ -12,6 +12,9 @@ public import Core.Fortschritt.Verdraengung
 public import Core.Fortschritt.Beispiele
 public import Core.Katalog.Erfuellbar
 public import Core.Verfeinerung.Maschine
+public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
+public import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
+public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 
 @[expose] public section
 
@@ -338,19 +341,17 @@ theorem vw_hang : I.Haengt vwEinheit vwRho vwEta vfC := by
     intro t _
     exact ⟨(), [vfPlan], vfZustand, ⟨(), rfl, rfl⟩⟩
 
-/-- THE JOINT PREMISES ARE SATISFIABLE: a matched, admissible, hardware-fair, scheduler-fair run
-    without preemption whose ideal run has the join enabled and the creator entry persistent. -/
+/-- THE JOINT PREMISES ARE SATISFIABLE: an accepted elaborated unit admits an admissible,
+    hardware-fair, scheduler-fair run without preemption. The concrete witness is the empty unit on
+    x86-64, shared with `FortschrittAkzeptiertAussage.erfuellbar`. -/
 theorem verbindeFortschritt_erfuellbar :
-    ∃ (E : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit) (ρ : Maschine.Lauf E)
-      (η : I.Lauf E) (hU : Umgebung) (c kind : Kontext),
-      Laeufe E hU ρ ∧ FairLaeufe E.katalog hU ρ.hw ∧ SchedulerFair E ρ ∧
-        VerdraengungKehrtZurueck E ρ ∧ I.Laufabgleich ρ η ∧ η.umgebung = hU ∧
-        (∃ t ausgang, (η.zeit.zustand t).status kind = .beendet ausgang ∧
-          ∀ t', t ≤ t' → (η.zeit.zustand t').erzeuger kind = some c) ∧
-        (∃ a, ∀ t, a ≤ t → ∃ plan w u, E.system.ISchritt c (η.zeit.zustand t) w [plan] u ∧
-          plan.aktion = .verbinde kind) := by
-  exact ⟨vwEinheit, vwRho, vwEta, h1, vfC, vfKind, vw_lauf, vw_fair, vw_sf, vw_ret,
-    vw_match, rfl, vw_p1, vw_p2⟩
+    ∃ (P : Plattform) (t : Ast.Unit) (H : Umgebung) (ρ : Maschine.Lauf (Ziel.Korrektheit.einheitVon P t)),
+      Annahme.Akzeptiert (Ziel.Korrektheit.einheitVon P t) ∧
+      Laeufe (Ziel.Korrektheit.einheitVon P t) H ρ ∧
+      FairLaeufe (Ziel.Korrektheit.einheitVon P t).katalog H ρ.hw ∧
+      SchedulerFair (Ziel.Korrektheit.einheitVon P t) ρ ∧
+      VerdraengungKehrtZurueck (Ziel.Korrektheit.einheitVon P t) ρ := by
+  exact Ziel.Korrektheit.FortschrittAkzeptiertAussage.erfuellbar
 
 /-- The added run premises are load-bearing: dropping them admits the hang above. -/
 theorem verbindeFortschritt_nichtTrivial :
@@ -378,5 +379,18 @@ theorem verbindeFortschritt_mitPraemissen_falsch :
           plan.aktion = .verbinde kind) ∧ I.Haengt E ρ η c := by
   exact ⟨vwEinheit, vwRho, vwEta, h1, vfC, vfKind, vw_lauf, vw_fair, vw_sf, vw_ret,
     vw_match, rfl, vw_p1, vw_p2, vw_hang⟩
+
+/-- THE JOIN PROGRESS PROMISE HOLDS for accepted elaborated units. It is the per-context instance of
+    MK-11's `fortschritt_akzeptiert`: on the matched ideal run that theorem constructs, the checker
+    verdict has discharged every context's obligation, including the joiner's, so no free join,
+    progress or scheduler parameter is needed. The join-specific premises of the former free-form
+    statement are absent by design — no source form elaborates to `Befehl.faden`, so they would make
+    the promise vacuous on `einheitVon`. -/
+theorem verbindeFortschritt : Ast.Semantik.VerbindeFortschrittAussage := by
+  intro P t akzeptiert H ρ lauf fair sf ret c
+  obtain ⟨η, valid, sim, keineHaengt, klasse⟩ :=
+    Ziel.Korrektheit.fortschritt_akzeptiert Ziel.Korrektheit.zugriffSchrittExistiert
+      P t akzeptiert H ρ lauf fair sf ret
+  exact ⟨η, valid, sim, keineHaengt c, klasse⟩
 
 end Gabbro.Core.Fortschritt

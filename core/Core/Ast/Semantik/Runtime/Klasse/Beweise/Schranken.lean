@@ -228,19 +228,26 @@ theorem Schrittform.ideal_stapelErhalt {ι : Type} (E : Klasseneinheit ι) (F : 
           simp only [Schrittform.nach, Function.update_self]
           exact stapel (s.lokal c) s.regionLive 0 n bound vorTief
         | some a =>
-          cases hr : a.reply.result with
-          | ok _v =>
-            have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
+          by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+          · cases htr : Antwort.uebersetzt a.question a.reply with
+            | none =>
+              have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
+                  (s.lokal c).fortsetzungen := by
+                simp only [Schrittform.verbraucheNach, h, hg, htr, if_true, if_false,
+                  Zustand.verbrauche, Function.update_self, Rahmen.weiter]
+              simp only [tiefe, hfort] at vorTief ⊢
+              exact vorTief
+            | some _v =>
+              have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
+                  (s.lokal c).fortsetzungen := by
+                simp only [Schrittform.verbraucheNach, h, hg, htr, if_true, if_false,
+                  Zustand.verbrauche, Function.update_self, verbraucheSchreibe, Rahmen.schreibe]
+              simp only [tiefe, hfort] at vorTief ⊢
+              exact vorTief
+          · have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
                 (s.lokal c).fortsetzungen := by
-              simp only [Schrittform.verbraucheNach, h, hr, Zustand.verbrauche,
-                Function.update_self, verbraucheSchreibe_fortsetzungen]
-            simp only [tiefe, hfort] at vorTief ⊢
-            exact vorTief
-          | error _e =>
-            have hfort : ((Schrittform.verbraucheNach ⟨.verbrauche, o, t⟩ c s).lokal c).fortsetzungen =
-                (s.lokal c).fortsetzungen := by
-              simp only [Schrittform.verbraucheNach, h, hr, Zustand.verbrauche,
-                Function.update_self, Rahmen.weiter]
+              simp only [Schrittform.verbraucheNach, h, hg, if_true, if_false,
+                Function.update_self, Rahmen.halt]
             simp only [tiefe, hfort] at vorTief ⊢
             exact vorTief
     | maskiere =>

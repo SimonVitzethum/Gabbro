@@ -9,6 +9,11 @@
   so completeness and the non-triviality statements below are part of the same package. Meaning change (MK-17):
   the isolation row of `Lokal` constrains the recorded implementation steps, so acceptance reaches them. Meaning change (MK-17):
   the isolation row of `Lokal` constrains the recorded implementation steps, so acceptance reaches them.
+  Meaning change (guard checker): the guard component is the computable checker
+  `prueferWaechterDecidierbar` whose verdict is the static guard analysis
+  `waechterPruefeCode` over the elaborated code; the guard statements below speak
+  about this deployed checker instead of a classical placeholder. This only
+  strengthens the package: a real checker replaces the placeholder.
 
   The checker is a TOTAL BOOLEAN function over source units (`Pruefer`), never a `Prop` with a `Decidable`
   instance: `∃ f : _ → Bool, ∀ p, f p = true ↔ Akzeptiert p` is provable classically and says nothing about
@@ -25,10 +30,13 @@ module
 public import Core.Ast.Semantik.Elaborierung
 public import Core.Annahme.Annahme
 public import Core.Beobachtung.Unentscheidbar.Rice
+public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
 
 @[expose] public section
 
 namespace Gabbro.Core.Ziel.Korrektheit
+
+open Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
 
 open Gabbro.Core
 
@@ -63,6 +71,19 @@ stores no invariant and the two elaborations coincide. -/
 theorem einheitVon_mitInvarianten (P : Katalog.Plattform) (t : Ast.Unit) :
     einheitVon P t = Ast.Semantik.elaborierenMitInvarianten P ⟨t, []⟩ := rfl
 
+/-- The deployed guard checker: a computable checker whose guard verdict is the static
+    interval analysis `waechterPruefeCode` over the elaborated code and whose fragment
+    is the named decidable fragment `waechterFragmentCode`. The local and clause
+    components are constantly true: this checker decides guards only. Its Lean body
+    is an ordinary `Bool` function, so computability is carried by the definition. -/
+def prueferWaechterDecidierbar : Pruefer where
+  pruefeLokal := fun _ _ => true
+  pruefeKlauseln := fun _ _ => true
+  pruefeWaechter := fun P t => waechterPruefeCode (Ast.Semantik.fragment Ast.Category.unit t).code
+  fragmentLokal := fun _ _ => true
+  fragmentKlauseln := fun _ _ => true
+  fragmentWaechter := fun P t => waechterFragmentCode (Ast.Semantik.fragment Ast.Category.unit t).code
+
 /-- SOUNDNESS of the local component: acceptance by the checker gives `Lokal` (types, ownership, lock ranks,
 units, provenance of outside answers, guards or `else` paths, waits, stack and length bounds, row selection,
 labelled flow). Feeds: `Annahme.Lokal` and its conjuncts (`RegelLokal`, `AussenLokal`, `FlussLokal`,
@@ -96,16 +117,23 @@ def PrueferKlauselnVollstaendigAussage (C : Pruefer) : Prop :=
     Annahme.KlauselnWahr (Ast.Semantik.elaborierenMitInvarianten P u) →
     C.pruefeKlauseln P u = true
 
-/-- SOUNDNESS of the guard component: acceptance by the checker gives `WaechterHalten` — every guard of a
-partial operation holds in every reachable `I` state, and no reachable cut has a closed waiting set. Feeds:
-`Annahme.WaechterHalten`, `waechterBedarf`, `SperrHalterHalten`, `deadlockfrei_aus_waechter`. -/
-def PrueferWaechterKorrektAussage (C : Pruefer) : Prop :=
-  ∀ P t, C.pruefeWaechter P t = true → Annahme.WaechterHalten (einheitVon P t)
+/-- SOUNDNESS of the guard component, stated about the deployed computable checker:
+    acceptance by the checker gives `WaechterHalten` — every guard of a partial
+    operation holds in every reachable `I` state, and no reachable cut has a closed
+    waiting set. Proved in `PrueferWaechterBeweise.lean` from `waechterAbstrakt`.
+    Feeds: `Annahme.WaechterHalten`, `waechterBedarf`, `SperrHalterHalten`,
+    `deadlockfrei_aus_waechter`. -/
+def PrueferWaechterKorrektAussage : Prop :=
+  ∀ P t, prueferWaechterDecidierbar.pruefeWaechter P t = true →
+    Annahme.WaechterHalten (einheitVon P t)
 
-/-- COMPLETENESS of the guard component on its fragment. -/
-def PrueferWaechterVollstaendigAussage (C : Pruefer) : Prop :=
-  ∀ P t, C.fragmentWaechter P t = true → Annahme.WaechterHalten (einheitVon P t) →
-    C.pruefeWaechter P t = true
+/-- COMPLETENESS of the guard component on its fragment, stated about the deployed
+    computable checker. Proved in `PrueferWaechterBeweise.lean` from the pinned
+    `WaechterFragmentVollstaendigAussage`. -/
+def PrueferWaechterVollstaendigAussage : Prop :=
+  ∀ P t, prueferWaechterDecidierbar.fragmentWaechter P t = true →
+    Annahme.WaechterHalten (einheitVon P t) →
+    prueferWaechterDecidierbar.pruefeWaechter P t = true
 
 /-- `pruefer_korrekt` of PERFECT-MODEL §3.2: the checker accepts only accepted units. -/
 def PrueferKorrektAussage (C : Pruefer) : Prop :=
@@ -117,9 +145,11 @@ def PrueferVollstaendigAussage (C : Pruefer) : Prop :=
   ∀ P t, C.fragment P t = true → Annahme.Akzeptiert (einheitVon P t) → C.pruefe P t = true
 
 /-- Soundness of the three components gives soundness of the checker. The clause component is asked
-about the plain unit with the empty predicate list. -/
+about the plain unit with the empty predicate list. The guard hypothesis is the explicit
+implication the deployed checker satisfies. -/
 theorem pruefer_korrekt_aus_teilen (C : Pruefer) (lokal : PrueferLokalKorrektAussage C)
-    (klauseln : PrueferKlauselnKorrektAussage C) (waechter : PrueferWaechterKorrektAussage C) :
+    (klauseln : PrueferKlauselnKorrektAussage C)
+    (waechter : ∀ P t, C.pruefeWaechter P t = true → Annahme.WaechterHalten (einheitVon P t)) :
     PrueferKorrektAussage C := by
   intro P t h
   simp only [Pruefer.pruefe, Bool.and_eq_true] at h
@@ -128,9 +158,12 @@ theorem pruefer_korrekt_aus_teilen (C : Pruefer) (lokal : PrueferLokalKorrektAus
   rw [← einheitVon_mitInvarianten] at hk
   exact ⟨lokal P t h.1.1, hk, waechter P t h.2⟩
 
-/-- Completeness of the three components gives completeness of the checker on the joint fragment. -/
+/-- Completeness of the three components gives completeness of the checker on the joint fragment.
+The guard hypothesis is the explicit implication the deployed checker satisfies on its fragment. -/
 theorem pruefer_vollstaendig_aus_teilen (C : Pruefer) (lokal : PrueferLokalVollstaendigAussage C)
-    (klauseln : PrueferKlauselnVollstaendigAussage C) (waechter : PrueferWaechterVollstaendigAussage C) :
+    (klauseln : PrueferKlauselnVollstaendigAussage C)
+    (waechter : ∀ P t, C.fragmentWaechter P t = true → Annahme.WaechterHalten (einheitVon P t) →
+      C.pruefeWaechter P t = true) :
     PrueferVollstaendigAussage C := by
   intro P t hf hA
   obtain ⟨hl, hk, hw⟩ := hA

@@ -21,6 +21,8 @@ public import Core.Ast.Semantik.Runtime.Klasse.Klasse
 public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
 public import Core.Maschine.Aussen
+public import Core.Aussen.Frage.Wert
+public import Core.Aussen.Frage.Commit
 
 @[expose] public section
 
@@ -244,39 +246,50 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .verbrauche
   | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => F.nach c s 0
 
-/-- **The frame writes the success bit of an outside answer into its named slot.**
-    A successful answer binds `true` at `ziel`; an error answer advances without writing
-    (the error ends the context at the state level, see `verbraucheNach`). -/
-def verbraucheSchreibe (ziel : Nat) (r : Rahmen) (a : Antwort) : Rahmen :=
-  match a.result with
-  | Except.ok _v => r.schreibe ziel (some ⟨.bool, true⟩)
-  | Except.error _e => r.weiter
+/-- **The frame writes the translated value of an outside answer into its named slot.**
+    The catalogue row of the question declares the return kind; an ok answer of that kind binds
+    its translated value at `ziel`. An answer without a translated value (an error, or a value of
+    another kind) halts the frame with a named reason; the context ends at the state level, see
+    `verbraucheNach`. -/
+def verbraucheSchreibe (ziel : Nat) (q : Frage) (r : Rahmen) (a : Antwort) : Rahmen :=
+  match Antwort.uebersetzt q a with
+  | some v => r.schreibe ziel (some v)
+  | none => r.halt .ungueltigerWert
 
 /-- The consume write keeps the continuation stack. -/
-theorem verbraucheSchreibe_fortsetzungen (ziel : Nat) (r : Rahmen) (a : Antwort) :
-    (verbraucheSchreibe ziel r a).fortsetzungen = r.fortsetzungen := by
-  cases h : a.result with
-  | ok _v => simp only [verbraucheSchreibe, h, Rahmen.schreibe]
-  | error _e => simp only [verbraucheSchreibe, h, Rahmen.weiter]
+theorem verbraucheSchreibe_fortsetzungen (ziel : Nat) (q : Frage) (r : Rahmen) (a : Antwort) :
+    (verbraucheSchreibe ziel q r a).fortsetzungen = r.fortsetzungen := by
+  cases h : Antwort.uebersetzt q a with
+  | none => simp only [verbraucheSchreibe, h, Rahmen.halt]
+  | some v => simp only [verbraucheSchreibe, h, Rahmen.schreibe]
 
-/-- **The state after a consume step** (MK-06, value binding). The next arrived answer of the
-    acting context is taken: its success bit is bound at the operand slot, and an error answer
-    ends the context with a reason exit while writing nothing. The consumption counter moves in
-    both cases. Without an arrived answer the step is the private transfer (totality for
-    progress). Only the acting context changes. -/
+/-- **The state after a consume step** (MK-06, value binding and commit guard). The next arrived
+    answer of the acting context is taken only when it still carries the revalidation evidence of
+    its commit (`gueltigBeiCommit`): its translated value is bound at the operand slot and the
+    consumption counter moves. An answer without that evidence is refused with a named halt and
+    is not consumed. An answer that cannot be translated ends the context with a reason exit.
+    Without an arrived answer the step is the private transfer (totality for progress). Only the
+    acting context changes. -/
 def Schrittform.verbraucheNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
   match s.naechsteAntwort c with
   | none => F.nach c s 0
   | some a =>
-    let s1 := s.verbrauche c
-    let ziel := (F.operand (s.lokal c)).ziel
-    match a.reply.result with
-    | Except.ok _v =>
-      { s1 with lokal := Function.update s1.lokal c (verbraucheSchreibe ziel (s1.lokal c) a.reply) }
-    | Except.error _e =>
-      { s1 with
-        lokal := Function.update s1.lokal c (s1.lokal c).weiter,
-        status := Function.update s1.status c (.beendet (.grund PUnit.unit)) }
+    if AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a then
+      let s1 := s.verbrauche c
+      let ziel := (F.operand (s.lokal c)).ziel
+      match Antwort.uebersetzt a.question a.reply with
+      | some _v =>
+        { s1 with lokal := Function.update s1.lokal c (verbraucheSchreibe ziel a.question (s1.lokal c) a.reply) }
+      | none =>
+        { s1 with
+          lokal := Function.update s1.lokal c (s1.lokal c).weiter,
+          status := Function.update s1.status c (.beendet (.grund PUnit.unit)) }
+    else
+      { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerWert) }
+
+/-- A refused consume keeps the consumption counters and halts only the acting frame. -/
+def Schrittform.verbraucheVerweigert (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
+  { s with lokal := Function.update s.lokal c ((s.lokal c).halt .ungueltigerWert) }
 
 /-- A consume step leaves every other context's frame alone. -/
 theorem Schrittform.verbraucheNach_andere (F : Schrittform) (c : Kontext) (s : Zustand)
@@ -286,11 +299,11 @@ theorem Schrittform.verbraucheNach_andere (F : Schrittform) (c : Kontext) (s : Z
   | none =>
     simp only [h, Schrittform.nach, Function.update_of_ne hd]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
-    | error _e =>
-      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche, Function.update_of_ne hd]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche, Function.update_of_ne hd]
+    · simp only [h, hg, if_true, if_false, Function.update_of_ne hd]
 
 /-- A consume step keeps the authority ledger. -/
 theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -300,11 +313,11 @@ theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Z
   | none =>
     simp only [h, Schrittform.nach]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      simp only [h, hr, Zustand.verbrauche]
-    | error _e =>
-      simp only [h, hr, Zustand.verbrauche]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the booking extents. -/
 theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -314,11 +327,11 @@ theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Z
   | none =>
     simp only [h, Schrittform.nach]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      simp only [h, hr, Zustand.verbrauche]
-    | error _e =>
-      simp only [h, hr, Zustand.verbrauche]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the questions, the answers and the epoch. -/
 theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -330,11 +343,11 @@ theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Z
   | none =>
     refine ⟨?_, ?_, ?_⟩ <;> simp only [h, Schrittform.nach]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
-    | error _e =>
-      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the outside part of the ledger. -/
 theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -345,11 +358,11 @@ theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Z
   | none =>
     refine ⟨?_, ?_⟩ <;> simp only [h, Schrittform.nach]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
-    | error _e =>
-      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => refine ⟨?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => refine ⟨?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · refine ⟨?_, ?_⟩ <;> simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the whole booking (only the acting frame, status and counter move). -/
 theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -359,11 +372,11 @@ theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : 
   | none =>
     simp only [h, Schrittform.nach]
   | some a =>
-    cases hr : a.reply.result with
-    | ok _v =>
-      simp only [h, hr, Zustand.verbrauche]
-    | error _e =>
-      simp only [h, hr, Zustand.verbrauche]
+    by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
