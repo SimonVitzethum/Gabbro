@@ -194,13 +194,13 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           | intern =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp [Befehl.nach, hEqL, hEqR]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
-            simp [Befehl.nach, hEqS]
+            simp only [Befehl.nach, hEqS]
           · rw [hstate]
-            simp [Befehl.nach, hEqK]
+            simp only [Befehl.nach, hEqK]
           · rw [hstate]
-            simp [Befehl.nach, hEqF, hFrPre]
+            simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .maskiere v1 a1 := hL
@@ -210,13 +210,16 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           | maskiere _ _ =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp [Befehl.nach, hEqL, hEqR]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
-            simp [Befehl.nach, hEqS]
+            simp only [Befehl.nach, hEqS]
           · rw [hstate]
-            simp [Befehl.nach, hEqK]
+            funext k
+            by_cases hk : ((ρ.zeit.zustand t).kerne k).laeuft = some eintritt
+            · simp [hk, Befehl.nach, hEqK]
+            · simp [hk, Befehl.nach, hEqK]
           · rw [hstate]
-            simp [Befehl.nach, hEqF, hFrPre]
+            simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .prioritaet g1 := hL
@@ -226,13 +229,13 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           | prioritaet _ =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp [Befehl.nach, hEqL, hEqR]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
-            simp [Befehl.nach, hEqS]
+            simp only [Befehl.nach, hEqS]
           · rw [hstate]
-            simp [Befehl.nach, hEqK]
+            simp only [Befehl.nach, hEqK]
           · rw [hstate]
-            simp [Befehl.nach, hEqF, hFrPre]
+            simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .sende v2 k2 := hL
@@ -242,13 +245,13 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           | sende _ _ =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp [Befehl.nach, hEqL, hEqR]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
-            simp [Befehl.nach, hEqS]
+            simp only [Befehl.nach, hEqS]
           · rw [hstate]
-            simp [Befehl.nach, hEqK]
+            simp only [Befehl.nach, hEqK]
           · rw [hstate]
-            simp [Befehl.nach, hEqF, hFrPre]
+            simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
         · have hR : (b.plan ((ρ.zeit.zustand t).lokal eintritt) 0).aktion = .leite l3 k3 p3 := hL
@@ -258,13 +261,13 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           | leite _ _ _ =>
           refine ⟨⟨ev, hev⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hstate]
-            simp [Befehl.nach, hEqL, hEqR]
+            simp only [Befehl.nach, hEqL, hEqR]
           · rw [hstate]
-            simp [Befehl.nach, hEqS]
+            simp only [Befehl.nach, hEqS]
           · rw [hstate]
-            simp [Befehl.nach, hEqK]
+            simp only [Befehl.nach, hEqK]
           · rw [hstate]
-            simp [Befehl.nach, hEqF, hFrPre]
+            simp only [Befehl.nach, hEqF, hFrPre]
           · rw [hstate, regionLive_graph_irrelevant, Befehl.nach_regionLive, hEqR,
               ← Befehl.nach_regionLive]
       · exfalso
