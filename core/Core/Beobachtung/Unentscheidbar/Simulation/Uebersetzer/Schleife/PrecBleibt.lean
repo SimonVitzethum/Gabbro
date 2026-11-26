@@ -3,6 +3,7 @@ module
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.Hilfen
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleife
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecEinSchritt
 
 @[expose] public section
 
@@ -59,13 +60,27 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
   intro r b hlt hget
   rw [precSchleifeLaenge] at hlt ⊢
   by_cases hltV : r.pc < 8
-  · interval_cases r.pc <;>
-      simp only [precSchleife, precCheck, kopie, List.append_assoc, List.nil_append,
-        List.append_nil, List.cons_append, List.getElem?_cons_zero,
-        List.getElem?_cons_succ, List.getElem?_nil, List.length_cons,
-        List.length_nil] at hget <;>
-      injection hget with hb <;> subst b <;>
-      simp only [Befehl.auswerten, Rahmen.schreibe] <;> (try split) <;> omega
+  · by_cases hlt7 : r.pc < 7
+    · have hgetCheck : (precCheck frei)[r.pc]? = some b := by
+        rw [← getAnhangLinks (precCheck frei)
+          ([(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)] ++
+            (precRumpf cgBlk aus frei ++ precEnde cgBlk frei)) r.pc
+            (by rw [precCheckLaenge]; exact hlt7)]
+        simpa only [precSchleife, List.append_assoc] using hget
+      have hle := bleibtImBlockPrecCheck frei r b hlt7 hgetCheck
+      omega
+    · have hrpc7 : r.pc = 7 := by omega
+      have hget7 : (precSchleife cgBlk aus frei)[7]? =
+          some (.springeWenn (frei + 6) false (cgBlk.length + 92)) :=
+        precSchleifeBei7 cgBlk aus frei
+      rw [hrpc7, hget7] at hget
+      injection hget with hb
+      subst b
+      change (if (r.temp (frei + 6)).bind alsBoolean = some false then
+          r.pc + (cgBlk.length + 92) else r.pc + 1) ≤ cgBlk.length + 99
+      rw [hrpc7]
+      by_cases hcond : (r.temp (frei + 6)).bind alsBoolean = some false <;>
+        simp only [hcond, if_true, if_false] <;> omega
   · have hgeV : 8 ≤ r.pc := by omega
     by_cases hltR : r.pc < 96 + cgBlk.length
     · let V := precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]
@@ -89,31 +104,23 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
       have hgetR : R[r0.pc]? = some b := by
         have hidx := getNachPrefix V R r0.pc hltMid
         rw [hlenV] at hidx
-        rw [show 8 + r0.pc = r.pc by omega] at hidx
+        rw [show 8 + r0.pc = r.pc by dsimp only [r0]; omega] at hidx
         change ((V ++ R) ++ precEnde cgBlk frei)[r.pc]? = some b at hget
         rw [getAnhangLinks (V ++ R) (precEnde cgBlk frei) r.pc (by rw [hlenVR]; exact hltR)] at hget
         rw [← hidx]
         exact hget
-      have hstepComp : Schritt (precSchleife cgBlk aus frei) (some r) = some (b.auswerten r) := by
-        show (match (precSchleife cgBlk aus frei)[r.pc]? with
-          | none => none | some c => some (c.auswerten r)) = some (b.auswerten r)
-        rw [hget]
-      have hstepR : Schritt R (some r0) = some (b.auswerten r0) := by
-        show (match R[r0.pc]? with | none => none | some c => some (c.auswerten r0)) = some (b.auswerten r0)
-        rw [hgetR]
       have hvR : VerschiebbaresProgramm R := by
         dsimp only [R]
         rw [← verschiebbarVonNull]
         exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
-      have hshift := schrittMitPcBei V R [] hvR r0 hltMid
-      simp only [List.append_nil, hmr, hstepR] at hshift
-      have heq : b.auswerten r = mitPc 8 (b.auswerten r0) :=
-        Option.some.inj (hstepComp.symm.trans hshift)
-      rw [heq]
-      simp only [mitPc]
+      obtain ⟨_, hvb, hzd⟩ := hvR r0.pc hltMid
+      have hshift := auswertenMitPc 8 b r0 hvb hzd
+      rw [hmr] at hshift
       have hle := bleibtImBlockPrecRumpf cgBlk aus frei hcg hvCg r0 b hltMid hgetR
       dsimp only [R] at hle
       rw [precRumpfLaenge] at hle
+      rw [hshift]
+      simp only [mitPc]
       omega
     · let t := r.pc - (96 + cgBlk.length)
       have htlt : t < 3 := by omega
