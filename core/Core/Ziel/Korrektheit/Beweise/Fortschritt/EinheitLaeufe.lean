@@ -262,8 +262,10 @@ theorem einheitVon_keine_fragen (P : Katalog.Plattform) (t : Ast.Unit)
   | zero =>
     have loaded := Beobachtung.fragment_geladen (Ast.Semantik.fragment Ast.Category.unit t) P
       lauf.1 lauf.2.2.1
-    rw [lauf.2.2.2, loaded] at cut
-    cases cut
+    have start : ρ.zeit.zustand 0 = some (Maschine.I.start (einheitVon P t) ρ.start).2 :=
+      lauf.2.2.2.trans loaded
+    have eq := Option.some.inj (cut.symm.trans start)
+    rw [eq]
     rfl
   | succ tick ih =>
     obtain ⟨before, hb⟩ := Beobachtung.fragment_zustand_some
@@ -282,10 +284,12 @@ theorem einheitVon_keine_fragen (P : Katalog.Plattform) (t : Ast.Unit)
         | kontext _ _ regel aus =>
           exact (einheitVon_kontext_intern_erhaelt P t regel aus).2.2.trans empty
         | antwort _ arrives =>
-          obtain ⟨_, _, _, rfl⟩ := arrives
+          obtain ⟨_, _, _, state⟩ := arrives
+          rw [state]
           exact empty
         | interrupt _ enters =>
-          obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := enters
+          obtain ⟨_, _, _, _, _, _, _, _, _, _, state⟩ := enters
+          rw [state]
           exact empty
         | absturz crash =>
           rw [crash.genau.2]
@@ -306,7 +310,10 @@ theorem einheitVon_schreitet_bei_gelegenheit (P : Katalog.Plattform) (t : Ast.Un
     (aus : FuehrtSchrittAus (einheitVon P t).einrichtung tick c s u plan spur s') :
     ∃ w spur, ρ.zeit.spur tick = some (.kontext c w, spur) := by
   have ht := ρ.zeit.takt tick
-  rw [cut] at ht
+  obtain ⟨next, hn⟩ := Beobachtung.fragment_zustand_some
+    (p := Ast.Semantik.fragment Ast.Category.unit t) (plattform := P) lauf (tick + 1)
+  have nextCut : ρ.zeit.zustand (tick + 1) = some next := hn
+  rw [cut, nextCut] at ht
   cases ht with
   | wartet _ _ noStep =>
     exact (noStep _ (some s') (.schritt (.kontext noCrash ready regel aus))).elim

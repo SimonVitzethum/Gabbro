@@ -45,7 +45,6 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
     (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
-    (sf : Maschine.SchedulerFair (einheitVon P t) ρ)
     (ret : Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
     {η : Maschine.I.Lauf (einheitVon P t)} (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η) (environment : η.umgebung = H) :
@@ -110,7 +109,7 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
         have hd : (s.kerne kstar).laeuft = some c :=
           hkonst t'' (Nat.le_trans hm ht'') s hs
         exact ⟨t'', ht'', kstar, hgeleg, s, hs, hd⟩
-      obtain ⟨t', ht', w, spur, hstep⟩ := sf a c suffixReady opportunities n hn
+      obtain ⟨t', ht', w, spur, hstep⟩ := einheitVon_schedulerFair P t lauf a c suffixReady opportunities n hn
       exact ⟨t', ht', ⟨w, spur, hstep⟩, bereitAlle t' (Nat.le_trans hn ht')⟩
     | inr lockOft =>
       obtain ⟨_, _, _, w, plan, u, _, ischritt, hakt⟩ := lockOft a (Nat.le_refl _)
@@ -143,8 +142,8 @@ def SchedulerFortschrittVoraussetzungAussage : Prop :=
     own context steps are the selection and the two run premises discharge `individuell`. -/
 theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAussage) :
     SchedulerFortschrittVoraussetzungAussage := by
-  intro P t _ H ρ lauf _ sf ret η valid matched environment
-  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+  intro P t _ H ρ lauf _ _ ret η valid matched environment
+  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
 
 /-- Construct one ideal run on every hardware history. On a fair history the two execution
     duties give per-context and per-cut progress for that same ideal run. -/
@@ -168,8 +167,8 @@ theorem einheitVon_sim_ziel_fortschritt (existiert : ZugriffSchrittExistiertAuss
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   apply Maschine.I.sim_ziel_fortschritt_im_lauf pflicht lauf
   intro η valid matched environment fair
-  obtain ⟨sf, ret⟩ := scheduler fair
-  exact einheitVon_scheduler_pflichten existiert P t lauf sf ret valid matched environment
+  have ret := (scheduler fair).2
+  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
 
 /-- The pinned progress statement follows from the shared ideal run and the two run premises. -/
 theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
@@ -180,9 +179,9 @@ theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
   exact ⟨η, valid, sim, (rest fair).1, (rest fair).2⟩
 
 /-- Both run premises hold jointly for an accepted elaborated unit: the catalogue is
-    well-formed by acceptance, the entry image is valid on every platform, and the fair
-    schedule over a history without raised interrupts constructs the run — scheduler-fair
-    by construction and preemption-free by the silent history. -/
+    well-formed by acceptance, the entry image is valid on every platform, and the schedule
+    over a history without raised interrupts constructs the run — scheduler-fair
+    by the actual transitions and preemption-free by the silent history. -/
 theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
     (akzeptiert : Annahme.Akzeptiert (einheitVon P t)) :
     ∃ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
@@ -222,9 +221,9 @@ theorem einheitVon_fair_lauf_erfuellbar (P : Katalog.Plattform) (t : Ast.Unit)
   have fair := Katalog.Umgebung.referenz_fair (einheitVon P t).katalog 2 sicht
     wohlgeformt (by decide)
   obtain ⟨s, zul⟩ := Katalog.zulStart_erfuellbar hardware gueltig
-  obtain ⟨ρ, run, sched, _, hwEq⟩ :=
-    Maschine.fairer_lauf_mit_hw (einheitVon P t) hardware zul fair.konform
-  refine ⟨h, ρ, run, ?_, sched, ?_⟩
+  obtain ⟨ρ, run, _, hwEq⟩ :=
+    Maschine.fairer_lauf (einheitVon P t) zul fair
+  refine ⟨h, ρ, run, ?_, einheitVon_schedulerFair P t run, ?_⟩
   · rw [← hwEq] at fair
     exact fair
   · exact Maschine.verdraengung_ohne_meldung (einheitVon P t) hw (fun i => rfl) ρ hwEq
