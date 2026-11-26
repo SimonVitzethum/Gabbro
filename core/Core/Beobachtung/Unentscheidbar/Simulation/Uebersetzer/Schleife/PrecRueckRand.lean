@@ -61,15 +61,15 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
     refine ⟨t, rEnd, le_rfl, hk, ?_⟩
     rw [hpcEnd]
     omega
-  let s0 := Nat.find hQ
+  let Nat.find hQ := Nat.find hQ
   rcases Nat.find_spec hQ with ⟨rJ, hs0t, hrunJ, hgeJ⟩
-  have hkle : ∀ s, s < s0 → ∀ rs,
+  have hkle : ∀ s, s < Nat.find hQ → ∀ rs,
       (Schritt (pre ++ mid ++ post))^[s] (some (mitPc pre.length r0)) = some rs → rs.pc < K := by
     intro s hs rs hrs
     have hnotQ : ¬ Q s := Nat.find_min hQ hs
     by_contra hge
     exact hnotQ ⟨rs, by omega, hrs, Nat.le_of_not_gt hge⟩
-  have hP : ∀ s, s < s0 → ∃ rm,
+  have hP : ∀ s, s < Nat.find hQ → ∃ rm,
       (Schritt mid)^[s] (some r0) = some rm ∧
       (Schritt (pre ++ mid ++ post))^[s] (some (mitPc pre.length r0)) = some (mitPc pre.length rm) ∧
       rm.pc < mid.length := by
@@ -82,7 +82,7 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
         exact hlenMid
     | succ s ih =>
         intro hs
-        have hsi : s < s0 := by omega
+        have hsi : s < Nat.find hQ := by omega
         obtain ⟨rm, hrm, hcomp, hltm⟩ := ih hsi
         obtain ⟨b, hb, hvb, hzd⟩ := hv rm.pc hltm
         have hstepMid : Schritt mid (some rm) = some (b.auswerten rm) := by
@@ -105,7 +105,7 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
   have hEqJ : rJ.pc = K := by
     by_contra hne
     have hgtJ : K < rJ.pc := Nat.lt_of_le_of_ne hgeJ (fun h => hne h.symm)
-    cases hs0zero : s0 with
+    cases hs0zero : Nat.find hQ with
     | zero =>
         have hrJ : rJ = mitPc pre.length r0 :=
           Option.some.inj (by simpa only [hs0zero, Function.iterate_zero_apply] using hrunJ.symm)
@@ -113,47 +113,48 @@ theorem randAusEndeMitPc (pre mid post : List Befehl) (hv : VerschiebbaresProgra
         dsimp only [K] at hgtJ
         omega
     | succ s1 =>
-        have hs1lt : s1 < s0 := by rw [hs0zero]; exact Nat.lt_succ_self s1
+        have hs1lt : s1 < Nat.find hQ := by rw [hs0zero]; exact Nat.lt_succ_self s1
         obtain ⟨rs, hrs⟩ := laufHatZwischen (pre ++ mid ++ post) (mitPc pre.length r0) t s1 rEnd hk (by omega)
         have hrsK : rs.pc < K := hkle s1 hs1lt rs hrs
         obtain ⟨rm, hrm, hcomp, hltm⟩ := hP s1 hs1lt
-        have hrSeq : rs = mitPc pre.length rm := Option.some.inj (hcomp.symm.trans hrs)
+        have hrSeq : rs = mitPc pre.length rm := Option.some.inj (hrs.symm.trans hcomp)
         obtain ⟨b, hb, hvb, hzd⟩ := hv rm.pc hltm
         have hstepMid : Schritt mid (some rm) = some (b.auswerten rm) := by
           show (match mid[rm.pc]? with | none => none | some c => some (c.auswerten rm)) =
             some (b.auswerten rm)
           rw [hb]
         have hleB := hlocal rm b hltm hb
-        have hrunJs : (Schritt (pre ++ mid ++ post))^[s0] (some (mitPc pre.length r0)) = some rJ := by
+        have hrunJs : (Schritt (pre ++ mid ++ post))^[Nat.find hQ] (some (mitPc pre.length r0)) = some rJ := by
           rw [hs0zero]
           exact hrunJ
         have hstepComp := schrittMitPcBei pre mid post hv rm hltm
         have hJstep : (Schritt (pre ++ mid ++ post))^[Nat.succ s1]
             (some (mitPc pre.length r0)) = some (mitPc pre.length (b.auswerten rm)) := by
           rw [Function.iterate_succ_apply', hcomp, hstepComp, hstepMid]
-        rw [← hrSeq] at hJstep
         have hJ : rJ = mitPc pre.length (b.auswerten rm) :=
           Option.some.inj (hJstep.symm.trans hrunJs)
         rw [hJ, mitPc] at hgtJ
         dsimp only [K] at hgtJ hleB
         omega
-  have hbleib : ∀ s, s < s0 → ∃ rm, (Schritt mid)^[s] (some r0) = some rm ∧ rm.pc < mid.length := by
+  have hbleib : ∀ s, s < Nat.find hQ → ∃ rm, (Schritt mid)^[s] (some r0) = some rm ∧ rm.pc < mid.length := by
     intro s hs
     obtain ⟨rm, hrm, hcomp, hltm⟩ := hP s hs
     exact ⟨rm, hrm, hltm⟩
-  have hagree := laufMitPc pre mid post hv r0 s0 hbleib
+  have hagree := laufMitPc pre mid post hv r0 Nat.find hQ hbleib
   rw [hrunJ] at hagree
-  cases hst : (Schritt mid)^[s0] (some r0) with
+  cases hst : (Schritt mid)^[Nat.find hQ] (some r0) with
   | none =>
-      simp only at hagree
-      cases hagree
+      have hnone : some rJ = none := by simpa only [hst] using hagree
+      cases hnone
   | some rMid =>
-      have hrJ : rJ = mitPc pre.length rMid := Option.some.inj (by simpa only using hagree)
-      refine ⟨s0, rJ, hs0t, hrunJ, ?_, hrJ, hst, ?_⟩
+      have hrJ : rJ = mitPc pre.length rMid := Option.some.inj (by simpa only [hst] using hagree)
+      have hpcMid : rMid.pc = mid.length := by
+        have hEqJ' := hEqJ
+        rw [hrJ, mitPc] at hEqJ'
+        dsimp only [K] at hEqJ'
+        omega
+      refine ⟨Nat.find hQ, rJ, rMid, hs0t, hrunJ, ?_, hrJ, hst, hpcMid⟩
       · dsimp only [K] at hEqJ
         exact hEqJ
-      · rw [hrJ, mitPc] at hEqJ
-        dsimp only [K] at hEqJ
-        omega
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
