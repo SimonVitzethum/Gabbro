@@ -12,8 +12,8 @@
               (`Wirkungsklasse.kostenZeile`) over the elaborated instructions of each
               source form, multiplies loop bodies by their static trip bound
               (`whileBounded` upper endpoint, `forRange` static span), resolves calls
-              through the declared per-function table (`KostenTabelle`, verified
-              without self-justification) or structurally, and treats recursion only
+              through the declared per-function table (`KostenTabelle`) or
+              structurally, and treats recursion only
               with `decreases` (the measure span bounds the re-entry depth); anything
               else (`forever`, unknown callees, recursion without `decreases`,
               exhausted fuel) is refused with `none`. The checker line
@@ -24,12 +24,9 @@
               per-invocation estimator covers them. Acceptance
               (`EndlichAkzeptiertAussage`, pinned) is the perfect checker with the
               new line, so everything accepted before stays accepted with the same
-              guarantees (`endlichAkzeptiert_verstaerkt`). The invocation bound
-              itself (`KostenSchaetzerKorrektAussage`, with its step correspondence
-              `KostenSchrittKorrespondenzAussage`) are the pinned open statements of
-              `KostenEndlich` for Hy4 from the sketches there; the finite KH duties
-              (`GebundenKHEndlichAussage`) are proved in `KostenEndlichBeweise` from
-              the correctness statement.
+              guarantees (`endlichAkzeptiert_verstaerkt`).
+              `Kosten.KostenGegenbeispiel` refutes the estimator bound for an
+              accepted unit with a measure prologue and an empty cost table.
 -/
 module
 
@@ -47,10 +44,8 @@ open Katalog Maschine Annahme
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 
-/-- The declared per-function cost table: each entry bounds one invocation of the
-    named function, from its entry to its exit. Entries are verified without
-    self-justification (the estimator checks each entry with the entry itself
-    removed), so no circular justification is possible. -/
+/-- Declared per-function bounds from entry to exit. The estimator uses these
+    values directly. Their verification is a separate obligation. -/
 abbrev KostenTabelle := List (Identifier × Nat)
 
 /-- Lookup of a declared function bound by name. -/
