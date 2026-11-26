@@ -96,14 +96,14 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           cases tick₂ with
           | wartet lab₂ _ hkein => exact (hkein (.antwort a, spur₂) _ st₂).elim
           | schritt lab₂ step₂ =>
-            cases hn₂ : ρ₂.zeit.zustand (t + 1) with
-            | none =>
-              rw [hn₂] at step₂
-              cases step₂
-            | some n₂ =>
-              rw [hn₂] at step₂
-              cases step₂ with
-              | schritt impl₂ =>
+            cases step₂ with
+            | schritt impl₂ =>
+              cases hn₂ : ρ₂.zeit.zustand (t + 1) with
+              | none =>
+                exfalso
+                cases impl₂
+              | some n₂ =>
+                rw [hn₂] at impl₂
                 have hinv₂ : GeraeteInvariantAussage d.binding s₂ :=
                   geraete_lauf_invariante vergleich.rechts t hz₂
                 obtain ⟨hfragen, hverlauf, hantworten, _, _⟩ :=
@@ -120,8 +120,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   · obtain ⟨owned, idle, _⟩ := hcase
                     exact (geraete_issue_schliesst_ankunft_aus (d := d) hinv₂ owned idle
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
-                  · obtain ⟨owned, pending, answer, ready, sameQ, _⟩ := hcase
-                    exact (geraete_consume_schliesst_ankunft_aus (d := d) hinv₂ owned pending ready sameQ
+                  · obtain ⟨owned, pending, answer, ready, _, _⟩ := hcase
+                    exact (geraete_consume_schliesst_ankunft_aus (d := d) hinv₂ owned pending ready
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                 | interrupt keinAbsturz₂ enters₂ =>
                   obtain ⟨kk, irq, c₂, nmi, _, pend₂, _, _, _, _, _⟩ := enters₂
