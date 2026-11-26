@@ -164,33 +164,85 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
                     exact List.rel_append (by simpa only [L₁, L₂, NiedrigeBeob] using
                       (geraeteKopplung_kopplung hkopp).1) reflA
+                  have hn1lokal : n₁.lokal = s₁.lokal := by rw [stateEq₁]; rfl
+                  have hn2lokal : n₂.lokal = s₂.lokal := by rw [stateEq₂]; rfl
+                  have hn1status : n₁.status = s₁.status := by rw [stateEq₁]; rfl
+                  have hn2status : n₂.status = s₂.status := by rw [stateEq₂]; rfl
+                  have hn1initial : n₁.initial = s₁.initial := by rw [stateEq₁]; rfl
+                  have hn2initial : n₂.initial = s₂.initial := by rw [stateEq₂]; rfl
+                  have hn1rechte : n₁.rechte = s₁.rechte := by rw [stateEq₁]; rfl
+                  have hn2rechte : n₂.rechte = s₂.rechte := by rw [stateEq₂]; rfl
+                  have hn1leihen : n₁.leihen = s₁.leihen := by rw [stateEq₁]; rfl
+                  have hn2leihen : n₂.leihen = s₂.leihen := by rw [stateEq₂]; rfl
+                  have hn1fragen : n₁.fragen = s₁.fragen ++ [a] := by
+                    rw [stateEq₁]
+                    rfl
+                  have hn2fragen : n₂.fragen = s₂.fragen ++ [a] := by
+                    have h := congrArg Zustand.fragen stateEq₂
+                    simpa only [Zustand.fragen, aeq] using h
+                  have hn1verlauf : n₁.verlauf = s₁.verlauf ++ [(a.cut, .frage a.question)] := by
+                    rw [stateEq₁]
+                    rfl
+                  have hn2verlauf : n₂.verlauf = s₂.verlauf ++ [(a.cut, .frage a.question)] := by
+                    have h := congrArg Zustand.verlauf stateEq₂
+                    simpa only [Zustand.verlauf, aeq] using h
+                  have hn1antworten : n₁.antworten = s₁.antworten ++ [a] := by
+                    rw [stateEq₁]
+                    rfl
+                  have hn2antworten : n₂.antworten = s₂.antworten ++ [a] := by
+                    have h := congrArg Zustand.antworten stateEq₂
+                    simpa only [Zustand.antwort, aeq] using h
+                  have hn1verbraucht : n₁.verbraucht = s₁.verbraucht := by rw [stateEq₁]; rfl
+                  have hn2verbraucht : n₂.verbraucht = s₂.verbraucht := by rw [stateEq₂]; rfl
+                  have hn1verworfen : n₁.verworfen = s₁.verworfen := by rw [stateEq₁]; rfl
+                  have hn2verworfen : n₂.verworfen = s₂.verworfen := by rw [stateEq₂]; rfl
+                  have hn1buchung : n₁.buchung = s₁.buchung := by rw [stateEq₁]; rfl
+                  have hn2buchung : n₂.buchung = s₂.buchung := by rw [stateEq₂]; rfl
+                  have hn1naechste : n₁.naechsteAntwort = (s₁.antwort a).naechsteAntwort := by
+                    rw [stateEq₁]
+                  have hn2naechste : n₂.naechsteAntwort = (s₂.antwort a).naechsteAntwort := by
+                    have h := congrArg Zustand.naechsteAntwort stateEq₂
+                    simpa only [aeq] using h
+                  have hnaPost : ∀ c, AntwortSicht (d.unit locals) n₁ c = AntwortSicht (d.unit locals) n₂ c := by
+                    intro c
+                    unfold AntwortSicht
+                    rw [hn1naechste, hn2naechste]
+                    simp only [Zustand.naechsteAntwort, Zustand.angekommen, Zustand.antwort,
+                      hantworten, aeq]
+                  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · intro v w hv hw
-                    obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
-                    obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
+                    subst v
+                    subst w
                     have hstate := (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
-                    refine ⟨?_, hstate.2.1, hstate.2.2.1, hstate.2.2.2.1, hstate.2.2.2.2⟩
-                    have hquell₁ : QuellzustandGleich (d.unit locals) s₁ s₂ := hstate.1
-                    unfold QuellzustandGleich at hquell₁ ⊢
-                    refine ⟨hquell₁.1, ?_, hquell₁.2.2.1, hquell₁.2.2.2.1,
-                      hquell₁.2.2.2.2.1, ?_⟩
-                    · intro c
-                      simpa only [stateEq₁, stateEq₂] using hquell₁.2.1 c
-                    · intro c
-                      unfold AntwortSicht
-                      simp only [Zustand.naechsteAntwort, Zustand.angekommen,
-                        stateEq₁, stateEq₂, hantworten, aeq]
+                    refine ⟨?_, ?_, ?_, ?_, ?_⟩
+                    · have hq := hstate.1
+                      unfold QuellzustandGleich at hq ⊢
+                      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+                      · simpa only [hn1lokal, hn2lokal] using hq.1
+                      · intro c
+                        simpa only [hn1status, hn2status] using hq.2.1 c
+                      · intro x
+                        simpa only [hn1initial, hn2initial] using hq.2.2.1 x
+                      · simpa only [hn1rechte, hn2rechte] using hq.2.2.2.1
+                      · simpa only [hn1leihen, hn2leihen] using hq.2.2.2.2.1
+                      · exact hnaPost c
+                    · rw [hn1lokal, hn2lokal, hstate.2.2.2.2]
+                    · rw [hn1rechte, hn2rechte, hstate.2.2.2.1]
+                    · rw [hn1status, hn2status, hstate.2.2.2.2]
+                    · rw [hn1status, hn2status, hstate.2.2.2.2]
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
                       List.length_append]
                     simp only [NiedrigeBeob] at hlen
                     exact congrArg (fun n => n + (aussenBeob (d.unit locals) (.antwort a)).length) hlen
                   · intro v w hv hw
-                    obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
-                    obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
-                    refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, rfl⟩
-                    · rw [stateEq₁, stateEq₂, hfragen, ← aeq]
-                    · rw [stateEq₁, stateEq₂, hverlauf, ← aeq]
-                    · rw [stateEq₁, stateEq₂, hantworten, ← aeq]
-                    · rfl
-                    · rfl
+                    subst v
+                    subst w
+                    refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+                    · rw [hn1fragen, hn2fragen, hfragen]
+                    · rw [hn1verlauf, hn2verlauf, hverlauf]
+                    · rw [hn1antworten, hn2antworten, hantworten]
+                    · rw [hn1verbraucht, hn2verbraucht]
+                    · rw [hn1verworfen, hn2verworfen]
+                    · rw [hn1buchung, hn2buchung]
 
 end Gabbro.Core.Beobachtung
