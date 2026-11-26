@@ -211,7 +211,6 @@ theorem stummer_schritt_koppelt
           f.vollzug_genau_privat privat (w := w) impl₁rule aus₁
         have transfer₁ := (f.impl_privat privat c vor w _ _).1 impl₁rule
         obtain ⟨_, hnach₁⟩ := transfer₁
-        subst hnach₁
         -- same-index offers
         have crashEq : (ρ₁.hw.angebot t).crash = (ρ₂.hw.angebot t).crash :=
           congrArg (fun p => (p.1 t).2.2.2.2.2.1) vergleich.politik
@@ -291,7 +290,6 @@ theorem stummer_schritt_koppelt
                   f.vollzug_genau_privat privat (w := w₂') impl₂'rule aus₂'
                   have htrans₂ := (f.impl_privat privat c w₂ w₂' _ _).1 impl₂'rule
                   obtain ⟨_, hnach₂⟩ := htrans₂
-                  subst hnach₂
                   have still₂ : schrittBeob ρ₂ predictor t = [] :=
                     fragment_kontext_schritt_still p plattform
                       (fun s b hs hk => privat_am_kopf zustand₂ kopf₂ privat s b hs (c_eq ▸ hk)) label₂
