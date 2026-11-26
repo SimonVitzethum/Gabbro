@@ -41,7 +41,8 @@ def Zustand.regionLive (s : Zustand) (slot : Nat) : Bool :=
     (match s.leihen slot with | .eigen => true | .verliehen _device => false)
 
 /-- **What a step names, read from its frame**: the cell of an access, the value it writes, the lock of a
-    lock action, the question it asks. A class reads the fields it needs and ignores the others. -/
+    lock action, the question it asks, and the named frame slot an outside answer is bound at
+    (`verbrauche`). A class reads the fields it needs and ignores the others. -/
 structure Operand where
   ort : Zelle
   wert : Int
@@ -49,9 +50,10 @@ structure Operand where
   frage : Option Frage
   aenderung : Aenderung
   faden : Fadenoperand
+  ziel : Nat
 
 /-- The operand of a step that names nothing (the frame-only classes). -/
-def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner⟩
+def Operand.keiner : Operand := ⟨.aussen, 0, 0, none, .tausche, Fadenoperand.keiner, 0⟩
 
 /-- The plan of a step that records no memory event and no question and carries the given protocol action. -/
 def planMit (a : Aktion Nat PUnit) : Plan := ⟨a, [], [], fun _ort => false, fun _ort => .na, fun _ort => 0⟩
@@ -279,8 +281,8 @@ def Schrittform.regel (F : Schrittform) : Regel := ⟨F.impl, F.ideal⟩
     context holds a handle: the access is refused, nothing is read or written. -/
 def Rahmen.zugriffOperand (r : Rahmen) (region index : Nat) (wert : Option Int) (a : Aenderung) : Operand :=
   match wert with
-  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner⟩
-  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner⟩
+  | some w => ⟨r.zelle region index, w, 0, none, a, Fadenoperand.keiner, 0⟩
+  | none => ⟨.aussen, 0, 0, none, a, Fadenoperand.keiner, 0⟩
 
 /-- **The operand of an access instruction at a frame**, read from the frame it steps. A fence names
     nothing. -/
@@ -302,11 +304,15 @@ def Zugriffsform.operand (z : Zugriffsform) (r : Rahmen) : Operand :=
     | none => r.zugriffOperand region index none .tausche
   | .zaun .. => Operand.keiner
 
-/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing. -/
+/-- The operand of an instruction at a frame. The instructions of the frame-only classes name nothing.
+    A `verbrauche` names its answer slot `ziel`; a `frage` names nothing yet (its question wiring is
+    follow-up work once the catalogue handle slots are bound). -/
 def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   match b with
   | .zugriff form => form.operand r
   | .faden form => { Operand.keiner with faden := form.operand r }
+  | .aussen (.verbrauche ziel) => { Operand.keiner with ziel := ziel }
+  | .aussen (.frage ..) => Operand.keiner
   | .rufe .. | .starte .. => Operand.keiner
   | .literal .. | .binaer .. | .wahrheitswert .. | .lesen .. | .negativ ..
   | .negieren .. | .verneinen .. | .teilen .. | .vergleichen ..
@@ -318,7 +324,7 @@ def Befehl.operand (b : Befehl) (r : Rahmen) : Operand :=
   | .definiereRecord .. | .baueRecord .. | .liesRecordFeld .. | .setzeRecordFeld ..
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung ..
-  | .aussen .. | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
+  | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => Operand.keiner
   | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => Operand.keiner
 
 /-- The frame transfer of an instruction, given the value the memory returned: an access instruction binds or
