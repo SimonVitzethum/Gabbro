@@ -300,7 +300,7 @@ private theorem satEval3 :
 theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   let E := memProgram k code
-  refine ⟨⟨hwf, ?_, ⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨hwf, ?_, ⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_, ?_, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hideal
     simp only [E, memProgram, MemInstruction.rule, MemInstruction.step] at hideal
     have hP : P = plan := by
@@ -325,6 +325,11 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
           (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
+    obtain ⟨_, _, planEq, _⟩ := himpl
+    cases (List.cons.inj planEq).1
+    obtain ⟨rfl, _⟩ := unmapMemGenauInternal haus
+    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
   · intro run conforms
     change (∀ pred ∈ (E.quelltabellen.klauseln).voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (E.quelltabellen.klauseln).invariant, _) ∧

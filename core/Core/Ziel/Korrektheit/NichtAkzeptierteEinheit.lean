@@ -399,8 +399,10 @@ theorem prueferEntscheidet_akzeptiertTrivial :
     · rfl
     · rename_i h
       exact (h hA.1).elim
-  have hK : (if Annahme.KlauselnWahr (einheitVon Katalog.Plattform.x86_64 trivialUnit) then true
-      else false) = true := by
+  have hK : (if Annahme.KlauselnWahr
+      (Ast.Semantik.elaborierenMitInvarianten Katalog.Plattform.x86_64 ⟨trivialUnit, []⟩)
+      then true else false) = true := by
+    rw [← einheitVon_mitInvarianten]
     split
     · rfl
     · rename_i h

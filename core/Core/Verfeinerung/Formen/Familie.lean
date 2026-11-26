@@ -36,7 +36,7 @@ def Befehl.familie : Befehl → LokalFamilie
   | .definiereVariante .. | .baueVariante .. | .waehleVariante ..
   | .definiereTraeger .. | .optionIstBesetzt .. | .definiereEffektgruppe .. | .waehleUmgebung .. => .variante
   | .textLiteral .. | .textConcat .. | .textIndex .. | .substring .. | .textLength .. => .text
-  | .zugriff .. | .faden .. => .zugriff
+  | .zugriff .. | .faden .. | .aussen .. => .zugriff
   | .maskiere .. | .prioritaet .. | .sendeUnterbrechung .. | .leiteLeitung .. => .kontrollfluss
 
 /-- **Every instruction is a form of its class, embedded in the unit of every fragment**: the unit
@@ -54,6 +54,7 @@ theorem Befehl.simulation (p : Fragment) (platform : Plattform) (b : Befehl) :
 /-- An instruction that is not in the family of access instructions is frame-only. -/
 theorem Befehl.privat_von_familie {b : Befehl} (h : b.familie ≠ .zugriff) : b.Privat :=
   b.privat_von_kein_zugriff (fun form eq => h (by subst eq; rfl)) (fun form eq => h (by subst eq; rfl))
+    (fun form eq => h (by subst eq; rfl))
 
 /-- A frame-only instruction is not in the family of the access instructions. -/
 theorem Befehl.privat_ne_zugriff {b : Befehl} (h : b.Privat) : b.familie ≠ .zugriff := by
@@ -61,6 +62,7 @@ theorem Befehl.privat_ne_zugriff {b : Befehl} (h : b.Privat) : b.familie ≠ .zu
   cases b with
   | zugriff z => exact absurd rfl (Befehl.privat_ne_zugriff_klasse _ h z)
   | faden z => exact absurd rfl (Befehl.privat_ne_faden_klasse _ h z)
+  | aussen z => cases z <;> rcases h with h | h | h | h | h | h <;> cases h
   | _ => cases hf
 
 /-- **Locality of every instruction, from its class.** -/

@@ -12,6 +12,7 @@ open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast.LowLevel
 open Gabbro.Core.Katalog
+open Gabbro.Core.Aussenfrage
 open Gabbro.Core.Text
 open Nat.Partrec
 
@@ -314,5 +315,73 @@ def fadenVonSumme : FadensummeTyp → Option Fadenform
 
 instance : Encodable Fadenform :=
   Encodable.ofLeftInjection fadenZuSumme fadenVonSumme (by intro z; cases z <;> rfl)
+
+/-! ## Outside-question forms (MK-06) -/
+
+instance : Encodable UInt8 :=
+  Encodable.ofLeftInverse UInt8.toNat UInt8.ofNat (by intro b; exact UInt8.ofNat_toNat)
+
+def dienstCode : Dienst → Nat
+  | .readSectors => 0
+  | .memoryMap => 1
+  | .enableA20 => 2
+  | .exitBootServices => 3
+  | .cpuOn => 4
+  | .hartStart => 5
+
+def dienstOfNat : Nat → Dienst
+  | 0 => .readSectors
+  | 1 => .memoryMap
+  | 2 => .enableA20
+  | 3 => .exitBootServices
+  | 4 => .cpuOn
+  | _ => .hartStart
+
+instance : Encodable Dienst :=
+  Encodable.ofLeftInverse dienstCode dienstOfNat (by intro d; cases d <;> rfl)
+
+abbrev AussenOperationSummeTyp : Type :=
+  Nat ⊕ (List UInt8) ⊕ (List UInt8) ⊕ (Dienst × List UInt8) ⊕ (List UInt8) ⊕
+    Nat ⊕ (Nat × Nat) ⊕ (Nat × Nat)
+
+def aussenOperationZuSumme : AussenOperation → AussenOperationSummeTyp
+  | .read => .inl 0
+  | .write bytes => .inr (.inl bytes)
+  | .resolve name => .inr (.inr (.inl name))
+  | .firmware service bytes => .inr (.inr (.inr (.inl (service, bytes))))
+  | .exchange message => .inr (.inr (.inr (.inr (.inl message))))
+  | .registerRead offset => .inr (.inr (.inr (.inr (.inr (.inl offset)))))
+  | .registerWrite offset value => .inr (.inr (.inr (.inr (.inr (.inr (.inl (offset, value)))))))
+  | .waitRegister offset expected => .inr (.inr (.inr (.inr (.inr (.inr (.inr ((offset, expected))))))))
+
+def aussenOperationVonSumme : AussenOperationSummeTyp → Option AussenOperation
+  | .inl _ => Option.some .read
+  | .inr (.inl bytes) => Option.some (.write bytes)
+  | .inr (.inr (.inl name)) => Option.some (.resolve name)
+  | .inr (.inr (.inr (.inl (service, bytes)))) => Option.some (.firmware service bytes)
+  | .inr (.inr (.inr (.inr (.inl message)))) => Option.some (.exchange message)
+  | .inr (.inr (.inr (.inr (.inr (.inl offset))))) => Option.some (.registerRead offset)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inl (offset, value))))))) =>
+    Option.some (.registerWrite offset value)
+  | .inr (.inr (.inr (.inr (.inr (.inr (.inr ((offset, expected)))))))) =>
+    Option.some (.waitRegister offset expected)
+
+instance : Encodable AussenOperation :=
+  Encodable.ofLeftInjection aussenOperationZuSumme aussenOperationVonSumme
+    (by intro op; cases op <;> rfl)
+
+abbrev AussenfrageSummeTyp : Type := (Nat × AussenOperation × List Nat) ⊕ Nat
+
+def aussenfrageZuSumme : Aussenfrageform → AussenfrageSummeTyp
+  | .frage ziel operation args => .inl (ziel, operation, args)
+  | .verbrauche ziel => .inr ziel
+
+def aussenfrageVonSumme : AussenfrageSummeTyp → Option Aussenfrageform
+  | .inl (ziel, operation, args) => Option.some (.frage ziel operation args)
+  | .inr ziel => Option.some (.verbrauche ziel)
+
+instance : Encodable Aussenfrageform :=
+  Encodable.ofLeftInjection aussenfrageZuSumme aussenfrageVonSumme
+    (by intro form; cases form <;> rfl)
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation

@@ -117,6 +117,7 @@ theorem Schrittform.zugriffsschritt_treu (F : Schrittform) (hl : F.klasse.liest 
     | zaun _ => cases hl
     | sperre _ => cases hl
     | frage => cases hl
+    | verbrauche => cases hl
     | starte => cases hl
     | beende => cases hl
     | verbinde => cases hl
@@ -139,6 +140,7 @@ theorem Schrittform.atomarTreu (F : Schrittform) (hl : F.klasse.liest = true) : 
   | zaun _ => cases hl
   | sperre _ => cases hl
   | frage => cases hl
+  | verbrauche => cases hl
   | starte => cases hl
   | beende => cases hl
   | verbinde => cases hl

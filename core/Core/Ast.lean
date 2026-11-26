@@ -70,6 +70,7 @@ public import Core.Ast.Aggregate.Types.ArrayProofs
 public import Core.Ast.Aggregate.Types.CarrierIndexProofs
 public import Core.Ast.Aggregate.Types.CarrierIndexOptionProofs
 public import Core.Ast.Aggregate.Carrier.TableProofs
+public import Core.Ast.Aggregate.Carrier.TabellenSubstrat
 public import Core.Ast.Aggregate.Carrier.Option.ConstructProofs
 public import Core.Ast.Aggregate.Carrier.Option.TestProofs
 public import Core.Ast.Aggregate.Carrier.Option.MatchProofs

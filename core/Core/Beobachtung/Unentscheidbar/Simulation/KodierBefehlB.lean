@@ -12,6 +12,7 @@ open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Ast.LowLevel
 open Gabbro.Core.Katalog
+open Gabbro.Core.Aussenfrage
 open Gabbro.Core.Text
 open Nat.Partrec
 
@@ -334,6 +335,13 @@ def befehlVonCodeB : Code → Option Befehl
           let f2n : ℕ ← codeZuNat f2
           let f2' : ℕ ← Encodable.decode f2n
           Option.some (.leiteLeitung f0' f1' f2')
+      | _ => Option.none
+    | some 56 =>
+      match kids with
+      | Code.pair f0 (Code.zero) => do
+          let f0n : ℕ ← codeZuNat f0
+          let f0' : Aussenfrageform ← Encodable.decode f0n
+          Option.some (.aussen f0')
       | _ => Option.none
     | _ => Option.none
   | _ => Option.none
