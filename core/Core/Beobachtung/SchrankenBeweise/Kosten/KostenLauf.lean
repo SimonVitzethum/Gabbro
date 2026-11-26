@@ -81,7 +81,7 @@ private theorem protokoll_lokal {e : Einrichtung Nat Zelle Int Nat Rahmen PUnit 
     {v : Zustand} (action : FuehrtAus e t c s u a labels events v) : v.lokal = u.lokal := by
   cases action <;> rfl
 
-private theorem kopf_position {code : List Befehl} (head : kopf code s c = some b) :
+theorem kopf_position {code : List Befehl} (head : kopf code s c = some b) :
     code[(s.lokal c).pc]? = some b := by
   unfold kopf at head
   cases hstatus : s.status c <;> rw [hstatus] at head

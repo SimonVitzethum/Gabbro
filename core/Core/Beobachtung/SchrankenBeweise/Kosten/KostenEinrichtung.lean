@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
+public import Core.Beobachtung.SchrankenBeweise.Kosten.MassHerkunft
 import Core.Ast.Semantik.Auswertung
 
 @[expose] public section
@@ -9,6 +10,7 @@ namespace Gabbro.Core.Beobachtung
 
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
+open Maschine
 
 private theorem pruefeMass_einrichtung {u : Ast.Unit} {name : Identifier}
     {kern : FunktionsKern} {m : Measure kern.koerper.1}
@@ -28,6 +30,94 @@ private theorem pruefeMass_einrichtung {u : Ast.Unit} {name : Identifier}
     simpa only [Rahmen.zahl, operand, Option.bind, alsGanzzahl] using read
   cases exactRead
   exact ⟨le_rfl, le_rfl⟩
+
+/-- A cut's head identifies the exact source prologue address without using
+    information about the current frame's call history. -/
+theorem kostenKopf_pruefeMass_herkunft (P : Katalog.Plattform) (u : UnitMitSchranken)
+    {s : Zustand} {c : Kontext} {slot : Nat}
+    (head : (einheitMitSchranken P u).system.kopf s c = some (.pruefeMass slot)) :
+    ∃ (name : Identifier) (kern : FunktionsKern) (m : Measure kern.koerper.1)
+      (pre post : List Befehl),
+      name ∈ alleFunktionen u.baum.2 ∧
+      (((alleFunktionen u.baum.2).map Subtype.val).Nodup → findeKern u.baum.2 name = some kern) ∧
+      kern.mass = some m ∧
+      (∃ earlier params result globals skip calls effects,
+        pre = earlier ++ [.definiere name params result globals skip true calls effects]) ∧
+      (∃ later, post = (bracedBlock kern.koerper.2.2).code ++ (.rueckVoid :: later)) ∧
+      (programm u.baum).code = pre ++ (measurePrologue (some m)).code ++ post ∧
+      (s.lokal c).pc = pre.length + (expr 0 m.expression).code.length ∧ slot = 0 :=
+  programm_pruefeMass_herkunft (u := u.baum) (kopf_position head)
+
+private theorem lauf_ersterSchritt (walk : Rahmen.Lauf code start finish) :
+    start = finish ∨ ∃ next, Rahmen.Schritt code start next ∧ Rahmen.Lauf code next finish := by
+  induction walk with
+  | start => exact .inl rfl
+  | schritt _ step ih =>
+    rcases ih with same | ⟨next, first, rest⟩
+    · cases same
+      exact .inr ⟨_, step, .start⟩
+    · exact .inr ⟨next, first, rest.schritt step⟩
+
+private theorem schritt_eindeutig (left : Rahmen.Schritt code start a)
+    (right : Rahmen.Schritt code start b) : a = b := by
+  obtain ⟨i, _, _, lookup, rfl⟩ := left
+  obtain ⟨j, _, _, lookup', rfl⟩ := right
+  cases Option.some.inj (lookup.symm.trans lookup')
+  rfl
+
+private theorem lauf_erhaeltEnde {code : List Befehl} (walk : Rahmen.Lauf code start a)
+    (other : Rahmen.Lauf code start b) (otherEnd : code[b.pc]? = none) :
+    Rahmen.Lauf code a b := by
+  induction walk with
+  | start => exact other
+  | schritt _ step ih =>
+    rcases lauf_ersterSchritt ih with same | ⟨next, first, rest⟩
+    · rw [same] at step
+      obtain ⟨_, _, _, lookup, _⟩ := step
+      rw [otherEnd] at lookup
+      cases lookup
+    · rw [schritt_eindeutig step first]
+      exact rest
+
+private theorem lauf_ende_eindeutig {code : List Befehl} (walk : Rahmen.Lauf code start a)
+    (atEnd : code[a.pc]? = none) (other : Rahmen.Lauf code start b)
+    (otherEnd : code[b.pc]? = none) : a = b := by
+  rcases lauf_ersterSchritt (lauf_erhaeltEnde walk other otherEnd) with same | ⟨_, step, _⟩
+  · exact same
+  · obtain ⟨_, _, _, lookup, _⟩ := step
+    rw [atEnd] at lookup
+    cases lookup
+
+/-- A frame reached by the actual measure-prefix walk has the declared
+    operand, by determinism up to the end of that prefix. -/
+theorem pruefeMass_kostenEinrichtung_amEnde {u : Ast.Unit} {name : Identifier}
+    {kern : FunktionsKern} {m : Measure kern.koerper.1}
+    (found : findeKern u.2 name = some kern) (declared : kern.mass = some m)
+    (env : Umgebung kern.koerper.1) (pre post : List Befehl)
+    (code : (programm u).code = pre ++ (measurePrologue (some m)).code ++ post)
+    {entry r : Rahmen} (entryPC : entry.pc = pre.length)
+    (atCheck : r.pc = pre.length + (expr 0 m.expression).code.length)
+    (active : entry.Aktiv) (typed : entry.traegt env) (owner : entry.funktion = some name)
+    (checked : entry.WaechterHalten (programm u).code)
+    (walk : Rahmen.Lauf (pre ++ (expr 0 m.expression).code) entry r) :
+    r.funktion = some name ∧ KostenEinrichtung u (.pruefeMass 0) r := by
+  let prefixCode := pre ++ (expr 0 m.expression).code
+  have layout : (programm u).code = prefixCode ++ (.pruefeMass 0 :: post) := by
+    simpa only [prefixCode, measurePrologue, Fragment.anhaengen, Fragment.einzel,
+      List.append_assoc, List.singleton_append] using code
+  have guarded : entry.WaechterHalten prefixCode := (layout ▸ checked).prefix
+  obtain ⟨out, trace, operand⟩ :=
+    expr_ergebnis_typ_am 0 m.expression env entry typed active pre [] entryPC
+      (by simpa only [List.append_nil, prefixCode] using guarded)
+  have outWalk : Rahmen.Lauf prefixCode entry out := by
+    simpa only [List.append_nil, prefixCode] using trace.walk
+  have atEnd (frame : Rahmen) (position : frame.pc = pre.length + (expr 0 m.expression).code.length) :
+      prefixCode[frame.pc]? = none := by
+    rw [List.getElem?_eq_none_iff, position]
+    simp only [prefixCode, List.length_append, Nat.le_refl]
+  have same := lauf_ende_eindeutig outWalk (atEnd out trace.position) walk (atEnd r atCheck)
+  have named : out.funktion = some name := (congrArg Rahmen.funktion trace.frame).trans owner
+  exact same ▸ ⟨named, pruefeMass_einrichtung found declared named (m.expression.wert env) operand⟩
 
 /-- Evaluate the declared measure at its entry address and execute the actual
     installer. Both a successful write and a rejected decrease preserve the
