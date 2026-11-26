@@ -51,19 +51,48 @@ theorem whilePasszahl_le {lo hi : Int} (bound : Expr scope (.int lo hi))
   · exact Int.toNat_le_toNat value.oben
   · simp only [Befehl.auswerten, read, Function.update_self]
 
-/-- The range setup's trip count is bounded by the span of the source endpoint types. -/
-theorem forPasszahl_le {low lowHi highLo high : Int}
+/-- A successful range setup installs a counter and upper value within the source bounds. -/
+theorem forEinrichtung_inGrenzen {low lowHi highLo high : Int}
     (lo : Expr scope (.int low lowHi)) (hi : Expr scope (.int highLo high))
-    (start : Zahl low lowHi) (stop : Zahl highLo high) :
-    (stop.wert - start.wert).toNat ≤ forSchranke lo hi := by
-  change (stop.wert - start.wert).toNat ≤ (high - low).toNat
-  exact Int.toNat_le_toNat (Int.sub_le_sub stop.oben start.unten)
+    (start : Zahl low lowHi) (stop : Zahl highLo high)
+    (r : Rahmen) (lower upper skip : Nat) (index : Ty .value) (shadowed missing : Bool)
+    (readLower : r.zahl lower = some (⟨low, lowHi, start⟩ : Ganzzahl))
+    (readUpper : r.zahl upper = some (⟨highLo, high, stop⟩ : Ganzzahl))
+    (nonempty : start.wert < stop.wert)
+    (allowed : (shadowed || (missing && decide (start.wert < stop.wert))) = false)
+    (initial : Dynamisch) (fits : wertIn index (Ganzzahl.pack ⟨low, lowHi, start⟩) = some initial) :
+    let next := (Befehl.forAnfang lower upper index skip shadowed missing).auswerten r
+    ∃ n b, next.zaehler (r.pc + 1) = some n ∧ n ≤ forSchranke lo hi ∧
+      next.obergrenzen (r.pc + 1) = some b ∧ b.zahl.wert ≤ high := by
+  have ordered : ¬ stop.wert ≤ start.wert := Int.not_le.mpr nonempty
+  refine ⟨(stop.wert - start.wert).toNat, ⟨highLo, high, stop⟩, ?_, ?_, ?_, stop.oben⟩
+  · simp only [Befehl.auswerten, Id.run, readLower, readUpper, allowed, Bool.false_eq_true,
+      if_false, ordered, fits, Function.update_self]
+  · exact Int.toNat_le_toNat (Int.sub_le_sub stop.oben start.unten)
+  · simp only [Befehl.auswerten, Id.run, readLower, readUpper, allowed, Bool.false_eq_true,
+      if_false, ordered, fits, Function.update_self]
 
 /-- Converting a nonnegative measure to the runtime representation preserves both endpoints. -/
 theorem masswert_imIntervall {lo hi : Int} (value : Zahl lo hi) (nonneg : 0 ≤ lo) :
     lo ≤ (value.wert.toNat : Int) ∧ (value.wert.toNat : Int) ≤ hi := by
   rw [Int.toNat_of_nonneg (Int.le_trans nonneg value.unten)]
   exact ⟨value.unten, value.oben⟩
+
+/-- A changed measure after `pruefeMass` is the value from its typed operand. -/
+theorem neuesMass_imIntervall {lo hi : Int} (value : Zahl lo hi) (nonneg : 0 ≤ lo)
+    (r : Rahmen) (slot n : Nat)
+    (read : r.zahl slot = some (⟨lo, hi, value⟩ : Ganzzahl))
+    (installed : ((Befehl.pruefeMass slot).auswerten r).mass = some n)
+    (changed : r.mass ≠ some n) :
+    lo ≤ (n : Int) ∧ (n : Int) ≤ hi := by
+  have effect : ((Befehl.pruefeMass slot).auswerten r).mass = r.mass ∨
+      ((Befehl.pruefeMass slot).auswerten r).mass = some value.wert.toNat := by
+    simp only [Befehl.auswerten, Rahmen.setzeMass, Id.run, read]
+    repeat' first | exact Or.inl rfl | exact Or.inr rfl | split
+  rcases effect with unchanged | stored
+  · exact (changed (unchanged.symm.trans installed)).elim
+  · cases Option.some.inj (installed.symm.trans stored)
+    exact masswert_imIntervall value nonneg
 
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
