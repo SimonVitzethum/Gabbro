@@ -1,22 +1,24 @@
 /-
   File:      core/Core/Beobachtung/SchrankenBeweise/KostenEndlichBeweise.lean
   Subject:   THE PROOFS OF THE FINITE-BOUND CORE STATEMENTS. `GebundenKHEndlichAussage`
-              closes from estimator correctness plus the finite checker line; estimator
-              correctness itself is the hard source-to-run statement and is kept here as
-              its own theorem.
+               closes from estimator correctness plus the finite checker line; the
+               window and segment costs come from `KostenSchaetzerKorrektAussage` over
+               admitted runs, the prefixes by context-cost monotonicity.
 
   The first half is unconditional over the checker outcomes: an open ceiling makes every
   `UnterGrenze` vacuous, and a finite ceiling gives `E ≤ K` from `pruefeSchrankenEndlich`
-  and the window and entry costs from estimator correctness. The context-cost monotonicity
+  and the window and segment costs from estimator correctness. The context-cost monotonicity
   used for a window prefix is proved from `I.zaehle`'s split equation, not assumed.
 
-  Estimator correctness itself is NOT proved here. Its entry-prefix conjunct quantifies over
-  an arbitrary `Lauf`, without `Laeufe`: `Zeitlauf.existiert` admits every initial state, and
-  every platform catalogue carries `.persistence`, so a run that restarts the entry context
-  at pc 0 after a crash accumulates more than one main invocation while `E` bounds one. Its
-  window conjunct needs a proved source-to-machine step correspondence (`klassenKosten`,
-  `zaehler`/`obergrenzen`, `decreases`) that does not exist in `core/`: the estimator is used
-  nowhere outside `KostenSchaetzer.lean`. Both gaps are reported, not papered over.
+  Estimator correctness itself is NOT proved here: it follows from the open step
+  correspondence (`KostenSchrittKorrespondenzAussage`, one induction over the window
+  from its start cut), which Hy4 discharges. The old prefix-from-zero shape over
+  arbitrary `Lauf` is gone by design: `Zeitlauf.existiert` admits every initial state,
+  and every platform catalogue carries `.persistence`, so a run that restarts the entry
+  context after a crash accumulates more than one invocation while `E` bounds one.
+  `kontextkosten_segmente` and `ohneFensterung_akkumuliert` below record exactly that:
+  the unwindowed prefix is the sum over crash-separated segments, so two full segments
+  already break any positive bound. Windowing is load-bearing, not a reformulation.
 -/
 module
 
@@ -107,14 +109,40 @@ private theorem halten_none (P : Katalog.Plattform) (u : UnitMitSchranken) (l : 
   rw [einheitMitSchranken_halten]
   simp only [Schrankendeklaration.haltenVon, hhalten, List.find?_nil, Option.map_none]
 
+/-- The context cost splits over adjacent intervals: the unwindowed prefix is the sum
+    over its segments. A crash that restarts the entry context therefore extends the
+    old count instead of opening a new one — unless windows cut at the crash. -/
+theorem kontextkosten_segmente (ρ : Lauf E) (c : Kontext) (a m n : Nat) :
+    Kontextkosten ρ c a (m + n) =
+      Kontextkosten ρ c a m + Kontextkosten ρ c (a + m) n := by
+  simp only [Kontextkosten]
+  exact zaehle_teil _ _ _ _
+
+/-- **Without windowing the bound is false in general**: two full segments — for
+    instance two crash-separated invocations each costing the whole bound — already
+    exceed any positive bound on the unwindowed prefix. This is the old k-restart
+    counterexample (k = 2); the windowed statement bounds each segment alone. -/
+theorem ohneFensterung_akkumuliert (ρ : Lauf E) (c : Kontext) (a m n Ebound : Nat)
+    (h1 : Kontextkosten ρ c a m = Ebound)
+    (h2 : Kontextkosten ρ c (a + m) n = Ebound)
+    (hE : 0 < Ebound) :
+    ¬ Kontextkosten ρ c a (m + n) ≤ Ebound := by
+  rw [kontextkosten_segmente, h1, h2]
+  intro h
+  have h2 : Ebound + Ebound ≤ Ebound + 0 := by
+    simpa only [two_mul, Nat.add_zero] using h
+  have hle : Ebound ≤ 0 := Nat.le_of_add_le_add_left h2
+  have h0 : Ebound = 0 := Nat.le_zero.mp hle
+  rw [h0] at hE
+  exact Nat.lt_irrefl 0 hE
+
 /-- **The finite cost and hold duties from estimator correctness.** An open ceiling is
     vacuous; a finite ceiling closes its cost legs by `E ≤ K` and the window monotonicity,
     and its hold legs by the empty hold list. -/
 theorem gebundenKHEndlich_ausKorrekt
     (hKorrekt : KostenSchaetzerKorrektAussage) :
     GebundenKHEndlichAussage := by
-  intro P u tab z akk
-  have akkPerfect := akk.1
+  intro P u tab z akk h ρ run
   have ok := akk.2
   cases hk : u.deklaration.kosten with
   | none =>
@@ -122,32 +150,32 @@ theorem gebundenKHEndlich_ausKorrekt
     have hkost : (einheitMitSchranken P u).schranken.kosten = none := by
       rw [einheitMitSchranken_kosten, hk]
     constructor
-    · intro ρ c f a b fenster t _ _
+    · intro c f a b fenster t _ _
       constructor
       · rw [hkost]
         exact unterGrenze_none _
       · intro l a' n _ _ _
         rw [halten_none P u l hhalten]
         exact unterGrenze_none _
-    · intro ρ t
+    · intro a b seg t _ _
       constructor
       · rw [hkost]
         exact unterGrenze_none _
-      · intro l a' n _ _
+      · intro l a' n _ _ _
         rw [halten_none P u l hhalten]
         exact unterGrenze_none _
   | some K =>
     obtain ⟨hhalten, E, hE, hEK⟩ := endlich_finite u tab z K hk ok
-    have korrekt := hKorrekt P u tab z E akk hE
+    have korrekt := hKorrekt P u tab z E akk hE run
     have hkost : (einheitMitSchranken P u).schranken.kosten = some K := by
       rw [einheitMitSchranken_kosten, hk]
     constructor
-    · intro ρ c f a b fenster t _ _
+    · intro c f a b fenster t _ _
       constructor
       · intro n hn
         have hnK : K = n := Option.some.inj (by simpa only [hkost] using hn)
         subst n
-        have hfull : Kontextkosten ρ c a (b - a) ≤ E := korrekt.1 ρ c f a b fenster
+        have hfull : Kontextkosten ρ c a (b - a) ≤ E := korrekt.1 c f a b fenster
         have htlen : t - a ≤ b - a := by omega
         have hmono : Kontextkosten ρ c a (t - a) ≤ Kontextkosten ρ c a (b - a) :=
           kontextkosten_mono ρ c a (t - a) (b - a) htlen
@@ -155,13 +183,18 @@ theorem gebundenKHEndlich_ausKorrekt
       · intro l a' n _ _ _
         rw [halten_none P u l hhalten]
         exact unterGrenze_none _
-    · intro ρ t
+    · intro a b seg t _ _
       constructor
       · intro n hn
         have hnK : K = n := Option.some.inj (by simpa only [hkost] using hn)
         subst n
-        exact le_trans (korrekt.2 ρ t) hEK
-      · intro l a' n _ _
+        have hfull : Kontextkosten ρ eintritt a (b - a) ≤ E := korrekt.2 a b seg
+        have htlen : t - a ≤ b - a := by omega
+        have hmono : Kontextkosten ρ eintritt a (t - a) ≤
+            Kontextkosten ρ eintritt a (b - a) :=
+          kontextkosten_mono ρ eintritt a (t - a) (b - a) htlen
+        exact le_trans hmono (le_trans hfull hEK)
+      · intro l a' n _ _ _
         rw [halten_none P u l hhalten]
         exact unterGrenze_none _
 
