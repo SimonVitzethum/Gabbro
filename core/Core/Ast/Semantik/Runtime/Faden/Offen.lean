@@ -87,8 +87,11 @@ def WechsleKomponierbarAussage : Prop :=
         (∀ k, (s.kerne k).laeuft ≠ some kind) ∧ kind ≠ c) →
       ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
 
-/-- **A join makes progress under hardware fairness** (open). In a fair ideal run, a context whose open instruction is a
-    join of a context that ends, by its recorded creator, does not hang: the join runs once the joined context has ended.
+/-- **A join makes progress under hardware fairness** (open, pinned). A context whose open instruction is a join of a
+    context that ends, by its recorded creator, does not hang on a hardware-fair, scheduler-fair run whose preemption
+    returns, once the ideal run is matched to that run over the one environment `hU`. The premises are bound to that
+    single environment (a `∀ h'` over admissible environments is unsatisfiable with `Laeufe`, see
+    `faire_umgebung_nicht_eindeutig`). Without them the promise is false: `verbindeFortschritt_ohneFairness_falsch`.
     Difficulty: mittel.
     Sketch: from the end cut on, `FuehrtAus.verbinde` is available at every cut (the status of an ended context is
     final, and the creator entry persists until this join: only a join of that thread clears it), the form step of the class is total (`klassenFortschritt`), and the hardware fairness of the run gives the
@@ -98,7 +101,13 @@ def WechsleKomponierbarAussage : Prop :=
 def VerbindeFortschrittAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E) (η : I.Lauf E)
-    (c kind : Kontext),
+    (hU : Katalog.Umgebung) (c kind : Kontext),
+    Laeufe E hU ρ →
+    FairLaeufe E.katalog hU ρ.hw →
+    SchedulerFair E ρ →
+    VerdraengungKehrtZurueck E ρ →
+    I.Laufabgleich ρ η →
+    η.umgebung = hU →
     (∃ t ausgang, (η.zeit.zustand t).status kind = .beendet ausgang ∧
       ∀ t', t ≤ t' → (η.zeit.zustand t').erzeuger kind = some c) →
       (∃ a, ∀ t, a ≤ t → ∃ plan w u, E.system.ISchritt c (η.zeit.zustand t) w [plan] u ∧

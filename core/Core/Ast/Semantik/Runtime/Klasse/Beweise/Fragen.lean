@@ -130,11 +130,11 @@ theorem klassenFragenbein (k : Wirkungsklasse) : KlassenFragenbeinAussage k := b
       have planAkt : plan.aktion = .intern := by
         rw [(List.cons.inj impl.1).1]
         rfl
-      have zwischenEq : zwischen = (⟨.verbrauche, o, tr⟩ : Schrittform).nach c vor 0 := impl.2
+      have zwischenEq : zwischen = (⟨.verbrauche, o, tr⟩ : Schrittform).verbraucheNach c vor := impl.2
       rw [planAkt] at aktion
       cases aktion with
       | intern =>
-        have buchung := nach_aussen_gleich (⟨.verbrauche, o, tr⟩ : Schrittform) c vor 0
+        have buchung := Schrittform.verbraucheNach_aussen (⟨.verbrauche, o, tr⟩ : Schrittform) c vor
         exact offen_befugt_nach_erhalten rahmen.fragen rahmen.antworten rahmen.epoche
           (by rw [zwischenEq]; exact buchung.1) (by rw [zwischenEq]; exact buchung.2) zustand offen
   | maskiere =>
