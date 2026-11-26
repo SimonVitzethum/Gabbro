@@ -43,8 +43,8 @@ theorem filter_filterMap_nil [DecidableEq α] (f : β → Bool) (g : α → Opti
     cases hg : g a with
     | none => simp only [List.filterMap_cons, hg, List.filter_cons, ih]
     | some b =>
-      cases hg
-      simp only [List.filterMap_cons, List.filter_cons, h a b rfl,
+      have hb : f b = false := h a b hg
+      simp only [List.filterMap_cons, hg, List.filter_cons, hb,
         Bool.false_eq_true, if_false, ih]
 
 theorem filter_sichtbar_nil (label : Etikett)
@@ -80,17 +80,16 @@ theorem aussenBeob_filter_nil
       intro p
       rfl
   | dma q a =>
-    rw [aussenBeob, List.filter_cons]
+    simp only [aussenBeob, List.filter_cons]
     cases a with
-    | read t o c => simp only [SB, SchreibBeobBool, Bool.false_eq_true, if_false]
-    | write t o b => simp only [SB, SchreibBeobBool, Bool.false_eq_true, if_false]
+    | read t o c => simp only [SB, Bool.false_eq_true, if_false]
+    | write t o b => simp only [SB, Bool.false_eq_true, if_false]
     rw [filter_sichtbar_nil _ _ (by rfl), List.nil_append]
   | geraet q a | interrupt c irq e | seite q =>
     rw [aussenBeob]
     rfl
   | persistenz pe =>
-    rw [aussenBeob]
-    cases pe <;> simp only
+    cases pe <;> simp only [aussenBeob]
     · exact filter_sichtbar_nil _ _ (by rfl)
     · exact filter_sichtbar_nil _ _ (by rfl)
     · exact filter_sichtbar_nil _ _ (by rfl)
