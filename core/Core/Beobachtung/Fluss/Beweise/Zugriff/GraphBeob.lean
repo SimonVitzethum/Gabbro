@@ -68,7 +68,7 @@ theorem SchreibSeitAbsturz_append (x : Ort)
           false_and, true_and, or_false, true_or] at ih ⊢
       all_goals
         rw [ih]
-        tauto
+        try tauto
     · simpa only [SchreibSeitAbsturz, hbe] using ih
 
 theorem SchreibSeitAbsturz_ohne_absturz (x : Ort)
@@ -165,12 +165,15 @@ theorem SchreibBeob_filterMap_speicherBeob
       (speicherBeob_schreibt_iff (x := x) hpub e).2 hs
     cases hsome : speicherBeob (Grund := Grund) (Form := Form) label e with
     | none =>
+      rw [hsome] at ho
       simp only [SchreibBeobOpt] at ho
       cases ho
     | some ev =>
+      rw [hsome] at ho
+      simp only [SchreibBeobOpt] at ho
       refine ⟨ev, ?_, ?_⟩
       · rw [List.mem_filterMap]
         exact ⟨e, he, hsome⟩
-      · simpa only [SchreibBeobOpt] using ho
+      · exact ho
 
 end Gabbro.Core.Beobachtung
