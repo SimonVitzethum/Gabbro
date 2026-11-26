@@ -1,5 +1,6 @@
 module
 
+public import Core.Ast.Tree.Statement
 public import Core.Ast.Program.StatementPrefixes
 public import Core.Ast.Program.StatementSuffix
 import Core.Ast.Program.StatementComparison

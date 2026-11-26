@@ -4,6 +4,9 @@
              reached from here; `core/` never imports `grammatik/`.
 -/
 module
+public import Core.Ast.Tree.Statement
+public import Core.Ast.Program.Access.Comparison
+public import Core.Ast.ProgramRegistry.AccessWitnesses
 public import Core.Ziel.Form
 public import Core.Ziel.Sicherheit
 public import Core.Text.Model
@@ -99,6 +102,8 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInvariant
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturz
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepTransport
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAntwortErhalt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
@@ -202,6 +207,8 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.VerschiebbarBlk
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleife
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecFolge
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecIteration
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -217,6 +224,9 @@ public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
 public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
+public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
+public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat

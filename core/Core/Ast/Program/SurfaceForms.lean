@@ -1,7 +1,7 @@
 module
 
 public import Core.Ast.Program.BatchSurface
-public import Core.Ast.Program.AccessGrammar
+public import Core.Ast.Program.Access.Grammar
 
 @[expose] public section
 
