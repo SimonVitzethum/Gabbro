@@ -300,8 +300,10 @@ theorem Schrittform.verbraucheNach_andere (F : Schrittform) (c : Kontext) (s : Z
     simp only [h, Schrittform.nach, Function.update_of_ne hd]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · simp only [h, hg, Zustand.verbrauche, Function.update_of_ne hd]
-    · simp only [h, hg, Function.update_of_ne hd]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche, Function.update_of_ne hd]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche, Function.update_of_ne hd]
+    · simp only [h, hg, if_true, if_false, Function.update_of_ne hd]
 
 /-- A consume step keeps the authority ledger. -/
 theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -312,8 +314,10 @@ theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Z
     simp only [h, Schrittform.nach]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · simp only [h, hg, Zustand.verbrauche]
-    · simp only [h, hg]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the booking extents. -/
 theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -324,8 +328,10 @@ theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Z
     simp only [h, Schrittform.nach]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · simp only [h, hg, Zustand.verbrauche]
-    · simp only [h, hg]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the questions, the answers and the epoch. -/
 theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -338,8 +344,10 @@ theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Z
     refine ⟨?_, ?_, ?_⟩ <;> simp only [h, Schrittform.nach]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, Zustand.verbrauche]
-    · refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the outside part of the ledger. -/
 theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -351,8 +359,10 @@ theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Z
     refine ⟨?_, ?_⟩ <;> simp only [h, Schrittform.nach]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · refine ⟨?_, ?_⟩ <;> simp only [h, hg, Zustand.verbrauche]
-    · refine ⟨?_, ?_⟩ <;> simp only [h, hg]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => refine ⟨?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => refine ⟨?_, ?_⟩ <;> simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · refine ⟨?_, ?_⟩ <;> simp only [h, hg, if_true, if_false]
 
 /-- A consume step keeps the whole booking (only the acting frame, status and counter move). -/
 theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : Zustand) :
@@ -363,8 +373,10 @@ theorem Schrittform.verbraucheNach_buchung (F : Schrittform) (c : Kontext) (s : 
     simp only [h, Schrittform.nach]
   | some a =>
     by_cases hg : AntwortEreignis.gueltigBeiCommit (s.lokal c).platform a
-    · simp only [h, hg, Zustand.verbrauche]
-    · simp only [h, hg]
+    · cases htr : Antwort.uebersetzt a.question a.reply with
+      | none => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+      | some _v => simp only [h, hg, htr, if_true, if_false, Zustand.verbrauche]
+    · simp only [h, hg, if_true, if_false]
 
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The

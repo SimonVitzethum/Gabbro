@@ -26,6 +26,7 @@
 module
 
 public import Core.Aussen.Frage.Aussagen
+public import Core.Aussen.Frage.Beweise
 public import Core.Ast.Semantik.Runtime.Klasse.Schritt
 public import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 public import Core.Aussen.Frage.Wert
@@ -38,6 +39,7 @@ namespace Gabbro.Core.Aussenfrage
 open Gabbro.Core.Maschine
 open Gabbro.Core.Katalog
 open Gabbro.Core.Aussen
+open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 
 /-- **The class assignment of the outside forms.** Issuing is the question class, taking an answer is the
@@ -176,12 +178,18 @@ theorem verbraucheFehlerGrund : VerbraucheFehlerGrundAussage := by
 theorem verbraucheEinmalLesen : VerbraucheEinmalLesenAussage := by
   refine ⟨?_, ?_, ?_⟩
   · intro F c s a ready hg
-    simp only [Schrittform.verbraucheNach, ready, hg]
-    refine ⟨?_, fun d hd => ?_⟩
-    · simp only [Zustand.verbrauche, Function.update_self]
-    · simp only [Zustand.verbrauche, Function.update_of_ne hd]
+    simp only [Schrittform.verbraucheNach, ready, hg, if_true, if_false]
+    cases htr : Antwort.uebersetzt a.question a.reply with
+    | none =>
+      refine ⟨?_, fun d hd => ?_⟩
+      · simp only [htr, Zustand.verbrauche, Function.update_self]
+      · simp only [htr, Zustand.verbrauche, Function.update_of_ne hd]
+    | some _v =>
+      refine ⟨?_, fun d hd => ?_⟩
+      · simp only [htr, Zustand.verbrauche, Function.update_self]
+      · simp only [htr, Zustand.verbrauche, Function.update_of_ne hd]
   · intro F c s a ready hval
-    simp only [Schrittform.verbraucheNach, ready, hval]
+    simp only [Schrittform.verbraucheNach, ready, hval, if_true, if_false]
   · intro F c s hempty
     simp only [Schrittform.verbraucheNach, hempty, Schrittform.nach]
 
@@ -217,7 +225,7 @@ theorem verbraucheEinmalLesen_nichtTrivial : VerbraucheEinmalLesenNichtTrivialAu
     untranslatable answer ends with a reason exit. -/
 theorem verbraucheFehlerBeendetUebertrag : VerbraucheFehlerBeendetUebertragAussage := by
   intro F c s a ready hg
-  simp only [Schrittform.verbraucheNach, ready, hg]
+  simp only [Schrittform.verbraucheNach, ready, hg, if_true, if_false]
   cases h : Antwort.uebersetzt a.question a.reply with
   | some v =>
     refine ⟨?_, ?_, ?_⟩
@@ -227,7 +235,7 @@ theorem verbraucheFehlerBeendetUebertrag : VerbraucheFehlerBeendetUebertragAussa
         Function.update_self]
   | none =>
     refine ⟨?_, ?_⟩
-    · simp only [Zustand.verbrauche]
+    · simp only [Zustand.verbrauche, Function.update_self]
     · simp only [Zustand.verbrauche]
 
 /-- The matching binding case is jointly satisfiable. -/
@@ -237,7 +245,7 @@ theorem verbraucheFehlerBeendetUebertrag_erfuellbar :
   let q : Frage := ⟨.hosted, handle, [], .read⟩
   let a : Antwort := ⟨handle.origin, [handle.origin], .ok (.data [])⟩
   let ev : AntwortEreignis := ⟨0, 0, 0, q, a⟩
-  refine ⟨ev, .x86_64, (.data []).alsDynamisch, ?_, ?_⟩
+  refine ⟨ev, .x86_64, (AussenWert.data []).alsDynamisch, ?_, ?_⟩
   · left
     intro t mem
     have singleton : t = (⟨handle, .read⟩ : Zugriff) := List.mem_singleton.mp mem
@@ -277,7 +285,8 @@ theorem verbraucheGueltigBeiCommitPflicht : VerbraucheGueltigBeiCommitPflichtAus
   · intro p s q a antwort erfolg
     exact Antwort.commitGueltig_von_atomar antwort erfolg
   · intro F c s a ready hval
-    simp only [Schrittform.verbraucheNach, ready, hval, Function.update_self]
+    simp only [Schrittform.verbraucheNach, ready, hval, if_true, if_false, Function.update_self]
+    exact ⟨True.intro, True.intro⟩
 
 /-- **The pinned root holds.** Every unit above is proved; none is a pinned handover now. -/
 theorem verbraucheSchrittAussagen : VerbraucheSchrittAussagen :=
