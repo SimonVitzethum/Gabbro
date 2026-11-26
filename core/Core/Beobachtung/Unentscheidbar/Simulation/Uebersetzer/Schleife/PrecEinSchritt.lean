@@ -162,6 +162,7 @@ theorem precEndeZweiSchritte (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahm
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
       some (natVal (y + 1))
     rw [updateHit]
+    congr 1
   · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 3) =
       some (natVal 1)
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (3 : Nat) ≠ 2))]
