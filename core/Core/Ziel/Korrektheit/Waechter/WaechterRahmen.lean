@@ -103,11 +103,59 @@ theorem absturzSperren_frei (p : Fragment) (platform : Plattform)
     ((((Maschine.Zustand.wiederanlauf s
       (p.einheit platform).einrichtung.wiederanlauf t per).sperren) l).besitzer) = none := rfl
 
-/-- An outside form transfers its frame by the identity: the evaluation at the
-    instruction boundary keeps the acting frame. -/
-theorem aussenUebertrag_ident (r : Rahmen) (live : Nat → Bool) (v : Int)
+/-- An outside form transfers its frame by advancing it: the evaluation at the
+    instruction boundary keeps temporaries and continuations. -/
+theorem aussenUebertrag_weiter (r : Rahmen) (live : Nat → Bool) (v : Int)
     (f : Aussenfrageform) :
-    (Befehl.aussen f).form.uebertrag r live v = r := rfl
+    (Befehl.aussen f).form.uebertrag r live v = r.weiter := rfl
+
+/-- Advancing a frame preserves the joined environments: only the position changes. -/
+theorem weiter_erfuellt (code : List Befehl) (frame : Rahmen)
+    (h : RahmenErfuellt code frame) :
+    RahmenErfuellt code frame.weiter := by
+  have htemp : frame.weiter.temp = frame.temp := rfl
+  have hfort : frame.weiter.fortsetzungen = frame.fortsetzungen := rfl
+  refine ⟨?_, ?_, ?_⟩
+  · intro slot lo hi hlook g hg
+    rw [htemp] at hg
+    exact h.1 slot lo hi hlook g hg
+  · intro slot l hh hlook d hd cap t hdt
+    rw [htemp] at hd
+    exact h.2.1 slot l hh hlook d hd cap t hdt
+  · intro k hk
+    rw [hfort] at hk
+    exact h.2.2 k hk
+
+/-- Writing an unknown value to a poisoned slot preserves the joined environments:
+    the poisoned lookup is vacuous and every other slot is untouched. -/
+theorem schreibePoison_erfuellt (code : List Befehl) (frame : Rahmen) (slot : Nat)
+    (V : Option Dynamisch) (h : RahmenErfuellt code frame)
+    (hI : umgebungInt code slot = none) (hT : umgebungText code slot = none) :
+    RahmenErfuellt code (frame.schreibe slot V) := by
+  have htemp : (frame.schreibe slot V).temp = Function.update frame.temp slot V := rfl
+  have hfort : (frame.schreibe slot V).fortsetzungen = frame.fortsetzungen := rfl
+  refine ⟨?_, ?_, ?_⟩
+  · intro s2 lo hi hlook g hg
+    rw [htemp] at hg
+    by_cases heq : s2 = slot
+    · subst heq
+      simp only [Function.update_self] at hg
+      rw [hI] at hlook
+      cases hlook
+    · rw [Function.update_of_ne heq] at hg
+      exact h.1 s2 lo hi hlook g hg
+  · intro s2 l hh hlook d hd cap t hdt
+    rw [htemp] at hd
+    by_cases heq : s2 = slot
+    · subst heq
+      simp only [Function.update_self] at hd
+      rw [hT] at hlook
+      cases hlook
+    · rw [Function.update_of_ne heq] at hd
+      exact h.2.1 s2 l hh hlook d hd cap t hdt
+  · intro k hk
+    rw [hfort] at hk
+    exact h.2.2 k hk
 
 /-- The common epilogue of a context step whose plan is internal: the frame transfer
     already preserves the invariant and the protocol step touches neither frames nor locks. -/
@@ -239,21 +287,35 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                             (s.lokal c) vv := (List.cons.inj same).1
                       have hU : u = (Befehl.aussen
                           (.frage ziel operation args)).form.zugriffNach c s vv := granted
+                      have hue : (Befehl.aussen
+                          (.frage ziel operation args)).form.uebertrag
+                          (s.lokal c) (Ast.Semantik.Zustand.regionLive s) vv =
+                          (s.lokal c).weiter :=
+                        aussenUebertrag_weiter _ _ _ _
                       have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
                         intro c'
-                        have hloc : (u.lokal) c' = (s.lokal) c' := by
-                          rw [hU]
-                          show (((Function.update s.lokal c
-                            ((Befehl.aussen
-                              (.frage ziel operation args)).form.uebertrag
-                              (s.lokal c) (Ast.Semantik.Zustand.regionLive s) vv))) c') = (s.lokal) c'
-                          rw [aussenUebertrag_ident]
-                          by_cases heq2 : c' = c
-                          · rw [heq2]
-                            rw [Function.update_self]
-                          · rw [Function.update_of_ne heq2]
-                        rw [hloc]
-                        exact ihR c'
+                        by_cases heq2 : c' = c
+                        · rw [heq2]
+                          have hact : (u.lokal) c = ((s.lokal c).weiter) := by
+                            rw [hU]
+                            show (((Function.update s.lokal c
+                              ((Befehl.aussen
+                                (.frage ziel operation args)).form.uebertrag
+                                (s.lokal c) (Ast.Semantik.Zustand.regionLive s) vv))) c) =
+                              ((s.lokal c).weiter)
+                            rw [hue, Function.update_self]
+                          rw [hact]
+                          exact weiter_erfuellt p.code (s.lokal c) (ihR c)
+                        · have hother : (u.lokal) c' = (s.lokal) c' := by
+                            rw [hU]
+                            show (((Function.update s.lokal c
+                              ((Befehl.aussen
+                                (.frage ziel operation args)).form.uebertrag
+                                (s.lokal c) (Ast.Semantik.Zustand.regionLive s) vv))) c') =
+                              (s.lokal) c'
+                            rw [hue, Function.update_of_ne heq2]
+                          rw [hother]
+                          exact ihR c'
                       have huS : u.sperren = s.sperren := by rw [hU]; rfl
                       have hplan : plan.aktion = .intern := by
                         rw [hpe]
@@ -265,27 +327,113 @@ theorem invariantAlle (p : Fragment) (platform : Plattform)
                     obtain ⟨same, after⟩ := ideal'
                     have hpe : plan = Semantik.plan := (List.cons.inj same).1
                     have hU : u = (Befehl.aussen
-                      (.verbrauche ziel)).form.nach c s 0 := after
-                    have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
-                      intro c'
-                      have hloc : (u.lokal) c' = (s.lokal) c' := by
-                        rw [hU]
-                        show (((Function.update s.lokal c
-                          ((Befehl.aussen
-                            (.verbrauche ziel)).form.uebertrag
-                            (s.lokal c) (Ast.Semantik.Zustand.regionLive s) 0))) c') = (s.lokal) c'
-                        rw [aussenUebertrag_ident]
-                        by_cases heq2 : c' = c
-                        · rw [heq2]
-                          rw [Function.update_self]
-                        · rw [Function.update_of_ne heq2]
-                      rw [hloc]
-                      exact ihR c'
-                    have huS : u.sperren = s.sperren := by rw [hU]; rfl
-                    have hplan : plan.aktion = .intern := by
-                      rw [hpe]
-                      rfl
-                    exact kontextEpilog p platform s u c t plan _ _ v _ huF huS ihS hplan hfa heq
+                      (.verbrauche ziel)).form.verbraucheNach c s := after
+                    have hpoisI : umgebungInt p.code ziel = none :=
+                      umgebungInt_unbekannt _ _
+                        (aussenVerbrauche_poisonInt _ _ hmem)
+                    have hpoisT : umgebungText p.code ziel = none :=
+                      umgebungText_unbekannt _ _
+                        (aussenVerbrauche_poisonText _ _ hmem)
+                    cases hna : s.naechsteAntwort c with
+                    | none =>
+                        have hUn : u = (Befehl.aussen
+                            (.verbrauche ziel)).form.nach c s 0 := by
+                          rw [hU]
+                          conv_lhs => simp only [Schrittform.verbraucheNach, hna]
+                        have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
+                          intro c'
+                          by_cases heq2 : c' = c
+                          · rw [heq2]
+                            have hact : (u.lokal) c = ((s.lokal c).weiter) := by
+                              rw [hUn]
+                              show (((Function.update s.lokal c
+                                ((Befehl.aussen
+                                  (.verbrauche ziel)).form.uebertrag
+                                  (s.lokal c) (Ast.Semantik.Zustand.regionLive s) 0))) c) =
+                                ((s.lokal c).weiter)
+                              rw [aussenUebertrag_weiter, Function.update_self]
+                            rw [hact]
+                            exact weiter_erfuellt p.code (s.lokal c) (ihR c)
+                          · have hother : (u.lokal) c' = (s.lokal) c' := by
+                              rw [hUn]
+                              show (((Function.update s.lokal c
+                                ((Befehl.aussen
+                                  (.verbrauche ziel)).form.uebertrag
+                                  (s.lokal c) (Ast.Semantik.Zustand.regionLive s) 0))) c') =
+                                (s.lokal) c'
+                              rw [aussenUebertrag_weiter, Function.update_of_ne heq2]
+                            rw [hother]
+                            exact ihR c'
+                        have huS : u.sperren = s.sperren := by
+                          rw [hUn]
+                          rfl
+                        have hplan : plan.aktion = .intern := by
+                          rw [hpe]
+                          rfl
+                        exact kontextEpilog p platform s u c t plan _ _ v _
+                          huF huS ihS hplan hfa heq
+                    | some a =>
+                        cases hr : a.reply.result with
+                        | ok _ok =>
+                            have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
+                              intro c'
+                              by_cases heq2 : c' = c
+                              · rw [heq2]
+                                have hact : (u.lokal) c =
+                                    ((s.lokal c).schreibe
+                                      ((Befehl.aussen
+                                        (.verbrauche ziel)).form.operand
+                                        (s.lokal c)).ziel
+                                      (some ⟨.bool, true⟩)) := by
+                                  rw [hU]
+                                  conv_lhs => simp only [Schrittform.verbraucheNach,
+                                    hna, hr, verbraucheSchreibe, Zustand.verbrauche,
+                                    Befehl.operand, Function.update_self]
+                                rw [hact]
+                                exact schreibePoison_erfuellt p.code (s.lokal c) ziel _
+                                  (ihR c) hpoisI hpoisT
+                              · have hother : (u.lokal) c' = (s.lokal) c' := by
+                                  rw [hU]
+                                  exact Schrittform.verbraucheNach_andere _ c s c' heq2
+                                rw [hother]
+                                exact ihR c'
+                            have huS : u.sperren = s.sperren := by
+                              rw [hU]
+                              simp only [Schrittform.verbraucheNach, hna, hr,
+                                Zustand.verbrauche]
+                            have hplan : plan.aktion = .intern := by
+                              rw [hpe]
+                              rfl
+                            exact kontextEpilog p platform s u c t plan _ _ v _
+                              huF huS ihS hplan hfa heq
+                        | error e =>
+                            have huF : ∀ c', RahmenErfuellt p.code (u.lokal c') := by
+                              intro c'
+                              by_cases heq2 : c' = c
+                              · rw [heq2]
+                                have hact : (u.lokal) c = ((s.lokal c).weiter) := by
+                                  rw [hU]
+                                  conv_lhs => simp only [Schrittform.verbraucheNach,
+                                    hna, hr, Zustand.verbrauche]
+                                  show (((Function.update s.lokal c
+                                    (((s.lokal c).weiter)))) c) = ((s.lokal c).weiter)
+                                  rw [Function.update_self]
+                                rw [hact]
+                                exact weiter_erfuellt p.code (s.lokal c) (ihR c)
+                              · have hother : (u.lokal) c' = (s.lokal) c' := by
+                                  rw [hU]
+                                  exact Schrittform.verbraucheNach_andere _ c s c' heq2
+                                rw [hother]
+                                exact ihR c'
+                            have huS : u.sperren = s.sperren := by
+                              rw [hU]
+                              simp only [Schrittform.verbraucheNach, hna, hr,
+                                Zustand.verbrauche]
+                            have hplan : plan.aktion = .intern := by
+                              rw [hpe]
+                              rfl
+                            exact kontextEpilog p platform s u c t plan _ _ v _
+                              huF huS ihS hplan hfa heq
           | antwort _ h =>
               obtain ⟨_, _, _, heqst⟩ := h
               rw [heqst]
