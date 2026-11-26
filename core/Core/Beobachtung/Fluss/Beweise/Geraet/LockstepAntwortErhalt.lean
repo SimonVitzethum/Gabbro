@@ -114,13 +114,14 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                 cases impl₂ with
                 | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
                   obtain ⟨binding, access, required, target, ruleEq, hbind⟩ := geraete_rule_binding locals d
+                  subst binding
                   obtain ⟨_, plan', hplans', rule₂'⟩ := geraete_kontext_regel ruleEq regel₂
                   rcases geraete_rule_faelle rule₂' with hcase | hcase
                   · obtain ⟨owned, idle, _⟩ := hcase
-                    exact (geraete_issue_schliesst_ankunft_aus (d := d) (binding := d.binding) hinv₂ (hbind ▸ owned) idle
+                    exact (geraete_issue_schliesst_ankunft_aus (d := d) hinv₂ owned idle
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                   · obtain ⟨owned, pending, answer, ready, sameQ, _⟩ := hcase
-                    exact (geraete_consume_schliesst_ankunft_aus (d := d) (binding := d.binding) hinv₂ (hbind ▸ owned) pending ready sameQ
+                    exact (geraete_consume_schliesst_ankunft_aus (d := d) hinv₂ owned pending ready sameQ
                       ⟨a, ρ₂.hw, t, offered₂⟩).elim
                 | interrupt keinAbsturz₂ enters₂ =>
                   obtain ⟨kk, irq, c₂, nmi, _, pend₂, _, _, _, _, _⟩ := enters₂
@@ -136,7 +137,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                 | antwort hkein₂' h2 =>
                   obtain ⟨a', offered₂', spurEq₂', append₂, stateEq₂⟩ := h2
                   have aeq : a' = a := geraete_antwort_eindeutig (d := d) hinv₂ offered₂' offered₂
-                  rw [aeq] at stateEq₂
                   have hbeob₁ := geraete_antwort_beob_tick (predictor := predictor) hlabel hz₁ hn₁ h1typ
                   have hbeob₂ : schrittBeob ρ₂ predictor t = aussenBeob (d.unit locals) (.antwort a) := by
                     rw [← aeq]
@@ -175,7 +175,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     · intro c
                       unfold AntwortSicht
                       simp only [Zustand.naechsteAntwort, Zustand.angekommen,
-                        stateEq₁, stateEq₂, hantworten]
+                        stateEq₁, stateEq₂, hantworten, aeq]
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
                       List.length_append]
                     simp only [NiedrigeBeob] at hlen
@@ -184,9 +184,9 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                     obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                     refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, rfl⟩
-                    · rw [stateEq₁, stateEq₂, hfragen]
-                    · rw [stateEq₁, stateEq₂, hverlauf]
-                    · rw [stateEq₁, stateEq₂, hantworten]
+                    · rw [stateEq₁, stateEq₂, hfragen, ← aeq]
+                    · rw [stateEq₁, stateEq₂, hverlauf, ← aeq]
+                    · rw [stateEq₁, stateEq₂, hantworten, ← aeq]
                     · rfl
                     · rfl
 
