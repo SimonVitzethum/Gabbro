@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepTransport
 
 @[expose] public section
 
@@ -13,6 +14,12 @@ open Gabbro.Core.Ast
 
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
 variable {d : Denotation k scope}
+
+private theorem geraete_ereignis_aequiv_refl (A : List (NiedrigesEreignis Nat UInt8 PUnit PUnit)) :
+    List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
+  induction A with
+  | nil => exact List.Forall₂.nil
+  | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
 
 /-- One shared low observation extends the prefix cover and the length equality. -/
 private theorem geraete_gleich_beob_schritt {ρ₁ ρ₂ : Lauf (d.unit locals)} {predictor : Praediktor}
@@ -33,17 +40,15 @@ private theorem geraete_gleich_beob_schritt {ρ₁ ρ₂ : Lauf (d.unit locals)}
     simpa only [L₁, L₂, NiedrigeBeob] using hlen
   have htake : (L₂ ++ A).take ((L₁ ++ A).length) = L₂ ++ A := by
     apply List.take_of_length_le
-    simp only [List.length_append, hlenP]
+    simpa only [List.length_append, hlenP]
   rw [htake]
   have hcov : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) L₁ L₂ := by
     have hc := (geraeteKopplung_kopplung hkopp).1
     simp only [NiedrigeBeob] at hc
     rw [hlenP] at hc
     simpa only [L₁, L₂, List.take_length] using hc
-  have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A := by
-    induction A with
-    | nil => exact List.Forall₂.nil
-    | cons x xs ih => exact List.Forall₂.cons (EreignisAequiv.gleich _) ih
+  have reflA : List.Forall₂ (EreignisAequiv (d.unit locals).fluss.freigabe) A A :=
+    geraete_ereignis_aequiv_refl A
   refine ⟨?_, ?_⟩
   · exact List.rel_append hcov reflA
   · simp only [List.length_append]
