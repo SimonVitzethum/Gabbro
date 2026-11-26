@@ -496,6 +496,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [hPendEq]
         change rQ.lokale = rC.lokale
         rw [hEqQ]
+        rfl
       exact hlokSRef.trans (hP0C.trans (hlokCr.trans hlokLRr))
     · rw [hEqEnd]
       change rS.rueckgabe = r.rueckgabe
@@ -505,6 +506,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [hPendEq]
         change rQ.rueckgabe = rC.rueckgabe
         rw [hEqQ]
+        rfl
       exact hrueckSRef.trans (hP0C.trans (hrueckCr.trans hrueckLRr))
     · rw [hEqEnd]
       change rS.stopp = r.stopp
@@ -514,5 +516,6 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [hPendEq]
         change rQ.stopp = rC.stopp
         rw [hEqQ]
+        rfl
       exact hstoppSRef.trans (hP0C.trans (hstoppCr.trans hstoppLRr))
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
