@@ -275,12 +275,13 @@ refuse mint effects and ghost value types at its metadata gate.
 A statement that reads or writes one cell of an owned region names its order:
 
 ```ebnf
-statement += "mem" ( load | store | swap | cas | fetch_add ) ;
+statement += "mem" ( load | store | swap | cas | fetch_add | await ) ;
 load       = "load" ident ":" type "=" region "," index "," mode ";" ;
 store      = "store" region "," index "," value "," mode ";" ;
 swap       = "swap" ident ":" type "=" region "," index "," value "," mode ";" ;
 cas        = "cas" ident ":" type "=" region "," index "," expected "," new "," mode ";" ;
 fetch_add  = "fetch_add" ident ":" type "=" region "," index "," amount "," mode ";" ;
+await      = "await" ident ":" type "=" region "," index "," marker "," mode ";" ;
 mode       = "na" | "rlx" | "ra" | "sc" ;
 ```
 
@@ -299,8 +300,10 @@ atomic, `ra` the release-acquire atomic and `sc` the sequentially consistent
 one. `mem fetch_add x : T = r, i, a, m;` evaluates `i` and `a`, atomically adds
 `a` to the value of one cell of `r` in mode `m`, writes the sum back and binds
 the value read to `x` at the written type `T`. The head word `mem` is reserved;
-the words after it are unreserved, so the confirming observation and the
-publication extend the same form without reserving more.
+the words after it are unreserved. `mem await x : T = r, i, k, m;` observes one
+cell of `r` in mode `m` until it sees the signed marker `k`, then binds the
+value observed to `x` at the written type `T`; the publication extends the same
+form without reserving more.
 
 Each form elaborates to one access instruction (`Befehl.zugriff`) at the end
 of the evaluated operands; the write footprint of a store or an update is its

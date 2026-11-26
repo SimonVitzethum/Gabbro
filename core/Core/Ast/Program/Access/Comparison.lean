@@ -11,6 +11,17 @@ namespace Gabbro.Core.Ast
 
 open Gabbro.Core.Text
 
+private theorem awaitHead_ne_load : keyword "await" ≠ keyword "load" := by
+  intro h; cases h
+private theorem awaitHead_ne_store : keyword "await" ≠ keyword "store" := by
+  intro h; cases h
+private theorem awaitHead_ne_swap : keyword "await" ≠ keyword "swap" := by
+  intro h; cases h
+private theorem awaitHead_ne_cas : keyword "await" ≠ keyword "cas" := by
+  intro h; cases h
+private theorem awaitHead_ne_fetchAdd : keyword "await" ≠ keyword "fetch_add" := by
+  intro h; cases h
+
 /-- **The productions of the access forms are deterministic**: two reads of the same tokens agree on the form and on
     the rest. -/
 theorem AccessReads.deterministic (left : AccessReads scope input a rest)
@@ -123,5 +134,31 @@ theorem AccessReads.deterministic (left : AccessReads scope input a rest)
       cases (List.cons.inj modeRest).2
       exact ⟨rfl, rfl⟩
     | _ => cases (List.cons.inj eq).1
+  | erwarte name ordinary written valid region visible receiverOrdinary typeRead indexRead markerRead modeRead =>
+    cases right with
+    | erwarte otherName otherOrdinary otherWritten otherValid otherRegion otherVisible otherReceiver
+        otherType otherIndex otherMarker otherMode =>
+      have nameEq : name.val = otherName.val := Token.word.inj (List.cons.inj (List.cons.inj eq).2).1
+      cases Subtype.ext nameEq
+      cases (List.cons.inj (List.cons.inj (List.cons.inj eq).2).2).2
+      obtain ⟨rfl, rhsEq⟩ := typeRead.deterministic otherType
+      have regionName : region.binding.name.val = otherRegion.binding.name.val :=
+        Token.word.inj (List.cons.inj (List.cons.inj rhsEq).2).1
+      cases Local.nameVisible_unique region otherRegion visible otherVisible regionName
+      cases (List.cons.inj (List.cons.inj (List.cons.inj rhsEq).2).2).2
+      obtain ⟨sameIndex, indexRest⟩ := indexRead.deterministic otherIndex
+      cases sameIndex
+      cases (List.cons.inj indexRest).2
+      obtain ⟨sameMarker, markerRest⟩ := markerRead.deterministic otherMarker
+      cases sameMarker
+      cases (List.cons.inj markerRest).2
+      obtain ⟨rfl, modeRest⟩ := modeRead.deterministic otherMode
+      cases (List.cons.inj modeRest).2
+      exact ⟨rfl, rfl⟩
+    | load => exact (awaitHead_ne_load (List.cons.inj eq).1).elim
+    | store => exact (awaitHead_ne_store (List.cons.inj eq).1).elim
+    | swap => exact (awaitHead_ne_swap (List.cons.inj eq).1).elim
+    | vergleicheTausche => exact (awaitHead_ne_cas (List.cons.inj eq).1).elim
+    | holeUndAddiere => exact (awaitHead_ne_fetchAdd (List.cons.inj eq).1).elim
 
 end Gabbro.Core.Ast

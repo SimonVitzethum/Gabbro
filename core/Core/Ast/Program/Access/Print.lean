@@ -37,6 +37,10 @@ def Access.printPieces : Access before after → List PrintedToken
     [printFetchAddWord, name.print, printColon] ++ written.printPieces ++
       [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
       [printComma] ++ betrag.printPieces ++ [printComma, mode.print, printSemicolon]
+  | .erwarte name _ written _ region _ _ index marker mode =>
+    [printAwaitWord, name.print, printColon] ++ written.printPieces ++
+      [printAssignment, region.binding.name.print, printComma] ++ index.printPieces ++
+      [printComma] ++ signedPieces marker ++ [printComma, mode.print, printSemicolon]
 
 theorem ModeReads.print (mode : AccessMode) (more : List Token) :
     ModeReads (mode.print.value :: more) mode more := by
@@ -58,6 +62,25 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
   have hpSwap : printSwapWord.value = keyword "swap" := rfl
   have hpCas : printCasWord.value = keyword "cas" := rfl
   have hpFetchAdd : printFetchAddWord.value = keyword "fetch_add" := rfl
+  have hpAwait : printAwaitWord.value = keyword "await" := rfl
+  have signed_printReads : ∀ (number : Int) (tail : List Token),
+      SignedReads ((signedPieces number).map PrintedToken.value ++ tail) number tail := by
+    intro number tail
+    unfold signedPieces
+    by_cases hneg : number < 0
+    · simp only [if_pos hneg, List.map_cons, List.map_nil]
+      rw [Arith.print_value]
+      let n := number.natAbs
+      change SignedReads (minus :: .natural n :: tail) number tail
+      have hnum : number = -(n : Int) := by
+        have hnat : (n : Int) = -number := by dsimp [n]; exact Int.ofNat_natAbs_of_nonpos (Int.le_of_lt hneg)
+        omega
+      rw [hnum]; exact SignedReads.negative (n := n) (rest := tail)
+    · simp only [if_neg hneg, List.map_cons, List.map_nil]
+      let n := number.natAbs
+      change SignedReads (.natural n :: tail) number tail
+      have hnum : number = (n : Int) := by dsimp [n]; exact Int.eq_natAbs_of_nonneg (by omega)
+      rw [hnum]; exact SignedReads.positive (n := n) (rest := tail)
   cases tree with
   | load name ordinary written valid region visible receiverOrdinary index mode =>
     have modeRead := ModeReads.print mode (semicolon :: rest)
@@ -128,5 +151,21 @@ theorem Access.printReads (tree : Access before after) (rest : List Token) :
       hpSemi] using
       (AccessReads.holeUndAddiere name ordinary written valid region visible receiverOrdinary
         typeRead indexRead betragRead modeRead)
+  | erwarte name ordinary written valid region visible receiverOrdinary index marker mode =>
+    have modeRead := ModeReads.print mode (semicolon :: rest)
+    have markerRead := signed_printReads marker (comma :: mode.print.value :: semicolon :: rest)
+    have indexRead := index.printReads (minimum := 0)
+      (rest := comma :: ((signedPieces marker).map PrintedToken.value ++
+        comma :: mode.print.value :: semicolon :: rest)) noOperatorAtComma
+    have typeRead := written.printReads valid
+      (rest := assignment :: .word region.binding.name.val :: comma ::
+        (index.printTokens ++ (comma :: ((signedPieces marker).map PrintedToken.value ++
+          comma :: mode.print.value :: semicolon :: rest))))
+      (by intro more h; cases h)
+    simpa only [Access.printPieces, Expr.printTokens, List.map_append, List.map_cons, List.map_nil,
+      List.cons_append, List.nil_append, List.append_assoc, hpAwait, hpName, hpColon, hpAssign, hpComma,
+      hpSemi] using
+      (AccessReads.erwarte name ordinary written valid region visible receiverOrdinary
+        typeRead indexRead markerRead modeRead)
 
 end Gabbro.Core.Ast

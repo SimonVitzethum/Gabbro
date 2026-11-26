@@ -113,6 +113,20 @@ theorem access_am_ort (scope : Scope) (result : Option (Ty .value)) :
     · simp only [List.length_append, Nat.sub_self, List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
       omega
+  | erwarte name ordinary written valid region visible receiverOrdinary index marker mode =>
+    change ((((expr 0 index).anhaengen
+      (.einzel (Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))).anhaengen
+      (.einzel (Befehl.bindeWert 0 written.type false))).code[(expr 0 index).code.length]? =
+      some (Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt : (expr 0 index).code.length <
+      ((expr 0 index).code ++ [Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)]).length := by
+      simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    rw [List.getElem?_append_left hlt]
+    rw [List.getElem?_append_right]
+    · simp only [Nat.sub_self, List.getElem?_cons_zero]
+    · omega
 
 -- Mirror forRange_realisiert at the actual access instruction.
 theorem access_realisiert (scope : Scope) (result : Option (Ty .value)) :
@@ -340,6 +354,46 @@ theorem fetch_add_erfuellbar (platform : Plattform) (start : AussenStart) :
   intro g guard
   cases guard
 
+/-- **The confirming observation occurs in an elaborated unit**: an await of cell `0` of one owned region,
+     stepped from canonical initialisation to its occurrence. -/
+theorem await_erfuellbar (platform : Plattform) (start : AussenStart) :
+    ∃ (scope : Scope) (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int 0 0)) (marker : Int),
+      (accessForm scope none).ErfuellbarAm platform start
+        ⟨_, .erwarte name ordinary written valid region visible receiverOrdinary index marker .ra⟩ := by
+  let rname : Identifier := keywordName 'r' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryR : ordinaryLocal rname := (directName_of_singleton (name := rname) rfl).1
+  let xname : Identifier := keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
+  have ordinaryX : ordinaryLocal xname := (directName_of_singleton (name := xname) rfl).1
+  have xne : xname.val ≠ "mut".toList := by
+    change ['x'] ≠ ['m', 'u', 't']
+    intro same
+    cases same
+  let scope : Scope := [⟨rname, .ownedRegion, false, false⟩]
+  let region : Local scope .ownedRegion := .here
+  let written := WrittenType.integer false 8 none
+  have valid : written.valid scope := by
+    change 1 ≤ 8 ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ (0 : Int) ≤ 255 ∧ (255 : Int) ≤ 255
+    omega
+  let index : Expr scope (.int 0 0) := Expr.lit 0
+  let marker : Int := 1
+  let form := (accessForm scope none)
+  let a : AccessStatement scope :=
+    ⟨_, .erwarte xname ⟨xne, ordinaryX⟩ written valid region trivial ordinaryR index marker .ra⟩
+  let E := form.einheit platform a
+  let s₀ := (I.start E start).2
+  let s₁ := (Befehl.literal 0 0).nach eintritt s₀
+  have reached : E.system.IErreichbar s₀ s₁ :=
+    .schritt eintritt () [plan] .start ⟨Befehl.literal 0 0, rfl, rfl, rfl⟩
+  refine ⟨scope, xname, ⟨xne, ordinaryX⟩, written, valid, region, trivial, ordinaryR, index, marker,
+    Ast.print (form.produktion.tree a), s₁, Ast.parse_print (form.produktion.tree a), rfl, reached,
+    form.realisiert (access_am_ort scope none) platform a s₁ rfl rfl rfl rfl, ?_⟩
+  intro g guard
+  cases guard
+
 /-- **The load statement is not trivial.** A load reads without writing: its class does not write, so a load
     lowered to a store would invent a write the footprint does not cover. -/
 theorem load_nichtTrivial :
@@ -364,6 +418,11 @@ theorem cas_nichtTrivial :
     to a load would lose the write the footprint covers. -/
 theorem fetch_add_nichtTrivial :
     (.holeUndAddiere 0 0 0 1 (.int 0 255) .ra : Zugriffsform).klasse.schreibend = true := rfl
+
+/-- **The confirming observation is not trivial.** It reads without writing, so lowering it to a store would
+    invent a write the footprint does not cover. -/
+theorem await_nichtTrivial :
+    (.erwarte 0 0 0 1 (.int 0 255) .ra : Zugriffsform).klasse.schreibend = false := rfl
 
 -- Mirror forRange_erfuellbar through the load witness.
 theorem access_erfuellbar : accessJoint := by

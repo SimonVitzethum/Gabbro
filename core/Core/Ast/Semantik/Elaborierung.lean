@@ -69,6 +69,10 @@ def accessCode : Access before after → Fragment
     ((((expr 0 index).anhaengen (expr 1 betrag)).anhaengen
       (.einzel (.zugriff (.holeUndAddiere 0 region.index 0 1 written.type mode.modus)))).anhaengen
       (.einzel (.bindeWert 0 written.type false)))
+  | .erwarte _ _ written _ region _ _ index marker mode =>
+    (((expr 0 index).anhaengen
+      (.einzel (.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))).anhaengen
+      (.einzel (.bindeWert 0 written.type false)))
 
 mutual
 /-- Record whether the range index is shadowed or written in its body. -/
@@ -91,6 +95,7 @@ def Stmt.rangeUses (index : Identifier) : Stmt result before after → Bool × B
   | .access (.swap name ..) => (name.val == index.val, false)
   | .access (.vergleicheTausche name ..) => (name.val == index.val, false)
   | .access (.holeUndAddiere name ..) => (name.val == index.val, false)
+  | .access (.erwarte name ..) => (name.val == index.val, false)
   | .forRange name _ _ _ _ _ body =>
     let (shadow, writes) := BracedBlock.rangeUses index body
     (name.val == index.val || shadow, writes)

@@ -378,7 +378,15 @@ inductive Access : Scope → Scope → Type where
       (written : WrittenType) (valid : written.valid scope)
       (region : Local scope .ownedRegion) (visible : region.nameVisible)
       (receiverOrdinary : ordinaryLocal region.binding.name)
-      (index : Expr scope (.int lo hi)) (betrag : Expr scope (.int bLo bHi)) (mode : AccessMode) :
+      (index : Expr scope (.int lo hi))       (betrag : Expr scope (.int bLo bHi)) (mode : AccessMode) :
+      Access scope (⟨name, written.type, false, false⟩ :: scope)
+  /-- `mem await name : T = region, index, marker, mode;` binds the value observed at the cell. It is the
+      confirming acquire observation: the frame advances only when it observes the marker. -/
+  | erwarte (name : Identifier) (ordinary : name.val ≠ "mut".toList ∧ ordinaryLocal name)
+      (written : WrittenType) (valid : written.valid scope)
+      (region : Local scope .ownedRegion) (visible : region.nameVisible)
+      (receiverOrdinary : ordinaryLocal region.binding.name)
+      (index : Expr scope (.int lo hi)) (marker : Int) (mode : AccessMode) :
       Access scope (⟨name, written.type, false, false⟩ :: scope)
 
 end Gabbro.Core.Ast
