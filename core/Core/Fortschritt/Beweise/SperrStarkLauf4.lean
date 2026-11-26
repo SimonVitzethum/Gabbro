@@ -20,7 +20,7 @@ def hw4 : HwLauf := Umgebung.referenzLauf Plattform.x86_64.katalog 3 sicht0
 def umgebung4 : Umgebung := Umgebung.referenz Plattform.x86_64.katalog 3 sicht0
 
 theorem fair4 : FairLaeufe E_4.katalog umgebung4 hw4 :=
-  Umgebung.referenz_fair _ _ _ Plattform.x86_64.katalog_wohlgeformt (by decide)
+  Umgebung.referenz_fair _ _ _ Plattform.x86_64.katalog_wohlgeformt (Nat.zero_lt_succ 2)
 
 theorem hw4_crash (t : Nat) : (hw4.angebot t).crash = false := rfl
 
@@ -118,7 +118,7 @@ theorem starkeWarteLauf4_erfuellbar : StarkeWarteLaufAussage := by
     | t + 9 => (.kontext (tail (t + 9)) (), ⟨[], []⟩)
   have tailReady (t : Nat) : KannSchreiten hw4 t (tail t) s9 := by
     refine ⟨t % 3, hw4_opp t, ?_, rfl⟩
-    have hr : t % 3 < 3 := Nat.mod_lt _ (by decide)
+    have hr : t % 3 < 3 := Nat.mod_lt _ (Nat.zero_lt_succ 2)
     have hc : t % 3 = 0 ∨ t % 3 = 1 ∨ t % 3 = 2 := by omega
     rcases hc with h | h | h <;> simp only [tail, h, ↓reduceIte] <;> rfl
   have step (t : Nat) : ImplSchritt E_4.einrichtung E_4.system E_4.katalog hw4
