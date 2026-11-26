@@ -355,14 +355,43 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have eIref : (Schritt I)^[1] (some rQ0) = some (rQ0.schreibe (frei + 2) (some (natVal 0))) := by
       simpa only [Function.iterate_one, Rahmen.schreibe] using
         (schrittLiteral I rQ0 0 (frei + 2) 0 rfl hIget)
+    have hpcIref : (rQ0.schreibe (frei + 2) (some (natVal 0))).pc = I.length := by
+      simp only [Rahmen.schreibe, rQ0]
+      dsimp only [I]
+      simp only [List.length_cons, List.length_nil]
     have hbleibI := laufBleibtVorEnde I rQ0 1 (rQ0.schreibe (frei + 2) (some (natVal 0)))
-      eIref (by dsimp only [I]; simp only [List.length_cons, List.length_nil])
-    have hrunIcomp' : (Schritt (Q ++ I))^[1] (some rQ) =
-        some (rQ0.schreibe (frei + 2) (some (natVal 0))) := by
+      eIref hpcIref
+    let rPRef := mitPc Q.length (rQ0.schreibe (frei + 2) (some (natVal 0)))
+    have eQI : (Schritt (Q ++ I))^[1] (some rQ) = some rPRef := by
       have hs := laufMitPc Q I [] hvI rQ0 1 hbleibI
-      simpa only [List.append_nil, hmitQ, eIref] using hs
-    have hPendEq : rP = rQ0.schreibe (frei + 2) (some (natVal 0)) :=
-      Option.some.inj (hrunIcomp'.symm.trans hrunIcomp)
+      rw [hmitQ] at hs
+      simpa only [List.append_nil, eIref, rPRef] using hs
+    have hpcPRef : rPRef.pc = (Q ++ I).length := by
+      simp only [rPRef, mitPc, List.length_append]
+      rw [hpcIref]
+    have hrunP_QI : (Schritt (Q ++ I))^[jP] (some r) = some rP := by
+      change (Schritt P)^[jP] (some r) = some rP
+      exact hrunP
+    have hkdecI : (Schritt (Q ++ I))^[jP] (some r) =
+        (Schritt (Q ++ I))^[jP - jI] ((Schritt (Q ++ I))^[jI] (some r)) := by
+      rw [← Function.iterate_add_apply]
+      congr 1
+      omega
+    have hPfromQ : (Schritt (Q ++ I))^[jP - jI] (some rQ) = some rP := by
+      rw [hkdecI, hrunIcomp] at hrunP_QI
+      exact hrunP_QI
+    have hdiff : jP - jI = 1 := by
+      by_contra hne
+      rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+      · exact laufStirbtNach (Q ++ I) rQ (jP - jI) 1 rP rPRef hPfromQ
+          (by rw [hpcP_Q]) eQI hpcPRef hlt
+      · exact laufStirbtNach (Q ++ I) rQ 1 (jP - jI) rPRef rP eQI hpcPRef
+          hPfromQ (by rw [hpcP_Q]) hgt
+    have hPendEq0 : rP = rPRef := by
+      have hEq : (Schritt (Q ++ I))^[1] (some rQ) = some rP := by
+        simpa only [hdiff] using hPfromQ
+      exact Option.some.inj (eQI.symm.trans hEq)
+    have hPendEq : rP = mitPc Q.length (rQ0.schreibe (frei + 2) (some (natVal 0))) := hPendEq0
     have hrP0a : rP0.temp (frei + 0) = some (natVal a) := by
       rw [hPendEq]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 0) = some (natVal a)
