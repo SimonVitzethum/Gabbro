@@ -64,7 +64,7 @@ theorem eintritt4_nicht_statisch4 : ¬ statisch4 eintritt4 := by
 
 /-- The hand-over rule: tickets, takes and releases as the lock rule allows, but acquisition
     only by statically dispatched contexts; every other context may only stutter. -/
-def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
+def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (_w : Unit)
     (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
     Prop :=
   (statisch4 c ∧
@@ -172,7 +172,7 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
       refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
         ⟨[], ?_, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
         fun hoffen q hmem hepo hant => ?_⟩
-      · rw [hziel, List.append_nil] <;> rfl
+      · exact (congrArg (fun z => z.buchung.wirkungen) hziel).trans (List.append_nil _).symm
       · rw [hziel] at hmem hepo hant ⊢
         exact hoffen q hmem hepo hant
 

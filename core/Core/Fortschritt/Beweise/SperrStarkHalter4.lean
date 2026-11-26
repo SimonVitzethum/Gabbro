@@ -1,5 +1,5 @@
 /-
-  File:      Core/Fortschritt/Beweise/SperrStarkHalter.lean
+  File:      Core/Fortschritt/Beweise/SperrStarkHalter4.lean
   Subject:   GLOBAL HOLDER ELIGIBILITY for the non-vacuous hand-over unit (M8 2b).
 
   The invariant says: the lock only ever contains statically dispatched contexts; before a
@@ -118,8 +118,8 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
       cases hF
       first
       | apply e4_inv_frame hi <;> rw [hziel] <;> rfl
-      | have hh : s'.kerne = s.kerne := by rw [hziel] <;> rfl
-        have hs : s'.status = s.status := by rw [hziel] <;> rfl
+      | have hh : s'.kerne = s.kerne := congrArg Zustand.kerne hziel
+        have hs : s'.status = s.status := congrArg Zustand.status hziel
         have hhlock (a : SperrAktion) (ha : statisch4 c ∨ a = .geben)
             (hstep : SperrSchritt a c (s.sperren ()) (s'.sperren ())) : inv4 s' :=
           e4_inv_lock hi ⟨k, hrun⟩ hstep ha hh hs
