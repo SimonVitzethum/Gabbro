@@ -157,12 +157,15 @@ private theorem arithmetik_schritt
     (s : Ast.Semantik.Zustand) (b : Befehl)
     (normal : (hw.angebot t).crash = false) (bereit : KannSchreiten hw t eintritt s)
     (kopf : (p.einheit platform).system.kopf s eintritt = some b)
-    (priv : b.Privat := by first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)) :
+    (priv : b.klasse = .lokal ∨ b.klasse = .ruf := by first | exact Or.inl rfl | exact Or.inr rfl) :
     Lauffolge (p.einheit platform) hw t (some s) (.kontext eintritt (), ⟨[], []⟩)
-      (some (b.nach eintritt s)) :=
+      (some (b.nach eintritt s)) := by
+  have hp : b.Privat := priv.elim Or.inl (Or.inr ∘ Or.inl)
+  have hmasch : b.maschinennach eintritt s (b.nach eintritt s) = b.nach eintritt s :=
+    b.maschinennach_lokal_ruf priv _ _ _
   .schritt (.kontext normal bereit
-    ⟨b, kopf, (b.impl_privat priv eintritt s () [Ast.Semantik.plan] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
-    (b.vollzug _ t eintritt s))
+    ⟨b, kopf, (b.impl_privat hp eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
+    (hmasch ▸ b.vollzug _ t eintritt s hp))
 
 /-- The rule and boundary obligations hold jointly for a loaded unit that actually
     executes literals, both binary operators and a local binding. -/
