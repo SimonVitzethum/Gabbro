@@ -164,18 +164,21 @@ theorem zielAusTeilenMitLuecken
 
 /-- The goal follows with the progress leg closed by the two run premises, with the three gaps
     supplied. Needs the liveness of the memory model for access heads
-    (`ZugriffSchrittExistiertAussage`). -/
+    (`ZugriffSchrittExistiertAussage`) and the scheduler premise for fragments with access
+    instructions (`SchedulerFortschrittVoraussetzung`; frame-only fragments are discharged
+    from scheduler fairness and preemption return). -/
 theorem zielAusTeilenMitFortschritt
     (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
     (niLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
       Beobachtung.Nichtinterferent E)
     (existiert : ZugriffSchrittExistiertAussage)
+    (scheduler : SchedulerFortschrittVoraussetzung)
     (P : Katalog.Plattform) (B : FormBeleg) :
     BildGueltigAussage P → FormenGedecktAussage P B → SchrankenAkzeptiertAussage P →
       NIAkzeptiertAussage P → Ziel.GabbroZielForm (R₀ P B) := by
   intro bildG formG schranken ni
   exact zielAusTeilenMitLuecken hang idealLuecke niLuecke P B bildG formG
-    (fortschritt_akzeptiert existiert) schranken ni
+    (fortschritt_akzeptiert existiert scheduler) schranken ni
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -51,6 +51,32 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
 
+/-- The four form-side fields of `FortschrittsPflichten` in the pre-access shape for a frame-only
+    fragment: with `Rein` every head is frame-only, so the template step composes
+    (`Befehl.komponierbar`) and `RegelKomponierbar` holds for every instruction. For fragments with
+    access instructions `RegelKomponierbar` is false (only the memory-accepted step composes), and
+    the koepfen shape (`einheit_fortschrittsfelder`) is used instead. -/
+theorem einheit_fortschrittsfelder_rein (rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein)
+    (P : Katalog.Plattform) (t : Ast.Unit) :
+    (∀ s c, (einheitVon P t).system.kopf s c = none → (einheitVon P t).system.fertig s c) ∧
+    (∀ f : Ast.Semantik.Befehl, RegelFortschritt (einheitVon P t).system f) ∧
+    (∀ f : Ast.Semantik.Befehl,
+      Maschine.I.RegelKomponierbar (einheitVon P t).einrichtung (einheitVon P t).system f) ∧
+    (∀ s c, Maschine.I.Bereit (E := einheitVon P t) s c →
+      ¬ (einheitVon P t).system.fertig s c ∧ ∀ b, ¬ (einheitVon P t).system.blockiert s c b) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact Ast.Semantik.Fragment.fertig (Ast.Semantik.fragment Ast.Category.unit t) P
+  · intro f
+    exact Ast.Semantik.Befehl.regelFortschritt (Ast.Semantik.fragment Ast.Category.unit t) P f
+  · intro f
+    by_cases h : f.Privat
+    · exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P f h
+    · intro t' s c w plans u hk _ _
+      exact absurd (rein f (Ast.Semantik.kopf_mem hk)) h
+  · intro s c bereit
+    rcases bereit with ⟨w, plans, u, step⟩
+    exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
+
 /-- No lock-taking step exists for elaborated units: a frame-only head forces the private plan,
     an access head the internal action (`Zugriffsform.ideal_aktion_intern`), so no step plans a lock. -/
 theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
