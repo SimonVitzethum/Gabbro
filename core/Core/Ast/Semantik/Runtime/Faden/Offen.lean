@@ -12,6 +12,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Faden.Aussagen
+public import Core.Ziel.Korrektheit.Pruefer
 
 @[expose] public section
 
@@ -87,32 +88,33 @@ def WechsleKomponierbarAussage : Prop :=
         (∀ k, (s.kerne k).laeuft ≠ some kind) ∧ kind ≠ c) →
       ∃ spur s', FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s'
 
-/-- **A join makes progress under hardware fairness** (open, pinned). A context whose open instruction is a join of a
-    context that ends, by its recorded creator, does not hang on a hardware-fair, scheduler-fair run whose preemption
-    returns, once the ideal run is matched to that run over the one environment `hU`. The premises are bound to that
-    single environment (a `∀ h'` over admissible environments is unsatisfiable with `Laeufe`, see
-    `faire_umgebung_nicht_eindeutig`). Without them the promise is false: `verbindeFortschritt_ohneFairness_falsch`.
-    Difficulty: mittel.
-    Sketch: from the end cut on, `FuehrtAus.verbinde` is available at every cut (the status of an ended context is
-    final, and the creator entry persists until this join: only a join of that thread clears it), the form step of the class is total (`klassenFortschritt`), and the hardware fairness of the run gives the
-    core an opportunity infinitely often, so the instance cannot stay open on the whole suffix (`BleibtOffen`);
-    the memory part of the step is empty. The statement is the join case of the progress classes of
-    `Fortschritt/Klasse` (`starvationFree`), whose per-thread promise is `¬ Haengt`. -/
+/-- **A join makes progress on every accepted elaborated unit** (pinned). On a hardware-fair,
+    scheduler-fair run whose preemption returns, every context of an accepted elaborated unit — in
+    particular the joiner of an ended thread — has ONE matched ideal run in which it does not hang,
+    and the ideal run satisfies the class progress alternative. The premise bundle is the one MK-11's
+    `FortschrittAkzeptiertAussage` uses for accepted units; `FortschrittsPflichten`, `BelegungGeprueft`
+    and the stutter bound are discharged there from the checker verdict, so no free progress parameter
+    remains. The former free-form promise (a join of an ended thread by its recorded creator, with a
+    matched ideal run but without the full duties) is false: `verbindeFortschritt_mitPraemissen_falsch`;
+    without the run premises it is false as well: `verbindeFortschritt_ohneFairness_falsch`. No source
+    form elaborates to `Befehl.faden`, so keeping join-specific premises here would make the promise
+    vacuous on `einheitVon`; the join case is the per-context instance of the general progress theorem.
+    Proved in `Beweise/VerbindeFortschritt.lean` from `FortschrittAkzeptiertAussage`. Difficulty: leicht. -/
 def VerbindeFortschrittAussage : Prop :=
-  ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl F : Type} [DecidableEq L]
-    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl F) (ρ : Maschine.Lauf E) (η : I.Lauf E)
-    (hU : Katalog.Umgebung) (c kind : Kontext),
-    Laeufe E hU ρ →
-    FairLaeufe E.katalog hU ρ.hw →
-    SchedulerFair E ρ →
-    VerdraengungKehrtZurueck E ρ →
-    I.Laufabgleich ρ η →
-    η.umgebung = hU →
-    (∃ t ausgang, (η.zeit.zustand t).status kind = .beendet ausgang ∧
-      ∀ t', t ≤ t' → (η.zeit.zustand t').erzeuger kind = some c) →
-      (∃ a, ∀ t, a ≤ t → ∃ plan w u, E.system.ISchritt c (η.zeit.zustand t) w [plan] u ∧
-        plan.aktion = .verbinde kind) →
-        ¬ I.Haengt E ρ η c
+  ∀ (P : Katalog.Plattform) (t : Ast.Unit),
+    Annahme.Akzeptiert (Ziel.Korrektheit.einheitVon P t) →
+    ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (Ziel.Korrektheit.einheitVon P t)),
+      Maschine.Laeufe (Ziel.Korrektheit.einheitVon P t) H ρ →
+      Katalog.FairLaeufe (Ziel.Korrektheit.einheitVon P t).katalog H ρ.hw →
+      Maschine.SchedulerFair (Ziel.Korrektheit.einheitVon P t) ρ →
+      Maschine.VerdraengungKehrtZurueck (Ziel.Korrektheit.einheitVon P t) ρ →
+      ∀ c : Kontext,
+      ∃ η : I.Lauf (Ziel.Korrektheit.einheitVon P t),
+        I.Laeufe (Ziel.Korrektheit.einheitVon P t) η ∧
+        I.Sim (Ziel.Korrektheit.einheitVon P t) ρ η ∧
+        ¬ I.Haengt (Ziel.Korrektheit.einheitVon P t) ρ η c ∧
+        I.FortschrittDerKlasse
+          (I.FortschrittsKlasse.blockierend : I.FortschrittsKlasse Ast.Semantik.Befehl) η
 
 /-- **The registry packet of `Befehl.faden`**: the two duties the classes do not carry. The other duties of the
     lifecycle classes are in `KlassenAussagen` (simulation, locality, progress, the four safety legs, bounds, information

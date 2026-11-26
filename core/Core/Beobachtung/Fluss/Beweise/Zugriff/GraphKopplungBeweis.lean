@@ -1,13 +1,14 @@
 /-
-  The final deduction of `SpeicherGraphKopplungAussage` from one single-run invariant: for a public cell,
-  `HatQuelle` of the graph at a cut is exactly a public write of that cell observed after the last crash
-  boundary. With that invariant the graph coupling at one cut is read off the equality of the two low
-  prefixes in `Kopplung`: for a fragment the event relation is equality, and a write observation transfers
-  verbatim. The invariant itself is the open obligation; the lemmas that prepare it are in `GraphBeob`.
+  The final deduction of `SpeicherGraphKopplungAussage` from the pinned single-run invariant
+  `SpeicherGraphInvariantAussage`: for a public cell, `HatQuelle` of the graph at a cut is exactly a
+  public write of that cell observed after the last crash boundary. With that invariant the graph
+  coupling at one cut is read off the equality of the two low prefixes in `Kopplung`: for a fragment
+  the event relation is equality, and a write observation transfers verbatim. The invariant is proved
+  in `GraphInvariante`, so the coupling closes without a hypothesis.
 -/
 module
 
-public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphBeob
+public import Core.Beobachtung.Fluss.Beweise.Zugriff.GraphInvariante
 
 @[expose] public section
 
@@ -36,20 +37,10 @@ theorem forall2_gleich {α : Type} {a b : List α} {r : α → α → Prop}
   | nil => rfl
   | cons head tail ih => rw [heq head, ih]
 
-/-- The graph coupling follows from one single-run invariant and the prefix equality already carried
-     by `Kopplung`. The invariant is left as a hypothesis: for a public cell, `HatQuelle` of the graph
-     at a cut equals a public write of that cell observed after the last crash boundary. Difficulty:
-     schwer. The crash case resets the graph but not the low trace, so a plain prefix reading is false;
-     the graph-side step is `hatQuelle_nach_viele`, the observation-side step needs the low trace's
-     write events to come only from `spur.speicher`. -/
-theorem speicherGraphKopplung_aus_invariante
-    (inv : ∀ (p : Fragment) (plattform : Plattform) {h : Umgebung} {ρ : Lauf (p.einheit plattform)},
-      Laeufe (p.einheit plattform) h ρ → ∀ (predictor : Praediktor) (t : Nat) (x : Ast.Semantik.Zelle),
-        match ρ.zeit.zustand t with
-        | none => True
-        | some s =>
-          HatQuelle s.graph x ↔
-            SchreibSeitAbsturz x (NiedrigeBeob (p.einheit plattform) ρ predictor t)) :
+/-- The graph coupling follows from the pinned single-run invariant and the prefix equality already
+     carried by `Kopplung`: for a public cell, `HatQuelle` of the graph at a cut equals a public write
+     of that cell observed after the last crash boundary. -/
+theorem speicherGraphKopplung_aus_invariante (inv : SpeicherGraphInvariantAussage) :
     SpeicherGraphKopplungAussage := by
   intro p plattform h₁ h₂ ρ₁ ρ₂ vergleich predictor t kopplung v w hv hw x hpub
   let E := p.einheit plattform
@@ -68,5 +59,9 @@ theorem speicherGraphKopplung_aus_invariante
   have tracesEq : NiedrigeBeob E ρ₁ predictor t = NiedrigeBeob E ρ₂ predictor t :=
     forall2_gleich cov (fun {u v} h => ereignisAequiv_fragment p plattform h)
   rw [inv1, inv2, tracesEq]
+
+/-- The coupling of public memory cells closes with no hypothesis: the invariant is proved. -/
+theorem speicherGraphKopplung : SpeicherGraphKopplungAussage :=
+  speicherGraphKopplung_aus_invariante speicherGraphInvariant
 
 end Gabbro.Core.Beobachtung

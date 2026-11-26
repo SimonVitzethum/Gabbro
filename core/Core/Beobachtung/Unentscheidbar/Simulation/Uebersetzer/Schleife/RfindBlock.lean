@@ -22,7 +22,7 @@ def rfindSchleife (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
   paarBerechnung (frei + 0) (frei + 2) (frei + 4) (frei + 10) ++
     cfBlk ++
     [.literal (frei + 5) 0, .vergleichen .lt (frei + 5),
-      .springeWenn (frei + 5) false 3] ++
+      .springeWenn (frei + 5) false 4] ++
     [.literal (frei + 7) 1, .binaer .add (frei + 2),
       .zurueckSprung (49 + cfBlk.length)] ++
     kopie aus (frei + 2)
@@ -34,11 +34,12 @@ def rfindBlk (cfBlk : List Befehl) (ein aus frei freiL : Nat) : List Befehl :=
     kopie (frei + 2) (frei + 1) ++ rfindSchleife cfBlk aus frei
 
 /-- Forward convergence of the minimisation loop, as a pinned obligation. If
-    `cf` evaluates to zero first at candidate `y0 >= m` and stays defined up to
-    `y0`, the loop reaches its end with `y0` in the output slot. Difficulty:
-    hard; proof sketch: induct over `y0 - m`, discharge one iteration with the
-    pairing block, the `cf` block and the concrete zero test, then apply the
-    induction hypothesis at the incremented candidate. -/
+    `cf` evaluates to zero first at candidate `y0 >= m`, stays defined and is
+    nonzero at every candidate from `m` up to `y0`, the loop reaches its end
+    with `y0` in the output slot. Difficulty: hard; proof sketch: induct over
+    `y0 - m`, discharge one iteration with the pairing block, the `cf` block
+    and the concrete zero test, then apply the induction hypothesis at the
+    incremented candidate. -/
 def rfindKonvergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     (a aus frei freiCf freiP : Nat) : Prop :=
   ∀ (m y0 v : Nat) (r rEnd : Rahmen) (schr : Nat),
@@ -49,6 +50,7 @@ def rfindKonvergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     m ≤ y0 →
     Nat.Partrec.Code.eval cf (Nat.pair a y0) = Part.some 0 →
     (∀ y, m ≤ y → y < y0 → ∃ v', Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v') →
+    (∀ y, m ≤ y → y < y0 → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0) →
     BlockKorrekt cfBlk cf (frei + 4) (frei + 6) freiCf →
     VerschiebbaresProgramm cfBlk → BleibtImBlock cfBlk →
     frei + 20 ≤ freiCf → frei + 10 ≤ freiP →
@@ -56,11 +58,11 @@ def rfindKonvergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     rEnd.pc = (rfindSchleife cfBlk aus frei).length →
     rEnd.temp aus = some (natVal y0)
 
-/-- Divergence of the minimisation loop, as a pinned obligation. When no
-    candidate yields zero while every candidate is defined, the loop never
-    dies; conversely a non-terminating run of the loop means no zero is found.
-    Difficulty: hard; proof sketch: prove both directions by induction over
-    the candidates and use `laufStirbtNicht_iff` from `Divergenz` to connect the
+/-- Divergence of the minimisation loop, as a pinned obligation. The premises
+    (including that no candidate yields zero while every candidate is defined)
+    stand before the equivalence; the substantive direction is that a zero-free
+    search never dies. Difficulty: hard; proof sketch: induct over the
+    candidates and use `laufStirbtNicht_iff` from `Divergenz` to connect the
     zero-free search to `LaufStirbtNicht`. -/
 def rfindDivergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     (a aus frei freiCf freiP : Nat) : Prop :=
@@ -70,8 +72,10 @@ def rfindDivergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     r.temp (frei + 1) = some (natVal m) →
     r.temp (frei + 2) = some (natVal m) →
     ((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
+      (∀ y, m ≤ y → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0)) →
+    (((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
       (∀ y, m ≤ y → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0)) ↔
-      LaufStirbtNicht (rfindSchleife cfBlk aus frei) r
+       LaufStirbtNicht (rfindSchleife cfBlk aus frei) r)
 
 /-- Block correctness of the `rfind'` block, as a pinned obligation. The block
     reads both components of the input, initialises the candidate from `m` and
