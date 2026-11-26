@@ -156,11 +156,16 @@ theorem e2_ideal_geben (w : Unit) : E_2.system.ISchritt A s2_0 w [wGebenPlan] s2
 /-- The release execution at cut zero. -/
 theorem ausfuehr_geben : FuehrtSchrittAus E_2.einrichtung 0 A s2_0 s2_0 wGebenPlan
     ⟨g2_es, []⟩ s2_1 := by
-  refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, s2_0,
-    .sperre (SperrSchritt.geben s2_0_gibt) (fun _ => trivial), g2_mem, rfl⟩
+  have hF : FuehrtAus E_2.einrichtung 0 A s2_0 s2_0 (.sperre () .geben)
+      [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s2_0 :=
+    .sperre (SperrSchritt.geben s2_0_gibt) (fun _ => trivial)
+  have hM : Speicherfolge s2_0.initial (SpeicherAkteur.kontext A) s2_0.graph
+      [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] g2_es g2_g :=
+    g2_mem
+  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+    fun _ h => (List.not_mem_nil h).elim, _, s2_0, hF, hM, rfl⟩
 
-def spur2 : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
+noncomputable def spur2 : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
   | 0 => some (.kontext A (), ⟨g2_es, []⟩)
   | (t + 1) => spurw (t + 1)
 
@@ -315,7 +320,7 @@ theorem e2_bereit : ∀ t s', 0 ≤ t → ρ_2.zeit.zustand t = some s' →
     intro hne
     exact ⟨s2_0_live _, ⟨0, s2_0_kerne0⟩, (), wGebenPlan, s2_0,
       e2_ideal_geben (),
-      rfl, fun _ _ => trivial⟩
+      rfl, fun _ _ _ => trivial⟩
   | succ t =>
     have hss : s' = s2_1 := Option.some.inj (hzs.symm.trans rfl)
     subst hss
@@ -340,17 +345,17 @@ theorem e2_hagree : ∀ t s w plan u, 0 ≤ t → ρ_2.zeit.zustand t = some s �
     rcases himpl' with ⟨next, hss, hpeq, hueq⟩ | ⟨next, hss, hpeq, hueq⟩ |
       ⟨next, hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
     · cases hss with
-      | ticket hne _ => exact hne rfl
+      | ticket hne _ => exact False.elim (hne rfl)
     · cases hss with
       | nehmen hN =>
         have h1 := hN.besitzt.2
         rw [s2_0_lock] at h1
-        exact Option.some_ne_none A h1
-    · have hplan : plan = wGebenPlan := (List.cons.inj hpeq).1.symm
+        exact False.elim (Option.some_ne_none A h1)
+    · have hplan : plan = wGebenPlan := (List.cons.inj hpeq).1
       subst hplan
       subst hueq
       exact ⟨s2_0, e2_impl_geben w, _, _, ausfuehr_geben⟩
-    · have hcon : plan = stutterPlan := (List.cons.inj hpeq).1.symm
+    · have hcon : plan = stutterPlan := (List.cons.inj hpeq).1
       subst hcon
       have hact : stutterPlan.aktion = .intern := rfl
       rw [hact] at hakt
