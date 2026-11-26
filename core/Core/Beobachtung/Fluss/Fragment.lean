@@ -322,50 +322,48 @@ theorem stummer_schritt_koppelt
                     intro a b ha hb
                     rw [nachEq₁] at ha
                     rw [nachEq₂] at hb
-                    obtain rfl := Option.some.inj ha
-                    obtain rfl := Option.some.inj hb
                     have lokPost' : a.lokal = b.lokal := by
-                      rw [hlokal₁, hlokal₂]
+                      rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, hlokal₁, hlokal₂]
                       exact lokPost
                     refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
                     · intro d p hp
                       exact congrFun lokPost' d
                     · intro d
-                      have s1 : a.status d = vor.status d := by rw [hstatus₁]; rfl
-                      have s2 : b.status d = w₂.status d := by rw [hstatus₂]; rfl
+                      have s1 : a.status d = vor.status d := by rw [(Option.some.inj ha).symm, hstatus₁]; rfl
+                      have s2 : b.status d = w₂.status d := by rw [(Option.some.inj hb).symm, hstatus₂]; rfl
                       simp only [s1, s2, statusEq]
                     · intro x
-                      have i1 : a.initial = vor.initial := by rw [hinitial₁]; rfl
-                      have i2 : b.initial = w₂.initial := by rw [hinitial₂]; rfl
+                      have i1 : a.initial = vor.initial := by rw [(Option.some.inj ha).symm, hinitial₁]; rfl
+                      have i2 : b.initial = w₂.initial := by rw [(Option.some.inj hb).symm, hinitial₂]; rfl
                       simp only [i1, i2]
                       exact initialGleich x
                     · have r1 : a.rechte = vor.rechte := by rw [hrechte₁]; rfl
-                      have r2 : b.rechte = w₂.rechte := by rw [hrechte₂]; rfl
+                      have r2 : b.rechte = w₂.rechte := by rw [(Option.some.inj hb).symm, hrechte₂]; rfl
                       simp only [r1, r2]
                       exact rechteGleich
                     · have l1 : a.leihen = vor.leihen := by rw [hleihen₁]; rfl
-                      have l2 : b.leihen = w₂.leihen := by rw [hleihen₂]; rfl
+                      have l2 : b.leihen = w₂.leihen := by rw [(Option.some.inj hb).symm, hleihen₂]; rfl
                       simp only [l1, l2]
                       exact leihenGleich
                     · intro d
                       simp only [AntwortSicht]
                       have q1 : a.naechsteAntwort d = vor.naechsteAntwort d := by
-                        have e1 : a.antworten = vor.antworten := by rw [hantworten₁]; rfl
-                        have e2 : a.verworfen = vor.verworfen := by rw [hverworfen₁]; rfl
-                        have e3 : a.verbraucht = vor.verbraucht := by rw [hverbraucht₁]; rfl
+                        have e1 : a.antworten = vor.antworten := by rw [(Option.some.inj ha).symm, hantworten₁]; rfl
+                        have e2 : a.verworfen = vor.verworfen := by rw [(Option.some.inj ha).symm, hverworfen₁]; rfl
+                        have e3 : a.verbraucht = vor.verbraucht := by rw [(Option.some.inj ha).symm, hverbraucht₁]; rfl
                         simp only [Zustand.naechsteAntwort, Zustand.angekommen, e1, e2, e3]
                       have q2 : b.naechsteAntwort d = w₂.naechsteAntwort d := by
-                        have e1 : b.antworten = w₂.antworten := by rw [hantworten₂]; rfl
-                        have e2 : b.verworfen = w₂.verworfen := by rw [hverworfen₂]; rfl
-                        have e3 : b.verbraucht = w₂.verbraucht := by rw [hverbraucht₂]; rfl
+                        have e1 : b.antworten = w₂.antworten := by rw [(Option.some.inj hb).symm, hantworten₂]; rfl
+                        have e2 : b.verworfen = w₂.verworfen := by rw [(Option.some.inj hb).symm, hverworfen₂]; rfl
+                        have e3 : b.verbraucht = w₂.verbraucht := by rw [(Option.some.inj hb).symm, hverbraucht₂]; rfl
                         simp only [Zustand.naechsteAntwort, Zustand.angekommen, e1, e2, e3]
                       rw [q1, q2]
                       exact antwortGleich d
                     · have e1 : a.epoche = vor.epoche := by rw [hepoche₁]; rfl
-                      have e2 : b.epoche = w₂.epoche := by rw [hepoche₂]; rfl
+                      have e2 : b.epoche = w₂.epoche := by rw [(Option.some.inj hb).symm, hepoche₂]; rfl
                       simp only [e1, e2, epocheEq]
                     · have g1 : a.geliefert = vor.geliefert := by rw [hgeliefert₁]; rfl
-                      have g2 : b.geliefert = w₂.geliefert := by rw [hgeliefert₂]; rfl
+                      have g2 : b.geliefert = w₂.geliefert := by rw [(Option.some.inj hb).symm, hgeliefert₂]; rfl
                       simp only [g1, g2, geliefertEq]
                     · have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
                         rw [lokEqFun]
@@ -420,7 +418,7 @@ theorem stummer_schritt_koppelt
                         cases aktion₂
                         rw [stateEq₁, stateEq₂]
                     · have s1 : a.status = vor.status := by rw [hstatus₁]; rfl
-                      have s2 : b.status = w₂.status := by rw [hstatus₂]; rfl
+                      have s2 : b.status = w₂.status := by rw [(Option.some.inj hb).symm, hstatus₂]; rfl
                       simp only [s1, s2, statusEq]
                   · -- length: both sides append nothing
                     rw [e₁, e₂]
