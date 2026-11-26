@@ -141,9 +141,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
             | none =>
                 rw [hlab] at label₂
                 cases label₂
-            | some ev =>
-                cases ev
-                exact ⟨_, _, hlab⟩
+            | some ev => exact ⟨ev.1, ev.2, hlab.trans (by cases ev; rfl)⟩
           obtain ⟨wahl, spur', label'⟩ := someEv
           have evEq := Option.some.inj (label₂.symm.trans label')
           rw [evEq] at step₂
@@ -155,9 +153,8 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                 | kontext keinAbsturz₂ bereit₂ regel₂ aus₂ =>
                     obtain ⟨binding, access, required, target, ruleEq, hbind⟩ :=
                       geraete_rule_binding locals d
-                    subst binding
                     obtain ⟨_, plan', hplans', rule₂⟩ := geraete_kontext_regel ruleEq regel₂
-                    have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] u₂ := by
+                    have regel₂' : E.system.ImplSchritt c₂ s₂ w₂ [plan'] _ := by
                       simpa only [hplans'] using regel₂
                     have keinAbsturz₁ : (ρ₁.hw.angebot t).crash = false := by
                       rw [hang]
