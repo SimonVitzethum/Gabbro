@@ -118,8 +118,8 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
       cases hF
       first
       | apply e4_inv_frame hi <;> rw [hziel] <;> rfl
-      | have hh : s'.kerne = s.kerne := by simp only [hziel, toggleUpdate]
-        have hs : s'.status = s.status := by simp only [hziel, toggleUpdate]
+      | have hh : s'.kerne = s.kerne := by rw [hziel] <;> rfl
+        have hs : s'.status = s.status := by rw [hziel] <;> rfl
         have hhlock (a : SperrAktion) (ha : statisch4 c ∨ a = .geben)
             (hstep : SperrSchritt a c (s.sperren ()) (s'.sperren ())) : inv4 s' :=
           e4_inv_lock hi ⟨k, hrun⟩ hstep ha hh hs
