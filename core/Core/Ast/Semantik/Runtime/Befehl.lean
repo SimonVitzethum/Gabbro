@@ -276,7 +276,7 @@ def Befehl.auswerten (b : Befehl) (frame : Rahmen) (live : Nat → Bool := fun _
   | .bindeRegion receiver init, frame => frame.bindeRegion receiver init live
   | .zugriff form, frame => form.uebertrag frame 0
   | .faden form, frame => form.uebertrag frame 0
-  | .aussen _form, frame => frame
+  | .aussen _form, frame => frame.weiter
   | .maskiere .., frame => { frame with pc := frame.pc + 1 }
   | .prioritaet .., frame => { frame with pc := frame.pc + 1 }
   | .sendeUnterbrechung .., frame => { frame with pc := frame.pc + 1 }
