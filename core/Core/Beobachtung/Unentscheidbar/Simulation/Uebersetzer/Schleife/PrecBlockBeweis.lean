@@ -192,7 +192,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     refine ⟨kS + (1 + (kC + kLR)), mitPc P.length rS, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rw [Function.iterate_add_apply, Function.iterate_add_apply,
         Function.iterate_add_apply, hrunLR_G, hrunC_G, hrunI_G, hshiftS]
-    · simp only [mitPc, hpcS, List.length_append]
+    · simp only [mitPc, hpcS, List.length_append, S]
     · change rS.temp aus = some (natVal v)
       exact hrSaus
     · intro s hs hneAus
