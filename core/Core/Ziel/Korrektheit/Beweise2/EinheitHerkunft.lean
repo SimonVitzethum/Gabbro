@@ -3,6 +3,9 @@ module
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Maschine
 public import Core.Ziel.Korrektheit.Beweise2.Spracheinheit
+import Core.Ziel.Korrektheit.Beweise2.ZugriffIdealBestimmt
+import Core.Ziel.Korrektheit.Beweise2.ZugriffNIFragmentBeweis
+import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenLauf
 public import Core.Linken.Aussage
 
 @[expose] public section
@@ -44,9 +47,12 @@ def IdealVerlinkteEinheitAussage : Prop :=
     Maschine.I.Bestimmt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system ∧
     Maschine.I.Fortschritt (p.einheit plan.plattform).einrichtung (p.einheit plan.plattform).system
 
+theorem zugriffZiel : ZugriffZielAussage :=
+  ⟨Ast.Semantik.zugriffSicherBeweis, zugriffIdealBestimmt, zugriffSchrittExistiert, zugriffNIFragment⟩
+
 /-- The linker enforces source origin and concatenation preserves the classes proved for that origin. -/
-theorem ideal_verlinkte_einheit (zugriff : ZugriffZielAussage) : IdealVerlinkteEinheitAussage :=
-  fun plan p h _ => ideal_fragment_einheit zugriff p plan.plattform (Linken.linke_klassenrein h)
+theorem ideal_verlinkte_einheit : IdealVerlinkteEinheitAussage :=
+  fun plan p h _ => ideal_fragment_einheit zugriffZiel p plan.plattform (Linken.linke_klassenrein h)
 
 theorem IdealVerlinkteEinheitAussage.erfuellbar :
     ∃ (plan : Linken.Bauplan) (p : Ast.Semantik.Fragment), Linken.linke plan = some p ∧
@@ -54,22 +60,21 @@ theorem IdealVerlinkteEinheitAussage.erfuellbar :
   ⟨Linken.beispielPlan, Linken.beispielFragment, Linken.beispielLinke, Linken.beispielAkzeptiert⟩
 
 /-- Source elaboration and successful linking supply the class proofs for ideal determinacy and progress. -/
-theorem ideal_spracheinheit (zugriff : ZugriffZielAussage)
-    (E : Spracheinheit) (akzeptiert : Annahme.Akzeptiert E.val) :
+theorem ideal_spracheinheit (E : Spracheinheit) (akzeptiert : Annahme.Akzeptiert E.val) :
     Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
     Maschine.I.Fortschritt E.val.einrichtung E.val.system := by
   obtain ⟨E, herkunft⟩ := E
   cases herkunft with
-  | quelle P t => exact ideal_akzeptierte_einheit zugriff P t
-  | mitInvarianten P u => exact ideal_quelleinheit zugriff _ P (Or.inl ⟨u, rfl⟩)
-  | verlinkt plan p h => exact ideal_verlinkte_einheit zugriff plan p h akzeptiert
+  | quelle P t => exact ideal_akzeptierte_einheit zugriffZiel P t
+  | mitInvarianten P u => exact ideal_quelleinheit zugriffZiel _ P (Or.inl ⟨u, rfl⟩)
+  | verlinkt plan p h => exact ideal_verlinkte_einheit plan p h akzeptiert
 
 /-- The universal ideal leg includes every successful link. -/
-theorem ideal_spracheinheit_iff (zugriff : ZugriffZielAussage) :
+theorem ideal_spracheinheit_iff :
     (∀ E : Spracheinheit, Annahme.Akzeptiert E.val →
       Maschine.I.Bestimmt E.val.einrichtung E.val.system ∧
       Maschine.I.Fortschritt E.val.einrichtung E.val.system) ↔ IdealVerlinkteEinheitAussage := by
-  refine ⟨?_, fun _ => ideal_spracheinheit zugriff⟩
+  refine ⟨?_, fun _ => ideal_spracheinheit⟩
   intro ideal plan p h akzeptiert
   exact ideal ⟨p.einheit plan.plattform, .verlinkt plan p h⟩ akzeptiert
 
