@@ -402,9 +402,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.Semantik.TabellenAussagen, 6489623228406276377),
   (`Gabbro.Core.Beobachtung.NeustartVerwirftAussage, 7390683773427655253),
   (`Gabbro.Core.Katalog.AuswahlFair, 4706462524412336189),
-  (`Gabbro.Core.Beobachtung.EndlichAkzeptiertAussage, 8430242047517099562),
-  (`Gabbro.Core.Beobachtung.KostenSchaetzerKorrektAussage, 10222819777732496289),
-  (`Gabbro.Core.Beobachtung.GebundenKHEndlichAussage, 11743852453533077166),
-  (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 6982137449178699021)]
+  (`Gabbro.Core.Beobachtung.EndlichAkzeptiertAussage, 12205563419280168914),
+  (`Gabbro.Core.Beobachtung.KostenSchaetzerKorrektAussage, 9044051811646960773),
+  (`Gabbro.Core.Beobachtung.GebundenKHEndlichAussage, 8794563404312104274),
+  (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 10783882086571901253)]
 
 end Gabbro.Core.Waechter
