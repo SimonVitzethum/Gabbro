@@ -411,6 +411,6 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.blockPrecAussage, 0),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.rfindKonvergenzAussage, 0),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.rfindDivergenzAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.blockRfindAussage, 0)
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.blockRfindAussage, 0)]
 
 end Gabbro.Core.Waechter
