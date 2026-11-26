@@ -19,7 +19,7 @@ open Gabbro.Core.Ast.Semantik
 theorem bleibtImBlockPrecRumpf (cgBlk : List Befehl) (aus frei : Nat)
     (hcg : BleibtImBlock cgBlk) (hvCg : VerschiebbaresProgramm cgBlk) :
     BleibtImBlock (precRumpf cgBlk aus frei) := by
-  rw [precRumpf, ← List.append_assoc]
+  rw [precRumpf]
   apply bleibtImBlockAppend
   · apply bleibtImBlockAppend
     · exact bleibtImBlockPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
