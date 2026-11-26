@@ -464,10 +464,12 @@ theorem geraete_rule_faelle {k : Katalog} {binding : Binding k} {access : Regist
     {required : GeraetePhase} {target : Option GeraetePhase} {c : Kontext} {s u : State}
     {plan : Plan} (rule : Rule binding access required target c s plan u) :
     (∃ owned idle, u = setFrame s c { s.lokal c with pending := some (binding.question access) }) ∨
-      (∃ owned pending ready sameQuestion,
-        u = setFrame s c (geraete_consume_rahmen s c binding access sameQuestion.get target)) := by
+      (∃ owned, (s.lokal c).pending = some (binding.question access) ∧
+        ∃ answer, s.naechsteAntwort c = some answer ∧ answer.question = binding.question access ∧
+          u = setFrame s c (geraete_consume_rahmen s c binding access answer target)) := by
   cases rule with
   | issue owned idle => exact Or.inl ⟨owned, idle, rfl⟩
-  | consume owned pending ready sameQuestion => exact Or.inr ⟨owned, pending, ready, sameQuestion, rfl⟩
+  | consume owned pending ready sameQuestion =>
+      exact Or.inr ⟨owned, pending, ready, sameQuestion, rfl⟩
 
 end Gabbro.Core.Beobachtung
