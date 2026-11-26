@@ -223,8 +223,7 @@ theorem measurePrologue_rueckkante {kern : FunktionsKern} {m : Measure kern.koer
     (pre suffix : List Befehl) {pc : Nat} {b : Befehl}
     (within : pc < (bracedBlock kern.koerper.2.2).code.length)
     (head : (pre ++ (measurePrologue (some m)).code ++
-      ((bracedBlock kern.koerper.2.2).code ++ suffix))
-        [((pre ++ (measurePrologue (some m)).code).length + pc)]? = some b) :
+      ((bracedBlock kern.koerper.2.2).code ++ suffix))[((pre ++ (measurePrologue (some m)).code).length + pc)]? = some b) :
     (pre ++ (measurePrologue (some m)).code).length ≤
       (pre ++ (measurePrologue (some m)).code).length + pc - b.rueckweite := by
   rw [List.getElem?_append_right (Nat.le_add_right _ _), Nat.add_sub_cancel_left,
