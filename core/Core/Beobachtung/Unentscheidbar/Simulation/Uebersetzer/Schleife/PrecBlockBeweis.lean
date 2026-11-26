@@ -25,12 +25,12 @@ theorem precBlkLinksLaenge (ein frei freiL : Nat) : (precBlkLinks ein frei freiL
 
 theorem precBlkLinksBleibt (ein frei freiL : Nat) : BleibtImBlock (precBlkLinks ein frei freiL) := by
   rw [precBlkLinksGleich]
-  exact precBlkLinksBleibt ein frei freiL
+  exact bleibtImBlockLeft ein (frei + 0) freiL
 
 theorem precBlkLinksKorrekt (ein frei freiL : Nat) :
     BlockKorrekt (precBlkLinks ein frei freiL) .left ein (frei + 0) freiL := by
   rw [precBlkLinksGleich]
-  exact precBlkLinksKorrekt ein frei freiL
+  exact blockLeft ein (frei + 0) freiL (by omega) (by omega) (by omega)
 
 /-- The right projection segment, opaque for the same reason. -/
 @[irreducible] def precBlkRechts (ein frei freiL : Nat) : List Befehl :=
@@ -46,17 +46,17 @@ theorem precBlkRechtsLaenge (ein frei freiL : Nat) : (precBlkRechts ein frei fre
 
 theorem precBlkRechtsBleibt (ein frei freiL : Nat) : BleibtImBlock (precBlkRechts ein frei freiL) := by
   rw [precBlkRechtsGleich]
-  exact precBlkRechtsBleibt ein frei freiL
+  exact bleibtImBlockRight ein (frei + 1) freiL
 
 theorem precBlkRechtsVerschiebbar (ein frei freiL : Nat) :
     VerschiebbaresProgramm (precBlkRechts ein frei freiL) := by
   rw [precBlkRechtsGleich]
-  exact precBlkRechtsVerschiebbar ein frei freiL
+  exact verschiebbarRight ein (frei + 1) freiL
 
 theorem precBlkRechtsKorrekt (ein frei freiL : Nat) :
     BlockKorrekt (precBlkRechts ein frei freiL) .right ein (frei + 1) freiL := by
   rw [precBlkRechtsGleich]
-  exact precBlkRechtsKorrekt ein frei freiL
+  exact blockRight ein (frei + 1) freiL (by omega) (by omega) (by omega)
 
 /-- A standalone run that reaches the end of a prefix is also a run of the
     concatenation with any suffix. -/
@@ -109,8 +109,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     rw [precSchleifeLaenge]
     omega
   have hprecBlk : precBlk cfBlk cgBlk ein aus frei freiL freiCf = P ++ S := by
-    dsimp only [P, S, I, precBlkLinks ein frei freiL, precBlkRechts ein frei freiL]
-    rw [precBlk]
+    dsimp only [P, S, I]
+    rw [precBlk, precBlkLinksGleich, precBlkRechtsGleich]
   have hvS : VerschiebbaresProgramm S := by
     dsimp only [S]
     exact verschiebbarPrecSchleife cgBlk aus frei hcgV
@@ -134,10 +134,10 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have ha : Nat.Partrec.Code.eval .left n = Part.some a := by rfl
     have hk : Nat.Partrec.Code.eval .right n = Part.some k := by rfl
     obtain ⟨kLR, rLR, hrunLR, hpcLR, hrLRa, hrLRk, hpresLR, hlokLR, hrueckLR, hstoppLR⟩ :=
-      zweiEingaengeVor precBlkLinks ein frei freiL precBlkRechts ein frei freiL .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
-        (by rw [precBlkLinksGleich ein frei freiL]; exact precBlkLinksKorrekt ein frei freiL)
+      zweiEingaengeVor (precBlkLinks ein frei freiL) (precBlkRechts ein frei freiL) .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
+        (precBlkLinksKorrekt ein frei freiL)
         hvR
-        (by rw [precBlkRechtsGleich ein frei freiL]; exact precBlkRechtsKorrekt ein frei freiL)
+        (precBlkRechtsKorrekt ein frei freiL)
         (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
         n r hpc hr a k ha hk
     let rLR0 : Rahmen := { rLR with pc := 0 }
@@ -287,8 +287,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEndPS
     let Q := (precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL) ++ cfBlk
     have hlenQ : 0 < Q.length := by
-      dsimp only [Q, precBlkLinks ein frei freiL, precBlkRechts ein frei freiL]
-      rw [List.length_append, List.length_append, leftBlkLaenge, rightBlkLaenge]
+      dsimp only [Q]
+      rw [List.length_append, List.length_append, precBlkLinksLaenge, precBlkRechtsLaenge]
       omega
     have hpcP_Q : rP.pc = Q.length + I.length := by
       rw [hpcP]
@@ -298,12 +298,10 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       hpcP_Q.trans (@List.length_append Befehl Q I).symm
     obtain ⟨jI, rQ, hjIk, hrunIcomp, hrunQ, hpcQ⟩ :=
       randAusEndePrefix Q I hLRc hlenQ hlenI r jP rP hpc hrunP hpcP_Q'
-    have hlenL : 0 < precBlkLinks ein frei freiL.length := by
-      rw [precBlkLinksGleich ein frei freiL]
+    have hlenL : 0 < (precBlkLinks ein frei freiL).length := by
       rw [precBlkLinksLaenge ein frei freiL]
       omega
-    have hlenR : 0 < precBlkRechts ein frei freiL.length := by
-      rw [precBlkRechtsGleich ein frei freiL]
+    have hlenR : 0 < (precBlkRechts ein frei freiL).length := by
       rw [precBlkRechtsLaenge ein frei freiL]
       omega
     have hpcQ_LR : rQ.pc = (precBlkLinks ein frei freiL ++ precBlkRechts ein frei freiL).length + cfBlk.length := by
@@ -319,9 +317,9 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       randAusEndePrefix precBlkLinks ein frei freiL precBlkRechts ein frei freiL hL hlenL hlenR r jI rQ hpc hrunQ' hpcQ_LR'
     obtain ⟨a, kk, haeval, hkeval, hrLRa0, hrLRk0, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
       zweiEingaengeRueck precBlkLinks ein frei freiL precBlkRechts ein frei freiL .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
-        (by rw [precBlkLinksGleich ein frei freiL]; exact precBlkLinksKorrekt ein frei freiL)
+        (precBlkLinksKorrekt ein frei freiL)
         hL hlenL hvR
-        (by rw [precBlkRechtsGleich ein frei freiL]; exact precBlkRechtsKorrekt ein frei freiL)
+        (precBlkRechtsKorrekt ein frei freiL)
         hlenR (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
         n r hpc hr jC rLR hrunLR hpcLR
     let rLR0 : Rahmen := { rLR with pc := 0 }
