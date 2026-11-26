@@ -75,20 +75,20 @@ theorem bleibtImBlockKopie (ziel quelle : Nat) : BleibtImBlock (kopie ziel quell
     simp only [kopie, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h0]
     omega
   · rw [h1] at hget
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h1]
     omega
   · rw [h2] at hget
     simp only [kopie, List.getElem?_cons_succ, List.getElem?_cons_succ,
       List.getElem?_cons_zero] at hget
     injection hget with hb
     subst b
-    simp only [Befehl.auswerten, Rahmen.schreibe, h0, h1, h2]
+    simp only [Befehl.auswerten, Rahmen.schreibe, h2]
     omega
 
 /-- Forward reachability of the loop end with the first zero candidate in the
