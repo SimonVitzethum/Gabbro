@@ -190,9 +190,12 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     zahlOfNat _ _ _ hrE1s
   have hzb : rE1.zahl (frei + 3) = some ⟨(1 : Int), (1 : Int), Zahl.literal (1 : Int)⟩ :=
     zahlOfNat _ _ _ hrE1e
+  have g1 : prog[cgBlk.length + 97]? = some (.binaer .add (frei + 2)) := by
+    change (precSchleife cgBlk aus frei)[cgBlk.length + 97]? = some (.binaer .add (frei + 2))
+    exact precSchleifeBeiEnde1 cgBlk aus frei
   have eE1 := schrittBinaer prog rE1 (cgBlk.length + 97) (frei + 2) .add
     ⟨(y : Int), (y : Int), Zahl.literal (y : Int)⟩
-    ⟨(1 : Int), (1 : Int), Zahl.literal (1 : Int)⟩ hpcE1 hza hzb
+    ⟨(1 : Int), (1 : Int), Zahl.literal (1 : Int)⟩ hpcE1 hza hzb g1
   let rE2 : Rahmen := rE1.schreibe (frei + 2) (some (precAddWert y))
   have eE1' : (Schritt prog)^[1] (some rE1) = some rE2 := by
     change (Schritt prog)^[1] (some rE1) =
