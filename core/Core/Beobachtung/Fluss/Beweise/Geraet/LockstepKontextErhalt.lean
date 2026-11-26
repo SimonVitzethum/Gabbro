@@ -178,6 +178,8 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           hrechte₂, hleihen₂, _, _, _, _, _⟩ :=
                           geraete_issue_tick (target := target) aus₂a hplansA' rfl owned₂A idle₂A
                         let uR := setFrame s₂ c { s₂.lokal c with pending := some (d.binding.question access) }
+                        have heq : s₁.stelleFrage t c (d.binding.question access) = s₂.stelleFrage t c (d.binding.question access) := by
+                          simp only [Zustand.stelleFrage, hfragen]
                         have hbeob₁ : schrittBeob ρ₁ predictor t =
                             [.frage c.nummer s₁.fragen.length (d.binding.question access)] :=
                           geraete_issue_beob_tick (predictor := predictor) hlabel hz₁ hn₁ aus₁
@@ -236,8 +238,8 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           obtain rfl : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
                           obtain rfl : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                           refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-                          · rw [hfragen₁, hfragen₂, hfragen]
-                          · rw [hverlauf₁, hverlauf₂, hverlauf]
+                          · rw [hfragen₁, hfragen₂, heq, hfragen]
+                          · rw [hverlauf₁, hverlauf₂, heq, hverlauf]
                           · rw [hantworten₁, hantworten₂, hantworten]
                           · rw [hverbraucht₁, hverbraucht₂, hverbraucht]
                           · rw [hverworfen₁, hverworfen₂, hverworfen]
