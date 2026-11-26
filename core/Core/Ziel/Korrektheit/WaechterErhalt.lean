@@ -224,11 +224,14 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
                 have he := eintrittArgumente_erfuellt code frame target.parameter entry
                   h5 h.1 h.2.1
                 have hfort : entry.fortsetzungen = frame.fortsetzungen := by
-                  simp only [Rahmen.eintrittArgumente] at h5
+                  unfold Rahmen.eintrittArgumente at h5
                   split at h5
                   · cases h5
                     rfl
-                  · cases h5
+                  · split at h5
+                    · cases h5
+                      rfl
+                    · cases h5
                 refine ⟨?_, ?_, ?_⟩
                 · intro slot lo hi hlook g hg
                   rw [hfort] at hg ⊢
@@ -313,9 +316,25 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
   | waehleVariante source name labels cases branches =>
     cases h1 : (frame.temp source).bind (wertAls (variantValueType name labels cases)) with
     | none =>
-      exact transfer_unveraendert code frame live _ hmem h rfl rfl
+      have htemp : (((Befehl.waehleVariante source name labels cases branches).auswerten
+          frame live).temp) = frame.temp := by
+        simp only [Befehl.auswerten, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      have hfort : (((Befehl.waehleVariante source name labels cases branches).auswerten
+          frame live).fortsetzungen) = frame.fortsetzungen := by
+        simp only [Befehl.auswerten, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
     | some v =>
-      exact transfer_unveraendert code frame live _ hmem h rfl rfl
+      have htemp : (((Befehl.waehleVariante source name labels cases branches).auswerten
+          frame live).temp) = frame.temp := by
+        simp only [Befehl.auswerten, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      have hfort : (((Befehl.waehleVariante source name labels cases branches).auswerten
+          frame live).fortsetzungen) = frame.fortsetzungen := by
+        simp only [Befehl.auswerten, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
   | textLiteral dst decoded =>
     have hpoisI : beitragInt (Befehl.textLiteral dst decoded) dst = some .unbekannt := by
       exact if_pos List.mem_cons_self
@@ -340,13 +359,119 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
   | textIndex base capacity =>
     have hpoisT : beitragText (Befehl.textIndex base capacity) base = some .unbekannt := by
       exact if_pos List.mem_cons_self
-    exact transfer_schreibe_statischInt code frame live _ _ hmem h _
-      rfl (textIndex_hV code frame live base capacity hmem h) hpoisT
+    cases htext : (frame.temp base).bind (wertAls (.text capacity)) with
+    | none =>
+      have htemp : (((Befehl.textIndex base capacity).auswerten frame live).temp) =
+          frame.temp := by
+        simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+        rfl
+      have hfort : (((Befehl.textIndex base capacity).auswerten frame live).fortsetzungen) =
+          frame.fortsetzungen := by
+        simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+        rfl
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
+    | some text =>
+      cases hzahl : frame.zahl (base + 1) with
+      | none =>
+        have htemp : (((Befehl.textIndex base capacity).auswerten frame live).temp) =
+            frame.temp := by
+          simp only [Befehl.auswerten, htext, hzahl, Rahmen.halt, Id.run]
+          rfl
+        have hfort : (((Befehl.textIndex base capacity).auswerten frame live).fortsetzungen) =
+            frame.fortsetzungen := by
+          simp only [Befehl.auswerten, htext, hzahl, Rahmen.halt, Id.run]
+          rfl
+        exact transfer_unveraendert code frame live _ hmem h htemp hfort
+      | some offset =>
+        by_cases hneg : offset.zahl.wert < 0
+        case pos =>
+          have htemp : (((Befehl.textIndex base capacity).auswerten frame live).temp) =
+              frame.temp := by
+            simp only [Befehl.auswerten, htext, hzahl, if_pos hneg, Rahmen.halt, Id.run]
+            rfl
+          have hfort : (((Befehl.textIndex base capacity).auswerten frame live).fortsetzungen) =
+              frame.fortsetzungen := by
+            simp only [Befehl.auswerten, htext, hzahl, if_pos hneg, Rahmen.halt, Id.run]
+            rfl
+          exact transfer_unveraendert code frame live _ hmem h htemp hfort
+        case neg =>
+          cases hbyte : text.bytes[offset.zahl.wert.toNat]? with
+          | none =>
+            have htemp : (((Befehl.textIndex base capacity).auswerten frame live).temp) =
+                frame.temp := by
+              simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt, Id.run]
+              rfl
+            have hfort : (((Befehl.textIndex base capacity).auswerten frame live).fortsetzungen) =
+                frame.fortsetzungen := by
+              simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt, Id.run]
+              rfl
+            exact transfer_unveraendert code frame live _ hmem h htemp hfort
+          | some byte =>
+            have hschreibe : ((Befehl.textIndex base capacity).auswerten frame live) =
+                frame.schreibe base (some ⟨.int (0 : Int) 255, byteValue byte⟩) := by
+              simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt, Id.run]
+              rfl
+            exact transfer_schreibe_statischInt code frame live _ _ hmem h _
+              hschreibe (textIndex_hV code frame live base capacity hmem h) hpoisT
   | substring base capacity =>
     have hpoisI : beitragInt (Befehl.substring base capacity) base = some .unbekannt := by
       exact if_pos List.mem_cons_self
-    exact transfer_schreibe_statischText code frame live _ _ hmem h _ rfl hpoisI
-      (substring_hV code frame live base capacity hmem h)
+    cases htext : (frame.temp base).bind (wertAls (.text capacity)) with
+    | none =>
+      have htemp : (((Befehl.substring base capacity).auswerten frame live).temp) =
+          frame.temp := by
+        simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+        rfl
+      have hfort : (((Befehl.substring base capacity).auswerten frame live).fortsetzungen) =
+          frame.fortsetzungen := by
+        simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+        rfl
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
+    | some text =>
+      cases hfirst : frame.zahl (base + 1) with
+      | none =>
+        have htemp : (((Befehl.substring base capacity).auswerten frame live).temp) =
+            frame.temp := by
+          simp only [Befehl.auswerten, htext, hfirst, Rahmen.halt, Id.run]
+          rfl
+        have hfort : (((Befehl.substring base capacity).auswerten frame live).fortsetzungen) =
+            frame.fortsetzungen := by
+          simp only [Befehl.auswerten, htext, hfirst, Rahmen.halt, Id.run]
+          rfl
+        exact transfer_unveraendert code frame live _ hmem h htemp hfort
+      | some first =>
+        cases hlast : frame.zahl (base + 2) with
+        | none =>
+          have htemp : (((Befehl.substring base capacity).auswerten frame live).temp) =
+              frame.temp := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, Rahmen.halt, Id.run]
+            rfl
+          have hfort : (((Befehl.substring base capacity).auswerten frame live).fortsetzungen) =
+              frame.fortsetzungen := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, Rahmen.halt, Id.run]
+            rfl
+          exact transfer_unveraendert code frame live _ hmem h htemp hfort
+        | some last =>
+          by_cases hok : 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧
+              last.zahl.wert ≤ (text.bytes.size : Int)
+          case pos =>
+            have hschreibe : ((Befehl.substring base capacity).auswerten frame live) =
+                frame.schreibe base
+                  (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩) := by
+              simp only [Befehl.auswerten, htext, hfirst, hlast, if_pos hok, Rahmen.halt, Id.run]
+              rfl
+            exact transfer_schreibe_statischText code frame live _ _ hmem h _ hschreibe
+              hpoisI (substring_hV code frame live base capacity hmem h)
+          case neg =>
+            have htemp : (((Befehl.substring base capacity).auswerten frame live).temp) =
+                frame.temp := by
+              simp only [Befehl.auswerten, htext, hfirst, hlast, if_neg hok, Rahmen.halt, Id.run]
+              rfl
+            have hfort : (((Befehl.substring base capacity).auswerten frame live).fortsetzungen) =
+                frame.fortsetzungen := by
+              simp only [Befehl.auswerten, htext, hfirst, hlast, if_neg hok, Rahmen.halt, Id.run]
+              rfl
+            exact transfer_unveraendert code frame live _ hmem h htemp hfort
   | textLength base capacity =>
     have hpoisT : beitragText (Befehl.textLength base capacity) base = some .unbekannt := by
       exact if_pos List.mem_cons_self
@@ -367,9 +492,25 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
   | bindeRegion receiver init =>
     cases h1 : (frame.lokale[receiver]?.join.bind (wertAls .ownedRegion)) with
     | none =>
-      exact transfer_unveraendert code frame live _ hmem h rfl rfl
+      have htemp : (((Befehl.bindeRegion receiver init).auswerten frame live).temp) =
+          frame.temp := by
+        simp only [Befehl.auswerten, Rahmen.bindeRegion, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      have hfort : (((Befehl.bindeRegion receiver init).auswerten frame live).fortsetzungen) =
+          frame.fortsetzungen := by
+        simp only [Befehl.auswerten, Rahmen.bindeRegion, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
     | some slot =>
-      exact transfer_unveraendert code frame live _ hmem h rfl rfl
+      have htemp : (((Befehl.bindeRegion receiver init).auswerten frame live).temp) =
+          frame.temp := by
+        simp only [Befehl.auswerten, Rahmen.bindeRegion, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      have hfort : (((Befehl.bindeRegion receiver init).auswerten frame live).fortsetzungen) =
+          frame.fortsetzungen := by
+        simp only [Befehl.auswerten, Rahmen.bindeRegion, h1, Rahmen.halt, Id.run]
+        repeat' first | rfl | split
+      exact transfer_unveraendert code frame live _ hmem h htemp hfort
   | zugriff form =>
     have hbf := hrein _ hmem
     simp only [keinFremdzugriff] at hbf
