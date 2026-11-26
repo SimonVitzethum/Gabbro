@@ -20,6 +20,7 @@ module
 public import Core.Ast.Semantik.Runtime.Klasse.Klasse
 public import Core.Ast.Semantik.Runtime.Klasse.Zugriff
 public import Core.Ast.Semantik.Runtime.Faden.Erhalt
+public import Core.Maschine.Aussen
 
 @[expose] public section
 
@@ -240,6 +241,113 @@ def Schrittform.faedenNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zusta
   | .lokal | .ruf | .lesen .. | .schreiben .. | .rmw .. | .zaun .. | .sperre .. | .frage | .verbrauche
   | .wechsle | .maskiere | .prioritaet | .sendeUnterbrechung | .leiteLeitung => F.nach c s 0
 
+/-- **The frame writes the success bit of an outside answer into its named slot.**
+    A successful answer binds `true` at `ziel`; an error answer advances without writing
+    (the error ends the context at the state level, see `verbraucheNach`). -/
+def verbraucheSchreibe (ziel : Nat) (r : Rahmen) (a : Antwort) : Rahmen :=
+  match a.result with
+  | Except.ok _v => r.schreibe ziel (some ⟨.bool, true⟩)
+  | Except.error _e => r.weiter
+
+/-- The consume write keeps the continuation stack. -/
+theorem verbraucheSchreibe_fortsetzungen (ziel : Nat) (r : Rahmen) (a : Antwort) :
+    (verbraucheSchreibe ziel r a).fortsetzungen = r.fortsetzungen := by
+  cases h : a.result with
+  | ok _v => simp only [verbraucheSchreibe, h, Rahmen.schreibe]
+  | error _e => simp only [verbraucheSchreibe, h, Rahmen.weiter]
+
+/-- **The state after a consume step** (MK-06, value binding). The next arrived answer of the
+    acting context is taken: its success bit is bound at the operand slot, and an error answer
+    ends the context with a reason exit while writing nothing. The consumption counter moves in
+    both cases. Without an arrived answer the step is the private transfer (totality for
+    progress). Only the acting context changes. -/
+def Schrittform.verbraucheNach (F : Schrittform) (c : Kontext) (s : Zustand) : Zustand :=
+  match s.naechsteAntwort c with
+  | none => F.nach c s 0
+  | some a =>
+    let s1 := s.verbrauche c
+    let ziel := (F.operand (s.lokal c)).ziel
+    match a.reply.result with
+    | Except.ok _v =>
+      { s1 with lokal := Function.update s1.lokal c (verbraucheSchreibe ziel (s1.lokal c) a.reply) }
+    | Except.error _e =>
+      { s1 with
+        lokal := Function.update s1.lokal c (s1.lokal c).weiter,
+        status := Function.update s1.status c (.beendet (.grund PUnit.unit)) }
+
+/-- A consume step leaves every other context's frame alone. -/
+theorem Schrittform.verbraucheNach_andere (F : Schrittform) (c : Kontext) (s : Zustand)
+    (d : Kontext) (hd : d ≠ c) : (F.verbraucheNach c s).lokal d = s.lokal d := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach, Function.update_of_ne hd]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche, Function.update_of_ne hd]
+
+/-- A consume step keeps the authority ledger. -/
+theorem Schrittform.verbraucheNach_rechte (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).rechte = s.rechte := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the booking extents. -/
+theorem Schrittform.verbraucheNach_umfang (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung.umfang = s.buchung.umfang := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the questions, the answers and the epoch. -/
+theorem Schrittform.verbraucheNach_rahmen (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).fragen = s.fragen ∧
+      (F.verbraucheNach c s).antworten = s.antworten ∧
+      (F.verbraucheNach c s).epoche = s.epoche := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    refine ⟨?_, ?_, ?_⟩ <;> simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      refine ⟨?_, ?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+
+/-- A consume step keeps the outside part of the ledger. -/
+theorem Schrittform.verbraucheNach_aussen (F : Schrittform) (c : Kontext) (s : Zustand) :
+    (F.verbraucheNach c s).buchung.aussengriff = s.buchung.aussengriff ∧
+      (F.verbraucheNach c s).buchung.geraet = s.buchung.geraet := by
+  simp only [Schrittform.verbraucheNach]
+  cases h : s.naechsteAntwort c with
+  | none =>
+    refine ⟨?_, ?_⟩ <;> simp only [h, Schrittform.nach]
+  | some a =>
+    cases hr : a.reply.result with
+    | ok _v =>
+      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+    | error _e =>
+      refine ⟨?_, ?_⟩ <;> simp only [h, hr, Zustand.verbrauche]
+
 /-- **The step of a lifecycle class**: with the operands it names, the planned step (the protocol action of
     its class, no memory event) and the state above; without them, the private plan and the refusal. The
     machine decides whether the action itself runs: a start of a thread that does not rest, a join of a
@@ -250,14 +358,15 @@ def Schrittform.faedenschritt (F : Schrittform) (c : Kontext) (s : Zustand) (pla
   (F.klasse.befugt (F.operand (s.lokal c)) s c ∧ plans = [F.plan (s.lokal c) 0] ∧ u = F.faedenNach c s)
 
 /-- **The ideal step of a form, from its class.** A private or interrupt-control class has one private
-    plan and its frame transfer; an access class has the step above; a lifecycle class has the
+    plan and its frame transfer; the consume class has the private plan and the answer-binding
+    transfer `verbraucheNach`; an access class has the step above; a lifecycle class has the
     lifecycle step. -/
 def Schrittform.ideal (F : Schrittform) (c : Kontext) (s : Zustand) (_ : PUnit.{1})
     (plans : List Plan) (u : Zustand) : Prop :=
   match F.klasse with
   | .lokal => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .ruf => plans = [Semantik.plan] ∧ u = F.nach c s 0
-  | .verbrauche => plans = [Semantik.plan] ∧ u = F.nach c s 0
+  | .verbrauche => plans = [Semantik.plan] ∧ u = F.verbraucheNach c s
   | .maskiere => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .prioritaet => plans = [Semantik.plan] ∧ u = F.nach c s 0
   | .sendeUnterbrechung => plans = [Semantik.plan] ∧ u = F.nach c s 0
