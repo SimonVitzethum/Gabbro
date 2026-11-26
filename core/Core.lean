@@ -183,7 +183,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Kette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.KetteRand
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BlockKette
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Paar
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Divergenz
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Divergenz
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.BleibtImBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBerechnung
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBlock
@@ -194,7 +194,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.PaarKorrekt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.Hilfen
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.PaarBeweise.BlockPair
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Relokation.VerschiebbarBlk
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.VerschiebbarBlk
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleife
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecFolge
 public import Core.Beobachtung.SchrankenBeweise.Leicht
