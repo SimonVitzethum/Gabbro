@@ -240,6 +240,11 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
                 · intro k hk
                   rw [hfort] at hk
                   exact h.2.2 k hk
+              have hausw : ((Befehl.starte name).auswerten frame live) =
+                  entry.ruf name target.parameter target.result := by
+                simp only [Befehl.auswerten, hn, h2, h3, h4, h5, Rahmen.halt, Id.run]
+                rfl
+              rw [hausw]
               exact Rahmen.ruf_erfuellt code entry name target.parameter target.result hentry
     · have htemp : ((Befehl.starte name).auswerten frame live).temp = frame.temp := by
         simp only [Befehl.auswerten, hn, Rahmen.halt, Id.run]
