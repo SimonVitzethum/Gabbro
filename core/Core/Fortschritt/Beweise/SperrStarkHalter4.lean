@@ -57,12 +57,13 @@ theorem e4_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
       have hakt : wGebenPlan.aktion = .sperre () .geben := rfl
       rw [hakt] at hF
       generalize hev : spur.aussen = evs at hF
-      have hss : (s.sperren ()).Gibt c ((s.sperren ()).abgeben) := by
+      have hss : ∃ z, (s.sperren ()).Gibt c z := by
         cases hF with
         | sperre hnext _ =>
           cases hnext with
-          | geben hg => cases hg; rfl
-      rw [SperrZustand.Gibt.besitzt hss] at hpre
+          | geben hg => exact ⟨_, hg⟩
+      obtain ⟨_, hg⟩ := hss
+      rw [SperrZustand.Gibt.besitzt hg] at hpre
       cases hpre
     · obtain rfl := (List.cons.inj hpeq).1
       subst u
