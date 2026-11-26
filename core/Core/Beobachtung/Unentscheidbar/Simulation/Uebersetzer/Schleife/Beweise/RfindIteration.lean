@@ -322,14 +322,9 @@ theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
   · dsimp only [r3, r2]
     rw [updateHit]
   · intro s hs
-    dsimp only [r3, r2, r1]
-    rw [updateMiss r1.temp s aus (some (natVal y)) hs]
-    rfl
-  · dsimp only [r3, r1]
-    simp only [List.drop_cons]
-  · dsimp only [r3, r2]
-    rfl
-  · dsimp only [r3, r2]
-    rfl
+    simp [r3, r2, r1, updateMiss, hs]
+  · simp [r3, r1]
+  · simp [r3, r2]
+  · simp [r3, r2]
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
