@@ -121,7 +121,6 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     rw [hpres2 s (by omega) (by omega)]
     change r1.temp s = r.temp s
     rw [hpres1 s (by omega) (by omega)]
-    rfl
   · change r3.lokale = r.lokale
     exact hlok3.trans (hlok2.trans hlok1)
   · change r3.rueckgabe = r.rueckgabe
