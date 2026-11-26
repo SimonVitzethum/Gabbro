@@ -52,42 +52,54 @@ theorem substring_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
       ∀ (cap : Nat) (t : TextValue cap), d = ⟨.text cap, t⟩ → ∀ L H : Nat,
       umgebungText code dst = some (L, H) → L ≤ t.bytes.size ∧ t.bytes.size ≤ H := by
   intro d hd cap t hdt L H hlook
-  simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self, Rahmen.halt, Id.run, eq_self_iff_true, if_true] at hd
   cases htext : (frame.temp dst).bind (wertAls (.text capacity)) with
   | none =>
-    simp only [htext] at hd
-    rw [hdt] at hd
+    have htn : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+        frame.temp dst := by
+      simp only [Befehl.auswerten, htext, Rahmen.halt, Id.run]
+      rfl
+    rw [htn, hdt] at hd
     exact h.2.1 dst _ _ hlook _ hd cap t rfl
   | some text =>
-    simp only [htext] at hd
     cases hfirst : frame.zahl (dst + 1) with
     | none =>
-      simp only [hfirst] at hd
-      rw [hdt] at hd
+      have htn : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+          frame.temp dst := by
+        simp only [Befehl.auswerten, htext, hfirst, Rahmen.halt, Id.run]
+        rfl
+      rw [htn, hdt] at hd
       exact h.2.1 dst _ _ hlook _ hd cap t rfl
     | some first =>
-      simp only [hfirst] at hd
       cases hlast : frame.zahl (dst + 2) with
       | none =>
-        simp only [hlast] at hd
-        rw [hdt] at hd
+        have htn : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+            frame.temp dst := by
+          simp only [Befehl.auswerten, htext, hfirst, hlast, Rahmen.halt, Id.run]
+          rfl
+        rw [htn, hdt] at hd
         exact h.2.1 dst _ _ hlook _ hd cap t rfl
       | some last =>
-        simp only [hlast] at hd
         by_cases hok : 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧
             last.zahl.wert ≤ (text.bytes.size : Int)
         case pos =>
-          simp only [if_pos hok] at hd
-          change (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ :
-              Option Dynamisch) = some d at hd
+          have hdpos : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+              some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, if_pos hok, Rahmen.halt, Id.run]
+            show (Function.update frame.temp dst
+              (some ⟨.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ :
+                Option Dynamisch)) dst = _
+            simp only [Function.update_self]
+          rw [hdpos] at hd
           cases hd
           cases hdt
           exact substring_wertSat code dst capacity hmem text
             first.zahl.wert.toNat last.zahl.wert.toNat L H hlook
         case neg =>
-          simp only [if_neg hok] at hd
-          change frame.temp dst = some d at hd
-          rw [hdt] at hd
+          have hdneg : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+              frame.temp dst := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, if_neg hok, Rahmen.halt, Id.run]
+            rfl
+          rw [hdneg, hdt] at hd
           exact h.2.1 dst _ _ hlook _ hd cap t rfl
 
 /-- The text-length value satisfies every present integer lookup. -/
@@ -218,8 +230,9 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
               Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true,
               Option.bind_some, alsGanzzahl, bind, Option.bind, pure] at hg
             cases hg
+            let v : Vector (Wert (.int lo hi)) count := values
             exact liesArray_wertSat code basis count lo hi hmem
-              values[index.zahl.wert.toNat]'hbound L H hlook
+              v[index.zahl.wert.toNat]'hbound L H hlook
           case neg =>
             have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
                 basis).bind alsGanzzahl = none := by
