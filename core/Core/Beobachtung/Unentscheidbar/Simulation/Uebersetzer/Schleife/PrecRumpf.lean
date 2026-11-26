@@ -28,7 +28,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     ∃ k rEnd, (Schritt (precRumpf cgBlk aus frei))^[k] (some r) = some rEnd ∧
       rEnd.pc = (precRumpf cgBlk aus frei).length ∧
       rEnd.temp aus = some (natVal v) ∧
-      (∀ s, s < freiCg → s ≠ aus → s ≠ frei + 4 → s ≠ frei + 5 → rEnd.temp s = r.temp s) ∧
+      (∀ s, s < frei + 10 → s ≠ aus → s ≠ frei + 4 → s ≠ frei + 5 → rEnd.temp s = r.temp s) ∧
       rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   rcases hcg with ⟨hcgEin, hcgAus, hcgUn, hcgNr⟩
   obtain ⟨k1, r1, hrun1, hpc1, hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
@@ -116,7 +116,7 @@ theorem precRumpfLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     exact hr3aus
   · intro s hs hneAus hneQ hneP
     change r3.temp s = r.temp s
-    rw [hpres3 s hs hneAus]
+    rw [hpres3 s (by omega) hneAus]
     change r2.temp s = r.temp s
     rw [hpres2 s (by omega) hneP]
     change r1.temp s = r.temp s
