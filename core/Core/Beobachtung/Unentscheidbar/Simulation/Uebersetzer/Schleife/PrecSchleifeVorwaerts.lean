@@ -106,7 +106,7 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     have hr1a : r1.temp (frei + 0) = some (natVal a) := by
       rw [hpres1 (frei + 0) (by omega)
         (addNeLinks (by decide : (0 : Nat) ≠ 6)) (addNeLinks (by decide : (0 : Nat) ≠ 7))
-        (ltNeAdd haus) (addNeLinks (by decide : (0 : Nat) ≠ 2))
+        (by omega) (addNeLinks (by decide : (0 : Nat) ≠ 2))
         (addNeLinks (by decide : (0 : Nat) ≠ 3)) (addNeLinks (by decide : (0 : Nat) ≠ 4))
         (addNeLinks (by decide : (0 : Nat) ≠ 5))]
       exact ha
