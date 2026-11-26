@@ -129,7 +129,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hdel : (ρ₂.hw.angebot t).delivery a.question.endpoint = true := by
                     rw [← offered₁.1]
                     exact offered₂.2.1.1
-                  exact (geraete_interrupt_schliesst_antwort_aus gueltig pend₂.2.2.2.2 hdel).elim
+                  exact (geraete_interrupt_schliesst_antwort_aus (a := a) gueltig pend₂.2.2.2.2 hdel).elim
                 | absturz crash₂ =>
                   exfalso
                   rw [crash₂.1.2] at hkein₂
@@ -140,7 +140,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have append₂ := h2.2.2.1
                   have stateEq₂ := h2.2.2.2
                   have aeq := geraete_antwort_eindeutig hinv₂ offered₂' offered₂
-                  have hbeob₁ := geraete_antwort_beob_tick (predictor := predictor) hlabel hz₁ hn₁ h1typ
+                  have hbeob₁ := geraete_antwort_beob_tick (predictor := predictor) hlabel hz₁ hn₁ h1copy
                   have hbeob₂ : schrittBeob ρ₂ predictor t = aussenBeob (d.unit locals) (.antwort a) := by
                     rw [← aeq]
                     exact geraete_antwort_beob_tick (predictor := predictor)
@@ -148,8 +148,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hlen := kopplung_laenge (geraeteKopplung_kopplung hkopp)
                   refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂]
-                    let L₁ := NiedrigeBeob (d.unit locals) ρ₁ predictor t
-                    let L₂ := NiedrigeBeob (d.unit locals) ρ₂ predictor t
+                    let L₁ := NiedrigeBeob.praefix (d.unit locals) ρ₁ predictor t
+                    let L₂ := NiedrigeBeob.praefix (d.unit locals) ρ₂ predictor t
                     let A := aussenBeob (d.unit locals) (.antwort a)
                     have hlenP : L₁.length = L₂.length := by
                       simpa only [L₁, L₂, NiedrigeBeob] using hlen
@@ -174,18 +174,24 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                   have hn2rechte : n₂.rechte = s₂.rechte := by rw [stateEq₂]; rfl
                   have hn1leihen : n₁.leihen = s₁.leihen := by rw [stateEq₁]; rfl
                   have hn2leihen : n₂.leihen = s₂.leihen := by rw [stateEq₂]; rfl
-                  have hn1fragen : n₁.fragen = s₁.fragen ++ [a] := by
+                  have hn1epoche : n₁.epoche = s₁.epoche := by rw [stateEq₁]; rfl
+                  have hn2epoche : n₂.epoche = s₂.epoche := by rw [stateEq₂]; rfl
+                  have hn1geliefert : n₁.geliefert = s₁.geliefert := by rw [stateEq₁]; rfl
+                  have hn2geliefert : n₂.geliefert = s₂.geliefert := by rw [stateEq₂]; rfl
+                  have hn1kerne : n₁.kerne = s₁.kerne := by rw [stateEq₁]; rfl
+                  have hn2kerne : n₂.kerne = s₂.kerne := by rw [stateEq₂]; rfl
+                  have hn1fragen : n₁.fragen = s₁.fragen := by
                     rw [stateEq₁]
                     rfl
-                  have hn2fragen : n₂.fragen = s₂.fragen ++ [a] := by
-                    have h := congrArg Zustand.fragen stateEq₂
-                    simpa only [Zustand.fragen, aeq] using h
+                  have hn2fragen : n₂.fragen = s₂.fragen := by
+                    rw [stateEq₂]
+                    rfl
                   have hn1verlauf : n₁.verlauf = s₁.verlauf ++ [(a.cut, .antwort a.question a.reply)] := by
                     rw [stateEq₁]
                     rfl
                   have hn2verlauf : n₂.verlauf = s₂.verlauf ++ [(a.cut, .antwort a.question a.reply)] := by
                     have h := congrArg Zustand.verlauf stateEq₂
-                    simpa only [Zustand.verlauf, aeq] using h
+                    simpa only [Zustand.antwort, aeq] using h
                   have hn1antworten : n₁.antworten = s₁.antworten ++ [a] := by
                     rw [stateEq₁]
                     rfl
@@ -228,10 +234,11 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                         simpa only [hn1initial, hn2initial] using hq.2.2.1 x
                       · simpa only [hn1rechte, hn2rechte] using hq.2.2.2.1
                       · simpa only [hn1leihen, hn2leihen] using hq.2.2.2.2.1
-                      · exact hnaPost c
-                    · rw [hn1lokal, hn2lokal, hstate.2.2.2.2]
-                    · rw [hn1rechte, hn2rechte, hstate.2.2.2.1]
-                    · rw [hn1status, hn2status, hstate.2.2.2.2]
+                      · intro c
+                        exact hnaPost c
+                    · rw [hn1epoche, hn2epoche, hstate.2.1]
+                    · rw [hn1geliefert, hn2geliefert, hstate.2.2.1]
+                    · rw [hn1kerne, hn2kerne, hstate.2.2.2.1]
                     · rw [hn1status, hn2status, hstate.2.2.2.2]
                   · simp only [NiedrigeBeob, NiedrigeBeob.praefix, hbeob₁, hbeob₂,
                       List.length_append]
