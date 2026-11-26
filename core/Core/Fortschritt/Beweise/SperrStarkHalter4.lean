@@ -81,20 +81,23 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
   · rcases hreg with ⟨hs, hreg⟩
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
+      subst u
       cases hF
       rw [hziel]
       rcases hcrash with hvor | hnach
       · refine ⟨?_, Or.inl ?_⟩
-        · constructor
-          · simpa only [SperrZustand.anstellen] using hlock.1
+        · cases hss
+          simp only [Function.update_self, SperrZustand.anstellen, List.mem_append, List.mem_singleton]
+          constructor
+          · exact hlock.1
           · intro d hd
-            simpa only [SperrZustand.anstellen, List.mem_append] using
-              (Or.elim hd hlock.2 (fun hdmem => Or.inr ⟨d, hdmem, hs⟩))
+            rcases hd with hd | rfl
+            · exact hlock.2 d hd
+            · exact hs
         · exact vorCrash4_von (s := u) rfl rfl (vorCrash4_von (s := s) rfl rfl hvor)
       · exact (hnach.1 c hs k hlk).elim
     · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
+      subst u
       cases hF
       rw [hziel]
       rcases hcrash with hvor | hnach
@@ -106,7 +109,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       · exact (hnach.1 c hs k hlk).elim
   · rcases hreg with ⟨_, hss, hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
-    subst hueq
+    subst u
     cases hF
     rw [hziel]
     rcases hcrash with hvor | hnach
@@ -133,7 +136,7 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
         exact hlock.1) k hlk).elim
   · rcases hreg with ⟨hpeq, hueq⟩
     obtain rfl := (List.cons.inj hpeq).1
-    subst hueq
+    subst u
     cases hF
     rw [hziel]
     refine ⟨hlock, ?_⟩
