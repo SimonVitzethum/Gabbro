@@ -92,13 +92,12 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       simpa only [P, S, List.append_assoc] using hh.trans hrunLR
     have hrunKfull : (Schritt (P ++ S))^[3] (some rLR) = some (mitPc LR.length rK) := by
       have hs := laufMitPc LR K S hvK rLR0 3 hbleibK
+      rw [hKrun] at hs
       rw [hmitLR] at hs
       simpa only [P, S, List.append_assoc] using hs
     have hrKa : rK.temp (frei + 0) = some (natVal a) := by
       dsimp only [rK, rLR0]
       rw [updateMiss _ (frei + 0) (frei + 2) _ (by omega)]
-      change rLR.temp (frei + 0) = _
-      rw [hpresLR (frei + 0) (by omega) (by omega)]
       exact hrLRa
     have hrKm1 : rK.temp (frei + 1) = some (natVal m) := by
       dsimp only [rK, rLR0]
@@ -111,8 +110,8 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     have hmitEntry : mitPc P.length rEntry = mitPc LR.length rK := by
       show { mitPc LR.length rK with pc := P.length + 0 } = mitPc LR.length rK
       rw [show P.length = (mitPc LR.length rK).pc by
-        change P.length = LR.length + rK.pc
-        rw [hpcK]
+        dsimp only [rK]
+        change P.length = LR.length + 3
         dsimp only [P, K]
         rw [List.length_append, kopieLaenge]
         omega, Nat.add_zero]
@@ -121,8 +120,10 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     have hrEntrym2 : rEntry.temp (frei + 2) = some (natVal m) := hrKm2
     obtain ⟨kE, rE, hrunE, hpcE, hausE, hpresE, hlokE, hrueckE, hstoppE⟩ :=
       rfindErreich cfBlk cf a aus frei freiCf ⟨hcfEin, hcfAus, hcfUn, hcfNr⟩ hcfV
-        (v - m) m m v rEntry rfl (by omega) hmv hrEntrya hrEntrym1 hrEntrym2 hzero
-        (fun y hy1 hy2 => (hvor y (by omega) hy2).1)
+        (v - m) m m v rfl (by omega) hmv rEntry rfl hrEntrya hrEntrym1 hrEntrym2 hzero
+        (fun y hy1 hy2 => by
+          obtain ⟨vv, hvv, hvne⟩ := hvor y (by omega) hy2
+          exact ⟨vv, hvv⟩)
         (fun y hy1 hy2 => by
           obtain ⟨vv, hvv, hvne⟩ := hvor y (by omega) hy2
           intro hzy
@@ -208,7 +209,7 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     have hjK3 : jK = 3 := by
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-      · exact laufStirbtNach K rLR0 jK 3 rMid rKRef hrunMid hpcMid hKref hpcKref hlt
+      · exact laufStirbtNach K rLR0 jK 3 rMid rKRef hrunMid hpcMid hKref hlt
       · exact laufStirbtNach K rLR0 3 jK rKRef rMid hKref hpcKref hrunMid hgt
     have hrMidEq : rMid = rKRef := by
       subst jK
@@ -219,14 +220,14 @@ theorem blockRfind (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       rw [hrMidEq]
       change LR.length + rKRef.pc = P.length
       rw [hpcKref]
-      dsimp only [P, K]
-      rw [List.length_append, kopieLaenge]
+      dsimp only [P, K, LR]
+      rw [List.length_append, List.length_append, kopieLaenge]
     let rEntry : Rahmen := { rB with pc := 0 }
     have hmitP : mitPc P.length rEntry = rB := by
       show { rB with pc := P.length + 0 } = rB
       rw [show P.length = rB.pc by rw [hrBpc], Nat.add_zero]
     have htailB : (Schritt (P ++ S))^[k - jLR - jK] (some rB) = some rEnd := by
-      rw [show k - jLR = jK + (k - jLR - jK) by omega] at htail'
+      rw [show k - jLR = (k - jLR - jK) + jK by omega] at htail'
       rw [Function.iterate_add_apply, hrunB] at htail'
       simpa only [P, List.append_assoc] using htail'
     have htailB' : (Schritt (P ++ S))^[k - jLR - jK] (some (mitPc P.length rEntry)) = some rEnd := by
