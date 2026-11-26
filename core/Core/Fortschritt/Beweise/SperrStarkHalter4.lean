@@ -64,8 +64,9 @@ theorem e4_kontext_inv {t : Nat} {c : Kontext} {s u v s' : Zustand Unit Unit Uni
     {w : Unit} {spur : SchrittSpur Unit Unit} (hinv : inv4 s) (hreg : e4Regel c s w [plan] u)
     (hF : FuehrtAus E_4.einrichtung t c s u plan.aktion sperren spur.aussen v)
     (hziel : s' = {v with graph := s'.graph}) : inv4 s' := by
-  rcases hreg with ⟨hs, ⟨⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩⟩⟩ |
-    ⟨_, hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
+  rcases hreg with hreg | hreg | hreg
+  · rcases hreg with ⟨hs, hreg⟩
+    rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
       subst hueq
       cases hF
@@ -87,30 +88,32 @@ theorem e4_kontext_inv {t : Nat} {c : Kontext} {s u v s' : Zustand Unit Unit Uni
       obtain ⟨r, _, hnext⟩ := nimmt_inv hss
       rw [← hnext]
       exact ⟨hs, by intro d hd; exact hlock.2 d hd⟩
-    · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
-      cases hF
-      rw [hziel]
-      rcases hinv with ⟨hlock, hcrash⟩
-      refine ⟨?_, hcrash⟩
-      obtain ⟨q, _, hnext⟩ := gibt_abgeben hss
-      rw [← hnext]
-      cases q with
-      | nil =>
-        exact ⟨⟨by simp only [SperrZustand.abgeben],
-          by simp only [SperrZustand.abgeben]; intro d hd; cases hd⟩, hcrash⟩
-      | cons d rest =>
-        refine ⟨⟨?_, ?_⟩, hcrash⟩
-        · simp only [SperrZustand.abgeben]
-          exact hlock.2 d (by simp)
-        · intro e he
-          simp only [SperrZustand.abgeben] at he ⊢
-          exact hlock.2 e he
-    · obtain rfl := (List.cons.inj hpeq).1
-      subst hueq
-      cases hF
-      rw [hziel]
-      exact hinv
+  · rcases hreg with ⟨_, hss, hpeq, hueq⟩
+    obtain rfl := (List.cons.inj hpeq).1
+    subst hueq
+    cases hF
+    rw [hziel]
+    rcases hinv with ⟨hlock, hcrash⟩
+    refine ⟨?_, hcrash⟩
+    obtain ⟨q, _, hnext⟩ := gibt_abgeben hss
+    rw [← hnext]
+    cases q with
+    | nil =>
+      exact ⟨⟨by simp only [SperrZustand.abgeben],
+        by simp only [SperrZustand.abgeben]; intro d hd; cases hd⟩, hcrash⟩
+    | cons d rest =>
+      refine ⟨⟨?_, ?_⟩, hcrash⟩
+      · simp only [SperrZustand.abgeben]
+        exact hlock.2 d (by simp)
+      · intro e he
+        simp only [SperrZustand.abgeben] at he ⊢
+        exact hlock.2 e he
+  · rcases hreg with ⟨hpeq, hueq⟩
+    obtain rfl := (List.cons.inj hpeq).1
+    subst hueq
+    cases hF
+    rw [hziel]
+    exact hinv
 
 /-- An answer arrival changes only the answer ledgers, never dispatch, masks or locks. -/
 theorem e4_antwort_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
@@ -137,8 +140,8 @@ theorem e4_absturz_inv {s s' : Zustand Unit Unit Unit Unit Bool Unit}
     all_goals
       by_cases hk' : k' = 0
       · subst k'
-        simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4]
-      · simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, Function.update_of_ne hk']
+        simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4]
+      · simp [Zustand.wiederanlauf, wEinrichtungGesperrt4, eintritt4, E_4, Function.update_of_ne hk']
 
 /-- One ideal step preserves the invariant. -/
 theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
