@@ -76,6 +76,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           obtain ⟨hkein₁, h1⟩ := geraete_impl_antwort hstepTyp
           have h1typ : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog
               ρ₁.hw t a s₁ spur n₁ := h1
+          have h1copy := h1typ
           obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1typ
           obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
             (by intro h; rw [hz₁] at h; cases h.1)
@@ -83,7 +84,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           subst v₁
           have gut₂ : s₂.SpeicherGut := geraete_lauf_speicher_gut vergleich.rechts t hz₂
           obtain ⟨spur₂, n₂t, hstep₂t, spurEq₂⟩ :=
-            geraete_antwort_transport vergleich hkopp hz₁ hz₂ gut₂ h1typ
+            geraete_antwort_transport vergleich hkopp hz₁ hz₂ gut₂ h1copy
           have hang := geraete_angebot_gleich vergleich t
           have hkein₂ : (ρ₂.hw.angebot t).crash = false := by
             rw [← hang]
@@ -97,11 +98,9 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           | schritt lab₂ step₂ =>
             cases hn₂ : ρ₂.zeit.zustand (t + 1) with
             | none =>
-              rw [hz₂] at step₂
               rw [hn₂] at step₂
               cases step₂
             | some n₂ =>
-              rw [hz₂] at step₂
               rw [hn₂] at step₂
               cases step₂ with
               | schritt impl₂ =>
