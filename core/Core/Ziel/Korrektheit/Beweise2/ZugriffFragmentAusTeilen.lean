@@ -32,7 +32,7 @@ theorem zugriffNIFragmentAusTeilen
     · exact stummer_schritt_koppelt vergleich zustand kopf tick
         (antwortNI p plattform h₂ ρ₂ vergleich.rechts t · ·) hpriv kopplung
     · subst f
-      exact zugriff p plattform z fluss h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor
+      exact zugriff p plattform z fluss vergleich predictor t c w spur vor
         zustand kopf tick kopplung
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with
