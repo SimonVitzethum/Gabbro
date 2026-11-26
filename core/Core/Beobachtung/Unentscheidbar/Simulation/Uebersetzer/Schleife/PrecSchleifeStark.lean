@@ -148,7 +148,7 @@ theorem precSchleifeRueckStark (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         change r7.temp (frei + 1) = some (natVal ((j + 1) + k))
         rw [hpres7 (frei + 1) (by omega) (by omega)]
         rw [hk]
-        exact congrArg natVal (show j + (k + 1) = (j + 1) + k by omega)
+        rw [show j + (k + 1) = (j + 1) + k by omega]
       have hrBi : rB.temp aus = some (natVal v1) := by
         rw [hrBMid]
         change rMid.temp aus = some (natVal v1)
@@ -243,7 +243,7 @@ theorem precSchleifeRueckStark (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
           (some rBack) = some rEnd := by
         rw [hkdecomp2, hrunToBack] at hrun
         exact hrun
-      obtain ⟨v, hihFolge, hihTemp⟩ := ih (j + 1) v1 v rBack rEnd (schr - (8 + jB + 3))
+      obtain ⟨v, hihFolge, hihTemp⟩ := ih (j + 1) v1 rBack rEnd (schr - (8 + jB + 3))
         hrBackpc hrBacka hrBackk hrBacky hrBacki haus hcgf hcg hcgv hbl hRest hpcEnd
       refine ⟨v, ?_, hihTemp⟩
       rw [precFolgeVonSchritt, hv1, Part.bind_some]
