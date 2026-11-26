@@ -131,7 +131,7 @@ theorem e1_klauseln : KlauselnWahr E_1 := by
 
 /-- A context step preserves the free lock: tickets keep the owner, the stutter keeps
     the state. -/
-theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
+theorem e1_kontext_erhaelt {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
     {u : Zustand Unit Unit Unit Unit Bool Unit} {s' : Zustand Unit Unit Unit Unit Bool Unit}
     {plan : SchrittPlan Unit Unit Unit Unit} {spur : SchrittSpur Unit Unit}
     {c : Kontext} {w : Unit}
@@ -146,9 +146,7 @@ theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit U
     obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
     have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
     rw [hakt] at hF
-    generalize hau : spur.aussen = au
-    clear hau
-    cases hF with
+    inversion hF with
     | sperre hF' _ =>
       cases hF' with
       | ticket _ _ =>
@@ -160,9 +158,7 @@ theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit U
     obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
     have hakt : stutterPlan.aktion = .intern := rfl
     rw [hakt] at hF
-    generalize hau : spur.aussen = au
-    clear hau
-    cases hF with
+    inversion hF with
     | intern =>
       rw [heq]
       exact hpre
