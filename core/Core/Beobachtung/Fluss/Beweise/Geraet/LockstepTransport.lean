@@ -9,6 +9,7 @@ namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
 open Gabbro.Core.Ast.LowLevel.Device
+open Gabbro.Core.Ast.LowLevel (entryContext)
 open Gabbro.Core.Ast
 
 variable {k : Katalog} {scope : Scope} {locals : Umgebung scope}
@@ -412,25 +413,25 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
     by_cases hp : (s.lokal entryContext).pending = none
     · exact (hwiderlege (hidle hp)).elim
     · cases hbusy hp with
-      | inl hbb => exact (hwiderlege hbb.2.2.2).elim
+      | inl hbb => exact (hwiderlege hbb.2.2).elim
       | inr hub =>
         obtain ⟨hnm, hverb, hex⟩ := hub
         have htake : s.fragen.take (s.antworten.length + 1) = s.fragen := by
           rw [← hnm]
-          exact List.take_length _
+          exact List.take_length
         have hfa := geraete_antwort_erklaert_letzte_frage hnm hrange hfwd hq0mem hzu0 hfrisch
         have hfa' := geraete_antwort_erklaert_letzte_frage hnm hrange hfwd hq1mem hzu1 hfrisch'
         rw [htake] at hfa hfa'
         have hn : s.antworten.length < s.fragen.length := by rw [hnm]; omega
-        have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]) (by simpa only [hnm])
-        have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]) (by simpa only [hnm])
-        have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]⟩ = a := by
+        have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
+        have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
+        have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a := by
           simp only [List.getElem_append_right]
-        have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]⟩ = a' := by
+        have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a' := by
           simp only [List.getElem_append_right]
         rw [hgeta] at hzua
         rw [hgeta'] at hzua'
-        have hqeq : s.fragen.get ⟨s.antworten.length, by simpa only [hnm]⟩ = s.fragen.get ⟨s.antworten.length, by simpa only [hnm]⟩ := rfl
+        have hqeq : s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ = s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ := rfl
         have hinst : a.questionInstance = a'.questionInstance :=
           hzua.2.2.1.symm.trans hzua'.2.2.1
         have hctx : a.context = a'.context :=
