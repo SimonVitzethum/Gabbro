@@ -79,7 +79,8 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     have hn : Nat.pair a k = n := by
       dsimp only [a, k]
       exact Nat.pair_unpair n
-    rw [← hn] at hv
+    have hvOrig : Nat.Partrec.Code.eval (.prec cf cg) n = Part.some v := hv
+    rw [← hn] at hvOrig
     rw [evalPrecAlsFolge] at hv
     obtain ⟨v0, hcfEval, hvFolge⟩ := Part.bind_eq_some_iff.mp hv
     have ha : Nat.Partrec.Code.eval .left n = Part.some a := by rfl
@@ -166,26 +167,39 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
     obtain ⟨kS, rS, hrunS, hpcS, hrSaus, hpresS, hlokS, hrueckS, hstoppS⟩ :=
       precSchleifeVorwaerts cgBlk cf cg a aus frei freiCg k v0 v rI0
         rfl hrI0a hrI0k hrI0c hrI0v
-        haus hfreiCg20 hcg hcgV hcfEval hv
+        haus hfreiCg20 hcg hcgV hcfEval hvOrig
     have hbleibS := laufBleibtVorEnde S rI0 kS rS hrunS hpcS
     have hshiftS : (Schritt (P ++ S))^[kS] (some rI) = some (mitPc P.length rS) := by
       have hs := laufMitPc P S [] hvS rI0 kS hbleibS
       rw [hmitI] at hs
       rw [hrunS] at hs
       simpa only [List.append_nil] using hs
+    have hbleibLR := laufBleibtVorEnde (L ++ R) r kLR rLR hrunLR hpcLR
+    have hrunLR_G : (Schritt (P ++ S))^[kLR] (some r) = some rLR := by
+      rw [hprecBlk]
+      simpa only [P, List.append_assoc] using
+        ((laufAnhang (L ++ R) (cfBlk ++ I ++ S) r kLR hbleibLR).trans hrunLR)
+    have hpCcomp : rCcomp.pc = ((L ++ R) ++ cfBlk).length := by
+      simp only [rCcomp, mitPc, List.length_append]
+      rw [hpcC]
+    have hrunC_G : (Schritt (P ++ S))^[kC] (some rLR) = some rCcomp := by
+      have hg := laufImAnhang ((L ++ R) ++ cfBlk) (I ++ S) rLR kC rCcomp hshiftC hpCcomp
+      simpa only [P, List.append_assoc] using hg
+    have hrunI_G : (Schritt (P ++ S))^[1] (some rCcomp) = some rI := by
+      simpa only [P, List.append_assoc] using (laufImAnhang P S rCcomp 1 rI eI hpI)
     rw [hprecBlk]
-    refine ⟨kS + (kC + 1), mitPc P.length rS, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · rw [Function.iterate_add_apply, hrunFullI, hshiftS]
-    · rw [hprecBlk]
-      simp only [mitPc, hpcS, List.length_append]
+    refine ⟨kS + (1 + (kC + kLR)), mitPc P.length rS, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [Function.iterate_add_apply, Function.iterate_add_apply,
+        Function.iterate_add_apply, hrunLR_G, hrunC_G, hrunI_G, hshiftS]
+    · simp only [mitPc, hpcS, List.length_append]
     · change rS.temp aus = some (natVal v)
       exact hrSaus
     · intro s hs hneAus
       change rS.temp s = r.temp s
       rw [hpresS s (by omega) hneAus]
       change rI.temp s = r.temp s
-      change (rCcomp.schreibe (frei + 2) (some (natVal 0))).temp s = r.temp s
-      rw [Rahmen.schreibe, updateMiss _ _ _ _ (by omega : s ≠ frei + 2)]
+      change (Function.update rCcomp.temp (frei + 2) (some (natVal 0))) s = r.temp s
+      rw [updateMiss rCcomp.temp s (frei + 2) (some (natVal 0)) (by omega)]
       change rC.temp s = r.temp s
       rw [hpresC s (by omega) hneAus]
       change rLR.temp s = r.temp s
