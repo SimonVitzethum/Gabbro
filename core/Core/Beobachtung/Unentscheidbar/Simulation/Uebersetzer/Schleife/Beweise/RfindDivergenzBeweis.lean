@@ -43,9 +43,7 @@ theorem rfindDivergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
             hcfBlk hvBlk hdef hnz
         refine ⟨k1 + K, by omega, r1, ?_, rpc1, ra1, rm1, ?_⟩
         · rw [Function.iterate_add_apply, hrun, hrun1]
-        · rw [ry1]
-          congr 1
-          omega
+        · simpa only [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using ry1
     obtain ⟨K, hKge, rt, hrun, _⟩ := hBound k
     obtain ⟨rk, hrk⟩ := laufHatZwischen (rfindSchleife cfBlk aus frei) r K k rt hrun (by omega)
     rw [hk] at hrk
