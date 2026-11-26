@@ -1,7 +1,7 @@
 module
 
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlock
-public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueckSchleife
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeStark
 
 @[expose] public section
 
@@ -211,6 +211,172 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       exact hrueckS.trans (hrueckC.trans hrueckLR)
     · change rS.stopp = r.stopp
       exact hstoppS.trans (hstoppC.trans hstoppLR)
-  · intro k rEnd hrun hpcEnd hvEnd
-    sorry
+  · intro k rEnd hrun hpcEnd
+    rw [hprecBlk] at hrun hpcEnd
+    have hlenP : 0 < P.length := by
+      dsimp only [P]
+      rw [List.length_append]
+      simp only [I, List.length_cons, List.length_nil]
+      omega
+    obtain ⟨jP, rP, hjPk, hrunScomp, hrunP, hpcP⟩ :=
+      randAusEndePrefix P S hP hlenP hlenS r k rEnd hpc hrun hpcEnd
+    have hkdecP : (Schritt (P ++ S))^[k] (some r) =
+        (Schritt (P ++ S))^[k - jP] ((Schritt (P ++ S))^[jP] (some r)) := by
+      rw [← Function.iterate_add_apply]
+      congr 1
+      omega
+    have hkS : (Schritt (P ++ S))^[k - jP] (some rP) = some rEnd := by
+      rw [hkdecP, hrunScomp] at hrun
+      exact hrun
+    let rP0 : Rahmen := { rP with pc := 0 }
+    have hmitP : mitPc P.length rP0 = rP := by
+      show { rP with pc := P.length + 0 } = rP
+      rw [show P.length + 0 = rP.pc by rw [hpcP, Nat.add_zero]]
+    have hkS' : (Schritt (P ++ S))^[k - jP] (some (mitPc P.length rP0)) = some rEnd := by
+      rw [hmitP]
+      exact hkS
+    obtain ⟨rS, hrunS, hpcS, hEqEnd⟩ :=
+      rueckMitPc P S hvS rP0 (k - jP) rEnd hkS' hpcEnd
+    let Q := (L ++ R) ++ cfBlk
+    have hlenQ : 0 < Q.length := by
+      dsimp only [Q, L, R]
+      rw [List.length_append, List.length_append, leftBlkLaenge, rightBlkLaenge]
+      omega
+    have hpcP_Q : rP.pc = Q.length + I.length := by
+      rw [hpcP]
+      dsimp only [P]
+      rw [List.length_append]
+    obtain ⟨jI, rQ, hjIk, hrunIcomp, hrunQ, hpcQ⟩ :=
+      randAusEndePrefix Q I hLRc hlenQ hlenI r jP rP hpc hrunP hpcP_Q
+    have hlenL : 0 < L.length := by
+      dsimp only [L]
+      rw [leftBlkLaenge]
+    have hlenR : 0 < R.length := by
+      dsimp only [R]
+      rw [rightBlkLaenge]
+    have hpcQ_LR : rQ.pc = (L ++ R).length + cfBlk.length := by
+      rw [hpcQ]
+      dsimp only [Q]
+      rw [List.length_append]
+    obtain ⟨jC, rLR, hjCk, hrunCcomp, hrunLR, hpcLR⟩ :=
+      randAusEndePrefix L R hL hlenL hlenR r jI rQ hpc hrunQ hpcQ_LR
+    obtain ⟨a, kk, haeval, hkeval, hrLRa0, hrLRk0, hpresLRr, hlokLRr, hrueckLRr, hstoppLRr⟩ :=
+      zweiEingaengeRueck L R .left .right ein (frei + 0) (frei + 1) freiL freiL freiL
+        (by dsimp only [L]; exact blockLeft ein (frei + 0) freiL (by omega) (by omega) (by omega))
+        hL hlenL hvR
+        (by dsimp only [R]; exact blockRight ein (frei + 1) freiL (by omega) (by omega) (by omega))
+        hlenR (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
+        n r hpc hr jC rLR hrunLR hpcLR
+    let rLR0 : Rahmen := { rLR with pc := 0 }
+    have hrLR0a : rLR0.temp (frei + 0) = some (natVal a) := hrLRa0
+    have hkdecQ : (Schritt (L ++ R ++ cfBlk))^[jI] (some r) =
+        (Schritt (L ++ R ++ cfBlk))^[jI - jC] ((Schritt (L ++ R ++ cfBlk))^[jC] (some r)) := by
+      rw [← Function.iterate_add_apply]
+      congr 1
+      omega
+    have hkC : (Schritt (L ++ R ++ cfBlk))^[jI - jC] (some rLR) = some rQ := by
+      rw [hkdecQ, hrunCcomp] at hrunQ
+      exact hrunQ
+    have hmitLR : mitPc (L ++ R).length rLR0 = rLR := by
+      show { rLR with pc := (L ++ R).length + 0 } = rLR
+      rw [show (L ++ R).length + 0 = rLR.pc by rw [hpcLR, Nat.add_zero]]
+    have hkC' : (Schritt (L ++ R ++ cfBlk))^[jI - jC]
+        (some (mitPc (L ++ R).length rLR0)) = some rQ := by
+      rw [hmitLR]
+      exact hkC
+    have hpcQend : rQ.pc = (L ++ R).length + cfBlk.length := hpcQ_LR
+    obtain ⟨rC, hrunC, hpcC, hEqQ⟩ :=
+      rueckMitPc (L ++ R) cfBlk hcfV rLR0 (jI - jC) rQ hkC' hpcQend
+    obtain ⟨v0, hcfEval0, hrCaus, hpresCr, hlokCr, hrueckCr, hstoppCr⟩ :=
+      (hcfNr a rLR0 rfl hrLR0a).2 (jI - jC) rC hrunC hpcC
+    let rQ0 : Rahmen := { rQ with pc := 0 }
+    have hmitQ : mitPc Q.length rQ0 = rQ := by
+      show { rQ with pc := Q.length + 0 } = rQ
+      rw [show Q.length + 0 = rQ.pc by rw [hpcQ, Nat.add_zero]]
+    have hIget : I[0]? = some (.literal (frei + 2) 0) := by
+      dsimp only [I]
+      simp only [List.getElem?_cons_zero]
+    have eIref : (Schritt I)^[1] (some rQ0) = some (rQ0.schreibe (frei + 2) (some (natVal 0))) := by
+      simpa only [Function.iterate_one, Rahmen.schreibe] using
+        (schrittLiteral I rQ0 0 (frei + 2) 0 rfl hIget)
+    have hbleibI := laufBleibtVorEnde I rQ0 1 (rQ0.schreibe (frei + 2) (some (natVal 0)))
+      eIref (by dsimp only [I]; simp only [List.length_cons, List.length_nil])
+    have hrunIcomp' : (Schritt (Q ++ I))^[1] (some rQ) =
+        some (rQ0.schreibe (frei + 2) (some (natVal 0))) := by
+      have hs := laufMitPc Q I [] hvI rQ0 1 hbleibI
+      simpa only [List.append_nil, hmitQ, eIref] using hs
+    have hPendEq : rP = rQ0.schreibe (frei + 2) (some (natVal 0)) :=
+      Option.some.inj (hrunIcomp'.symm.trans hrunIcomp)
+    have hrP0a : rP0.temp (frei + 0) = some (natVal a) := by
+      rw [hPendEq]
+      change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 0) = some (natVal a)
+      rw [updateMiss rQ.temp (frei + 0) (frei + 2) (some (natVal 0)) (by omega)]
+      change rQ.temp (frei + 0) = some (natVal a)
+      rw [hEqQ]
+      change rC.temp (frei + 0) = some (natVal a)
+      rw [hpresCr (frei + 0) (by omega) (by omega)]
+      exact hrLR0a
+    have hrP0k : rP0.temp (frei + 1) = some (natVal kk) := by
+      rw [hPendEq]
+      change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 1) = some (natVal kk)
+      rw [updateMiss rQ.temp (frei + 1) (frei + 2) (some (natVal 0)) (by omega)]
+      change rQ.temp (frei + 1) = some (natVal kk)
+      rw [hEqQ]
+      change rC.temp (frei + 1) = some (natVal kk)
+      rw [hpresCr (frei + 1) (by omega) (by omega)]
+      change rLR.temp (frei + 1) = some (natVal kk)
+      exact hrLRk0
+    have hrP0c : rP0.temp (frei + 2) = some (natVal 0) := by
+      rw [hPendEq]
+      change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 2) = some (natVal 0)
+      rw [updateHit]
+    have hrP0v : rP0.temp aus = some (natVal v0) := by
+      rw [hPendEq]
+      change (Function.update rQ.temp (frei + 2) (some (natVal 0))) aus = some (natVal v0)
+      rw [updateMiss rQ.temp aus (frei + 2) (some (natVal 0)) (by omega)]
+      change rQ.temp aus = some (natVal v0)
+      rw [hEqQ]
+      change rC.temp aus = some (natVal v0)
+      exact hrCaus
+    obtain ⟨vFinal, hFolge, hEndTemp⟩ :=
+      precSchleifeRueckStark cgBlk cf cg a aus frei freiCg 0 v0 k rP0 rS (k - jP)
+        rfl hrP0a (by simpa only [Nat.zero_add] using hrP0k) hrP0c hrP0v
+        haus hfreiCg20 hcg hcgv hbl hrunS hpcS
+    have hn : Nat.pair a kk = n := by
+      dsimp only [a, kk]
+      exact Nat.pair_unpair n
+    have hEvalPair : Nat.Partrec.Code.eval (.prec cf cg) n = Part.some vFinal := by
+      rw [← hn, evalPrecAlsFolge, hcfEval0, Part.bind_some]
+      exact hFolge
+    refine ⟨vFinal, hEvalPair, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hEqEnd]
+      change rS.temp aus = some (natVal vFinal)
+      exact hEndTemp
+    · intro s hs hneAus
+      rw [hEqEnd]
+      change rS.temp s = r.temp s
+      have hpresS' : rS.temp s = rP0.temp s := hpresS s (by
+        rw [hpcS]
+        dsimp only [S]
+        rw [precSchleifeLaenge]
+        omega) hneAus
+      rw [hpresS']
+      rw [hPendEq]
+      change (Function.update rQ.temp (frei + 2) (some (natVal 0))) s = r.temp s
+      rw [updateMiss rQ.temp s (frei + 2) (some (natVal 0)) (by omega)]
+      change rQ.temp s = r.temp s
+      rw [hEqQ]
+      change rC.temp s = r.temp s
+      rw [hpresCr s (by omega) hneAus]
+      change rLR.temp s = r.temp s
+      exact hpresLRr s (by omega) (by omega) (by omega)
+    · rw [hEqEnd]
+      change rS.lokale = r.lokale
+      exact hlokS.trans (hlokCr.trans hlokLRr)
+    · rw [hEqEnd]
+      change rS.rueckgabe = r.rueckgabe
+      exact hrueckS.trans (hrueckCr.trans hrueckLRr)
+    · rw [hEqEnd]
+      change rS.stopp = r.stopp
+      exact hstoppS.trans (hstoppCr.trans hstoppLRr)
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
