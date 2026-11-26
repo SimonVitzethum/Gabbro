@@ -222,4 +222,94 @@ theorem akzeptiert_E_4 : Akzeptiert E_4 :=
      ⟨Gabbro.Core.Aussen.zulassung_m2 _, e4_aussen_gueltig⟩, e4_fluss,
      e4_schranken_lokal, e4_sec, e4_domaenen⟩, e4_klauseln, waechter_E_4⟩
 
+theorem e4_sperrSpeicher {g : SpeicherGraph Unit Unit} (hk : g.graph.Konsistent)
+    (hv : g.graph.Vollstaendig) (c : Kontext) (a : Speicher.Art) :
+    ∃ es g', Speicherfolge (fun _ => ()) (.kontext c) g [⟨a, (), .ra, (), ()⟩] es g' := by
+  obtain ⟨r, es, g', hf⟩ := speicherzug_existiert (fun _ => ()) (.kontext c)
+    hk hv a () .ra () (fun _ => by decide)
+  cases r
+  exact ⟨es, g', hf⟩
+
+theorem e4_sperrAus {t c s u next} {a : SperrAktion}
+    {p : SchrittPlan Unit Unit Unit Unit} {es g}
+    (hp : p.aktion = .sperre () a) (hr : p.lesen = []) (hw : p.fuss = [])
+    (hf : Zustandsrahmen s u) (hs : SperrSchritt a c (s.sperren ()) next)
+    (hm : Speicherfolge s.initial (.kontext c) s.graph
+      (sperrEreignisse (s.sperren ()) next () (s.initial ())) es g) :
+    FuehrtSchrittAus E_4.einrichtung t c s u p ⟨es, []⟩
+      { u with sperren := Function.update s.sperren () next, graph := g } := by
+  refine ⟨hf, ?_, _, _, ?_, ?_, rfl⟩
+  · rw [hr]
+    exact fun _ h => (List.not_mem_nil h).elim
+  · rw [hp]
+    exact .sperre hs (fun _ => trivial)
+  · simpa only [hr, hw, schreibEreignisse, List.filter_nil, List.map_nil, List.append_nil]
+      using hm
+
+theorem e4_frame (s : Zustand Unit Unit Unit Unit Bool Unit) :
+    Zustandsrahmen s s :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The ideal run has a real owner and executes its release from the canonical empty lock. -/
+theorem e4_ideal_halter_erfuellbar :
+    ∃ ρ : I.Lauf E_4, I.Laeufe E_4 ρ ∧
+      ((ρ.zeit.zustand 2).sperren ()).besitzer = some A ∧
+      ((ρ.zeit.zustand 2).sperren ()).Gibt A ((ρ.zeit.zustand 3).sperren ()) ∧
+      ∃ sp, ρ.zeit.spur 2 = some (.kontext A (), sp) ∧
+        FuehrtSchrittAus E_4.einrichtung 2 A (ρ.zeit.zustand 2) (ρ.zeit.zustand 2)
+          wGebenPlan sp (ρ.zeit.zustand 3) := by
+  have fair := Umgebung.referenz_fair Plattform.x86_64.katalog 1 sicht0
+    Plattform.x86_64.katalog_wohlgeformt (by decide)
+  obtain ⟨start, hstart⟩ := zulStart_erfuellbar fair.hardware wBild_gueltig
+  let i0 := (I.start E_4 start).2
+  have hgraph : i0.graph.graph.Konsistent ∧ i0.graph.graph.Vollstaendig :=
+    ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
+  let i1 := { toggleUpdate A i0 with sperren := Function.update i0.sperren () ⟨none, [A]⟩ }
+  obtain ⟨es2, g2, hg2⟩ := e4_sperrSpeicher hgraph.1 hgraph.2 A .rmw
+  have hgood := hg2.viele.gut hgraph.1 hgraph.2
+  let i2 := { i1 with sperren := Function.update i1.sperren () ⟨some A, []⟩, graph := g2 }
+  obtain ⟨es3, g3, hg3⟩ := e4_sperrSpeicher hgood.1 hgood.2 A .schreiben
+  let i3 := { i2 with sperren := Function.update i2.sperren () .frei, graph := g3 }
+  have ht : SperrSchritt .ticket A (i0.sperren ()) ⟨none, [A]⟩ :=
+    .ticket (fun h => nomatch h) List.not_mem_nil
+  have hn : (i1.sperren ()).Nimmt A ⟨some A, []⟩ := .frei A []
+  have hg : (i2.sperren ()).Gibt A (i3.sperren ()) := .besitzer A []
+  have htAus : FuehrtSchrittAus E_4.einrichtung 0 A i0 (toggleUpdate A i0)
+      ticketPlan ⟨[], []⟩ i1 :=
+    e4_sperrAus rfl rfl rfl (e4_frame i0) ht (.nil _)
+  have hnAus : FuehrtSchrittAus E_4.einrichtung 1 A i1 i1 nehmenPlan ⟨es2, []⟩ i2 :=
+    e4_sperrAus rfl rfl rfl (e4_frame i1) (.nehmen hn) hg2
+  have hgAus : FuehrtSchrittAus E_4.einrichtung 2 A i2 i2 wGebenPlan ⟨es3, []⟩ i3 :=
+    e4_sperrAus rfl rfl rfl (e4_frame i2) (.geben hg) hg3
+  let z : Nat → Zustand Unit Unit Unit Unit Bool Unit
+    | 0 => i0
+    | 1 => i1
+    | 2 => i2
+    | _ + 3 => i3
+  let trace : Nat → SchrittWahl Unit × SchrittSpur Unit Unit
+    | 1 => (.kontext A (), ⟨es2, []⟩)
+    | 2 => (.kontext A (), ⟨es3, []⟩)
+    | _ => (.kontext A (), ⟨[], []⟩)
+  have ticks (t : Nat) : I.Schritt E_4.einrichtung E_4.system E_4.katalog hw1
+      t (z t) (trace t) (z (t + 1)) := by
+    match t with
+    | 0 => exact .kontext (hw1_crash 0) ⟨0, hw1_opp0 0, rfl, rfl⟩
+        (e4_impl_ticket statisch4_A ht) htAus
+    | 1 => exact .kontext (hw1_crash 1) ⟨0, hw1_opp0 1, rfl, rfl⟩
+        (e4_impl_nehmen statisch4_A (.nehmen hn)) hnAus
+    | 2 => exact .kontext (hw1_crash 2) ⟨0, hw1_opp0 2, rfl, rfl⟩
+        (e4_impl_geben hg) hgAus
+    | t + 3 => exact .kontext (hw1_crash _) ⟨0, hw1_opp0 _, rfl, rfl⟩
+        ⟨(), rfl, Or.inr (Or.inr ⟨rfl, rfl⟩)⟩
+        ⟨e4_frame i3, fun _ h => (List.not_mem_nil h).elim, [], i3, .intern, .nil _, rfl⟩
+  let ρ : I.Lauf E_4 := ⟨start, h1, hw1, ⟨z, fun t => some (trace t),
+    fun t => .schritt rfl (ticks t)⟩, fun _ => none⟩
+  refine ⟨ρ, ⟨fair.hardware, fair.konform, hstart, rfl, ⟨?_, ?_⟩, ?_⟩,
+    rfl, hg, ⟨_, rfl, hgAus⟩⟩
+  · intro t ht _
+    cases ht
+  · exact fun _ => ⟨0, fun _ _ => rfl⟩
+  · intro t c h
+    cases h
+
 end Gabbro.Core.Fortschritt
