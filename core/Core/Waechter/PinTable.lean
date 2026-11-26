@@ -406,11 +406,11 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.KostenSchaetzerKorrektAussage, 3038677247240970749),
   (`Gabbro.Core.Beobachtung.GebundenKHEndlichAussage, 12616975233130910026),
   (`Gabbro.Core.Beobachtung.KostenEndlichWurzelAussage, 9850116192743815101),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precRumpfRueckAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precSchleifeRueckAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 0),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 0)]
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precRumpfRueckAussage, 6140744517555631564),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.precSchleifeRueckAussage, 16535037678167256809),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 17631386630129323543),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 12112313260783346741),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 8960706728827970986),
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 14524978725030075693)]
 
 end Gabbro.Core.Waechter
