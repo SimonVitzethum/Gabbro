@@ -66,8 +66,8 @@ def Abschlussrueckkehr (s u : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
     Zustand L Ort Wert Raum Lok Grund :=
   { u with kerne :=
       match c with
-      | .faden _ => u.kerne
-      | .handler k _ _ | .nmi k _ =>
+      | .faden _thread => u.kerne
+      | .handler k _vector _delivery | .nmi k _delivery =>
         if (s.kerne k).laeuft = some c ∧ (s.kerne k).stapel ≠ [] then
           Function.update u.kerne k (s.kerne k).zurueck
         else u.kerne }
