@@ -25,11 +25,11 @@ theorem rfindDivergenzAussageFalsch :
   let r : Rahmen := { rBasis with temp := temp' }
   have hpc : r.pc = 0 := rfl
   have ha : r.temp (10 + 0) = some (natVal 0) := by
-    simp only [r, Nat.add_zero, Function.update_self, Function.update_of_ne]
+    simp only [r, temp', Nat.add_zero, Function.update_self, Function.update_of_ne]
   have hm1 : r.temp (10 + 1) = some (natVal 0) := by
-    simp only [r, Function.update_self, Function.update_of_ne]
+    simp only [r, temp', Function.update_self, Function.update_of_ne]
   have hm2 : r.temp (10 + 2) = some (natVal 0) := by
-    simp only [r, Function.update_self]
+    simp only [r, temp', Function.update_self]
   have hEquiv := hDiv 0 r hpc ha hm1 hm2
   have hL : ((∀ y, 0 ≤ y → ∃ v, Nat.Partrec.Code.eval (Nat.Partrec.Code.const 1)
         (Nat.pair 0 y) = Part.some v) ∧
