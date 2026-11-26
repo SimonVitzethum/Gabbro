@@ -234,16 +234,11 @@ theorem absturz_laeufe_erfuellbar {h : Umgebung} {s : AussenStart} {hw : HwLauf}
   exact ⟨ρ, η, run, ideal, startEq, startEq', hwEq.trans hwEq'.symm, hwEq.symm ▸ fairCrash,
     label, label'⟩
 
-/-- THE TWO RUN PREMISES OF THE PROGRESS LEG — scheduler fairness and preemption return —
-    and the fair schedule that delivers them. `Laeufe` above admits every maximal run;
-    the two properties it does not supply are premises of the pinned progress statement
-    instead: `SchedulerFair` (a continuously dispatched, live and rule-enabled context with
-    infinitely many opportunities on its dispatch core is stepped infinitely often — an
-    execution-model property, never a catalogue row) and `VerdraengungKehrtZurueck` (a live
-    context displaced by an interrupt is dispatched again at a strictly later cut).
-    The fair schedule (`fairerZeit`) serves every continuously ready context infinitely
-    often (`fairer_zeit_fair`), so `fairer_lauf_mit_hw` builds an admissible scheduler-fair
-    run for every conformant hardware history. -/
+/- The two run premises of the progress leg and the fair schedule that delivers them:
+   `Laeufe` above admits every maximal run; scheduler fairness and preemption return
+   are premises of the pinned progress statement instead. The fair schedule
+   (`fairerZeit`) serves every continuously ready context, so `fairer_lauf_mit_hw`
+   builds an admissible scheduler-fair run for every conformant history. -/
 
 /-- Scheduler fairness of an implementation run (PERFECT-MODEL §3.7, step M11): a context that is
     dispatched, live and rule-enabled on a whole suffix — with a crash-free tick and a complete
