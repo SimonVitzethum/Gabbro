@@ -470,7 +470,7 @@ theorem geraete_rule_faelle {k : Katalog} {binding : Binding k} {access : Regist
           u = setFrame s c (geraete_consume_rahmen s c binding access answer target)) := by
   cases rule with
   | issue owned idle => exact Or.inl ⟨owned, idle, rfl⟩
-  | consume owned pending ready sameQuestion =>
-      exact Or.inr ⟨owned, pending, ready, sameQuestion, rfl⟩
+  | @consume owned answer pending ready sameQuestion =>
+      exact Or.inr ⟨owned, pending, answer, ready, sameQuestion, rfl⟩
 
 end Gabbro.Core.Beobachtung
