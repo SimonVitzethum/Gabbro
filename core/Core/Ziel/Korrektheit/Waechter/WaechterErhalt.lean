@@ -10,7 +10,7 @@
 -/
 module
 
-public import Core.Ziel.Korrektheit.WaechterWert
+public import Core.Ziel.Korrektheit.Waechter.WaechterWert
 
 @[expose] public section
 

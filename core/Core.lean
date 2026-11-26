@@ -218,11 +218,11 @@ public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.PrueferKlauseln
 public import Core.Ziel.Korrektheit.PrueferRestBeweis
 public import Core.Ziel.Korrektheit.PrueferWaechterBeweise
-public import Core.Ziel.Korrektheit.WaechterAnalyse
-public import Core.Ziel.Korrektheit.WaechterTransfer
-public import Core.Ziel.Korrektheit.WaechterSchritt
-public import Core.Ziel.Korrektheit.WaechterWert
-public import Core.Ziel.Korrektheit.WaechterErhalt
+public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
+public import Core.Ziel.Korrektheit.Waechter.WaechterTransfer
+public import Core.Ziel.Korrektheit.Waechter.WaechterSchritt
+public import Core.Ziel.Korrektheit.Waechter.WaechterWert
+public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher

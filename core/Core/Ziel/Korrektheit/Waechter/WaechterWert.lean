@@ -7,7 +7,7 @@
 -/
 module
 
-public import Core.Ziel.Korrektheit.WaechterSchritt
+public import Core.Ziel.Korrektheit.Waechter.WaechterSchritt
 
 @[expose] public section
 

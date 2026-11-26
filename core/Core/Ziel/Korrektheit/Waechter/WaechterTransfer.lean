@@ -12,7 +12,7 @@
 -/
 module
 
-public import Core.Ziel.Korrektheit.WaechterAnalyse
+public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Frame
 public import Core.Ast.Aggregate.Runtime
