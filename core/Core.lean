@@ -231,6 +231,7 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindSchleifeLage
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindExit
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindIteration
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
