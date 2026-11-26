@@ -292,6 +292,7 @@ public import Core.Ziel.Korrektheit.Waechter.WaechterTransfer
 public import Core.Ziel.Korrektheit.Waechter.WaechterSchritt
 public import Core.Ziel.Korrektheit.Waechter.WaechterWert
 public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
+public import Core.Ziel.Korrektheit.Waechter.WaechterRahmen
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher
