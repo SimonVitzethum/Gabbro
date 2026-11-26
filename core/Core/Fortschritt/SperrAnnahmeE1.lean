@@ -50,14 +50,15 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
         generalize hau : spur.aussen = au at hF
+        clear hau
         cases hF
         case sperre _ _ =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
-            rw [hziel]
+            simp only [hziel]
           refine ⟨⟨fun ev h2 => (List.not_mem_nil h2).elim,
             ⟨[], hwb.trans (List.append_nil _).symm, fun _ h2 => (List.not_mem_nil h2).elim⟩⟩,
             fun hoffen q hmem hepo hant => ?_⟩
-          rw [hziel] at hmem hepo hant ⊢
+          simp only [hziel] at hmem hepo hant ⊢
           exact hoffen q hmem hepo hant
       · obtain rfl := (List.cons.inj hpeq).1
         subst hueq
@@ -65,6 +66,7 @@ theorem e1_aussen_gueltig : AussenGueltig E_1 := by
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
         generalize hau : spur.aussen = au at hF
+        clear hau
         cases hF
         case intern =>
           have hwb : s'.buchung.wirkungen = s.buchung.wirkungen := by
@@ -150,6 +152,7 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
         rw [hakt] at hF
         generalize hau : spur.aussen = au at hF
+        clear hau
         cases hF
         case sperre hF' _ =>
           cases hF' with
@@ -163,6 +166,7 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
         have hakt : stutterPlan.aktion = .intern := rfl
         rw [hakt] at hF
         generalize hau : spur.aussen = au at hF
+        clear hau
         cases hF
         case intern =>
           rw [heq]
