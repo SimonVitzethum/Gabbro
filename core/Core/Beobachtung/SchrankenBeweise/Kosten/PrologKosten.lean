@@ -93,11 +93,11 @@ theorem schaetzeEintritt_prolog_le (z : Wirkungsklasse → KlassenKostenzeile)
     kern.prologKosten z ≤ estimate := by
   cases hm : aufrufKosten z tab u (funktionsAnzahl u.2 + 2) mainName 0 with
   | none =>
-    simp only [schaetzeEintritt, hm, Option.bind_none] at estimated
+    simp only [schaetzeEintritt, hm] at estimated
     cases estimated
   | some cost =>
     have h := aufrufKosten_prolog_le z tab u _ mainName 0 cost kern found hm
-    simp only [schaetzeEintritt, hm, Option.bind_some] at estimated
+    simp only [schaetzeEintritt, hm] at estimated
     have he : summeDeklarationen z u.2 + (z .ruf).kosten + cost + (z .lokal).kosten =
         estimate := Option.some.inj estimated
     omega
