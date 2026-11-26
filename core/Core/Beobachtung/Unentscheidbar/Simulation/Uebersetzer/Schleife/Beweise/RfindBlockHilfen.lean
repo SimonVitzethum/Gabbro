@@ -36,7 +36,7 @@ theorem verschiebbarRfindSchleife (cfBlk : List Befehl) (aus frei : Nat)
       · unfold VerschiebbarVon
         intro j hj
         simp only [rfindNullTest, List.length_cons, List.length_nil] at hj
-        interval_cases j <;> refine ⟨_, rfl, by simp [Verschiebbar], ?_⟩ <;>
+        interval_cases j <;> refine ⟨_, rfl, by simp only [Verschiebbar], ?_⟩ <;>
           intro d hd <;> cases hd
       · rw [rfindNullTestLaenge]
         unfold VerschiebbarVon

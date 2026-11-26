@@ -30,7 +30,7 @@ theorem rfindEvalZeigt (cf : Nat.Partrec.Code) (a m y : Nat)
   have htrue : true ∈ p i := hiR.1
   have hfalse : ∀ {j}, j < i → false ∈ p j := hiR.2
   obtain ⟨v0, hv0, hv0eq⟩ := (Part.mem_map_iff (fun v : Nat => decide (v = 0))).1 htrue
-  have hv0zero : v0 = 0 := of_decide_eq_true hv0eq
+  have hv0zero : v0 = 0 := decide_eq_true_eq.mp hv0eq
   have hzero : Nat.Partrec.Code.eval cf (Nat.pair a (i + m)) = Part.some 0 :=
     Part.eq_some_iff.2 (by simpa only [hv0zero] using hv0)
   refine ⟨by omega, ?_, ?_⟩
@@ -57,7 +57,7 @@ theorem rfindEvalBeiNull (cf : Nat.Partrec.Code) (a m : Nat)
       simp only [Part.mem_some_iff]
     have hm' : 0 ∈ Nat.Partrec.Code.eval cf (Nat.pair a (0 + m)) := by
       simpa only [Nat.zero_add] using hm
-    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hm', by simp⟩
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hm', rfl⟩
   have hmemR : 0 ∈ Nat.rfind p := Nat.mem_rfind.2 ⟨hmem0, by
     intro j hj
     exact (Nat.not_lt_zero _ hj).elim⟩
@@ -84,7 +84,7 @@ theorem rfindEvalWeiter (cf : Nat.Partrec.Code) (a m y : Nat)
     have hyadd : (y - m) + m = y := by omega
     have hz' : 0 ∈ Nat.Partrec.Code.eval cf (Nat.pair a ((y - m) + m)) := by
       simpa only [hyadd] using hz
-    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hz', by simp⟩
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hz', rfl⟩
   have hmemF : ∀ {j}, j < y - m → false ∈ p j := by
     intro j hj
     have hjge : m ≤ j + m := by omega
@@ -100,13 +100,13 @@ theorem rfindEvalWeiter (cf : Nat.Partrec.Code) (a m y : Nat)
         intro he
         apply hnz
         rw [hv, he]
-      exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', by simp [hvne]⟩
+      exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', decide_eq_false_iff_not.mpr hvne⟩
     · have hjm : m + 1 ≤ j + m := by omega
       obtain ⟨v, hv, hvne⟩ := hvor (j + m) hjm hjlt
       have hv' : v ∈ Nat.Partrec.Code.eval cf (Nat.pair a (j + m)) := by
         rw [hv]
         simp only [Part.mem_some_iff]
-      exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', by simp [hvne]⟩
+      exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', decide_eq_false_iff_not.mpr hvne⟩
   have hmemR : (y - m) ∈ Nat.rfind p := Nat.mem_rfind.2 ⟨hmemZ, hmemF⟩
   have hR : Nat.rfind p = Part.some (y - m) := Part.eq_some_iff.2 hmemR
   have hgoal : (Nat.rfind p).map (fun n => n + m) = Part.some y := by
@@ -132,7 +132,7 @@ theorem rfindEvalAusVor (cf : Nat.Partrec.Code) (a m y : Nat)
     have hyadd : (y - m) + m = y := by omega
     have hz' : 0 ∈ Nat.Partrec.Code.eval cf (Nat.pair a ((y - m) + m)) := by
       simpa only [hyadd] using hz
-    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hz', by simp⟩
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨0, hz', rfl⟩
   have hmemF : ∀ {j}, j < y - m → false ∈ p j := by
     intro j hj
     have hjm : m ≤ j + m := by omega
@@ -141,7 +141,7 @@ theorem rfindEvalAusVor (cf : Nat.Partrec.Code) (a m y : Nat)
     have hv' : v ∈ Nat.Partrec.Code.eval cf (Nat.pair a (j + m)) := by
       rw [hv]
       simp only [Part.mem_some_iff]
-    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', by simp [hvne]⟩
+    exact (Part.mem_map_iff (fun v : Nat => decide (v = 0))).2 ⟨v, hv', decide_eq_false_iff_not.mpr hvne⟩
   have hR : Nat.rfind p = Part.some (y - m) :=
     Part.eq_some_iff.2 (Nat.mem_rfind.2 ⟨hmemZ, hmemF⟩)
   have hgoal : (Nat.rfind p).map (fun n => n + m) = Part.some y := by
