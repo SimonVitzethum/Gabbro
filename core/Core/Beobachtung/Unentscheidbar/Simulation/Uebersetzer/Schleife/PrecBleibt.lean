@@ -19,14 +19,21 @@ open Gabbro.Core.Ast.Semantik
 theorem bleibtImBlockPrecRumpf (cgBlk : List Befehl) (aus frei : Nat)
     (hcg : BleibtImBlock cgBlk) (hvCg : VerschiebbaresProgramm cgBlk) :
     BleibtImBlock (precRumpf cgBlk aus frei) := by
-  rw [precRumpf]
-  apply bleibtImBlockAppend
-  · apply bleibtImBlockAppend
-    · exact bleibtImBlockPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
-    · exact verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
-    · exact bleibtImBlockPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
-  · rw [← verschiebbarVonNull]
-    exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
-  · exact hcg
+  let paar1 := paarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
+  let paar2 := paarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
+  have h1 : BleibtImBlock paar1 := by
+    dsimp only [paar1]
+    exact bleibtImBlockPaarBerechnung (frei + 2) aus (frei + 4) (frei + 10)
+  have h2 : BleibtImBlock paar2 := by
+    dsimp only [paar2]
+    exact bleibtImBlockPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
+  have hv2 : VerschiebbaresProgramm paar2 := by
+    dsimp only [paar2]
+    exact verschiebbarPaarBerechnung (frei + 0) (frei + 4) (frei + 5) (frei + 20)
+  have h12 : BleibtImBlock (paar1 ++ paar2) :=
+    bleibtImBlockAppend paar1 paar2 h1 hv2 h2
+  have hres : BleibtImBlock ((paar1 ++ paar2) ++ cgBlk) :=
+    bleibtImBlockAppend (paar1 ++ paar2) cgBlk h12 hvCg hcg
+  simpa only [precRumpf, paar1, paar2] using hres
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
