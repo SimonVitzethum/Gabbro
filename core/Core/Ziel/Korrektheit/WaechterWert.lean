@@ -76,12 +76,25 @@ theorem substring_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
         simp only [hlast] at hd
         by_cases hok : 0 ≤ first.zahl.wert ∧ first.zahl.wert ≤ last.zahl.wert ∧
             last.zahl.wert ≤ (text.bytes.size : Int)
-      · simp only [if_pos hok] at hd
-        cases hd
-        cases hdt
-        exact substring_wertSat code dst capacity hmem text
-          first.zahl.wert.toNat last.zahl.wert.toNat L H hlook
-        · simp only [if_neg hok] at hd
+        case pos =>
+          have hdpos : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+              some ⟨Ty.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, if_pos hok, Rahmen.halt, Id.run]
+            show (Function.update frame.temp dst
+              (some ⟨Ty.text capacity, text.slice first.zahl.wert.toNat last.zahl.wert.toNat⟩ :
+                Option Dynamisch)) dst = _
+            simp only [Function.update_self]
+          rw [hdpos] at hd
+          cases hd
+          cases hdt
+          exact substring_wertSat code dst capacity hmem text
+            first.zahl.wert.toNat last.zahl.wert.toNat L H hlook
+        case neg =>
+          have hdneg : (((Befehl.substring dst capacity).auswerten frame live).temp dst) =
+              frame.temp dst := by
+            simp only [Befehl.auswerten, htext, hfirst, hlast, if_neg hok, Rahmen.halt, Id.run]
+            rfl
+          rw [hdneg] at hd
           rw [hdt] at hd
           exact h.2.1 dst _ _ hlook _ hd cap t rfl
 
@@ -170,30 +183,57 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
         alsGanzzahl = some g →
       ∀ L H : Int, umgebungInt code basis = some (L, H) → L ≤ g.zahl.wert ∧ g.zahl.wert ≤ H := by
   intro g hg L H hlook
-  cases hvals : (frame.temp basis).bind (wertAls (.array (.int lo hi) count))
-  case none =>
-    simp only [Befehl.auswerten, hvals, Rahmen.schreibe, Function.update_self,
-      eq_self_iff_true, if_true, Option.bind_none] at hg
+  cases htemp : frame.temp basis with
+  | none =>
+    have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
+        basis).bind alsGanzzahl = none := by
+      simp only [Befehl.auswerten, htemp, Rahmen.schreibe, Function.update_self,
+        eq_self_iff_true, if_true, Option.bind_none]
+    rw [hnone] at hg
     cases hg
-  case some values =>
-    simp only [Befehl.auswerten, hvals, Rahmen.schreibe, Function.update_self,
-      eq_self_iff_true, if_true, Option.bind_some] at hg
-    cases hindex : frame.zahl (basis + 1)
-    case none =>
-      simp only [hindex, Option.bind_none] at hg
+  | some d =>
+    cases hwd : wertAls (.array (.int lo hi) count) d with
+    | none =>
+      have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
+          basis).bind alsGanzzahl = none := by
+        simp only [Befehl.auswerten, htemp, hwd, Rahmen.schreibe, Function.update_self,
+          eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+      rw [hnone] at hg
       cases hg
-    case some index =>
-      simp only [hindex, Option.bind_some] at hg
-      by_cases hneg : index.zahl.wert < 0
-      · simp only [if_pos hneg, Option.bind_none] at hg
+    | some values =>
+      cases hindex : frame.zahl (basis + 1) with
+      | none =>
+        have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
+            basis).bind alsGanzzahl = none := by
+          simp only [Befehl.auswerten, htemp, hwd, hindex, Rahmen.schreibe,
+            Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+        rw [hnone] at hg
         cases hg
-      · simp only [if_neg hneg] at hg
-        by_cases hbound : index.zahl.wert.toNat < count
-        · simp only [dif_pos hbound, Option.bind_some, alsGanzzahl] at hg
+      | some index =>
+        by_cases hneg : index.zahl.wert < 0
+        case pos =>
+          have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
+              basis).bind alsGanzzahl = none := by
+            simp only [Befehl.auswerten, htemp, hwd, hindex, if_pos hneg, Rahmen.schreibe,
+              Function.update_self, eq_self_iff_true, if_true, Option.bind_some, Option.bind_none]
+          rw [hnone] at hg
           cases hg
-          exact liesArray_wertSat code basis count lo hi hmem
-            values[index.zahl.wert.toNat] L H hlook
-        · simp only [dif_neg hbound, Option.bind_none] at hg
-          cases hg
+        case neg =>
+          by_cases hbound : index.zahl.wert.toNat < count
+          case pos =>
+            simp only [Befehl.auswerten, htemp, hwd, hindex, if_neg hneg, dif_pos hbound,
+              Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true,
+              Option.bind_some, alsGanzzahl] at hg
+            cases hg
+            exact liesArray_wertSat code basis count lo hi hmem
+              values[index.zahl.wert.toNat]'hbound L H hlook
+          case neg =>
+            have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
+                basis).bind alsGanzzahl = none := by
+              simp only [Befehl.auswerten, htemp, hwd, hindex, if_neg hneg, dif_neg hbound,
+                Rahmen.schreibe, Function.update_self, eq_self_iff_true, if_true,
+                Option.bind_some, Option.bind_none]
+            rw [hnone] at hg
+            cases hg
 
 end Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
