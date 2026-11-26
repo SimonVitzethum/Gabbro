@@ -163,9 +163,11 @@ private theorem arithmetik_schritt
   have hp : b.Privat := priv.elim Or.inl (Or.inr ∘ Or.inl)
   have hmasch : b.maschinennach eintritt s (b.nach eintritt s) = b.nach eintritt s :=
     b.maschinennach_lokal_ruf priv _ _ _
+  have voll := b.vollzug (p.einheit platform).einrichtung t eintritt s hp
+  rw [hmasch] at voll
   exact .schritt (.kontext normal bereit
     ⟨b, kopf, (b.impl_privat hp eintritt s () [_] (b.nach eintritt s)).2 ⟨rfl, rfl⟩⟩
-    (hmasch ▸ b.vollzug _ t eintritt s hp))
+    voll)
 
 /-- The rule and boundary obligations hold jointly for a loaded unit that actually
     executes literals, both binary operators and a local binding. -/
