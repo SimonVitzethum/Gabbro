@@ -91,25 +91,28 @@ theorem zugriffBefugtBrauchtAnkunft (z : Zugriffsform)
       simpa [Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.operand, Zugriffsform.klasse,
         Wirkungsklasse.befugt] using bef.1)
 
-/-- A step of a class-good instruction at a context with no arrival regions plans the
-    private step: a frame-only form is private by its class; a fence plans nothing; every other
-    access form is refused because it holds no handle. -/
-theorem quellSchrittPlanPrivat (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
+/-- A class-good step without arrival regions has no memory footprint. Frame-only forms and fences
+    plan no reads or writes, and every other access is refused because it holds no handle. -/
+theorem quellSchrittOhneSpeicher (p : Fragment) (f : Befehl) (hgut : f.Klassengut)
     {c : Kontext} {s : Zustand} (leer : (s.lokal c).arrivalRegions = [])
     {w : PUnit} {plan : Plan} {u : Zustand}
     (impl : ((system p.code).regel f).impl c s w [plan] u) :
-    plan = Semantik.plan := by
+    plan.lesen = [] ∧ plan.fuss = [] := by
   change f.impl c s w [plan] u at impl
   rcases hgut with hpriv | ⟨z, rfl⟩
-  · exact (List.cons.inj (((Befehl.impl_privat f hpriv c s w [plan] u).1 impl).1)).1
+  · have same := (f.impl_privat hpriv c s w [plan] u).1 impl
+    rw [(List.cons.inj same.1).1]
+    exact f.plan_privat_leer hpriv (s.lokal c)
   · have step := (Zugriffsform.ideal_iff z c s w [plan] u).1 impl
     rcases step with ⟨_, eq, _⟩ | ⟨bef, v, _, eq, _⟩
-    · exact (List.cons.inj eq).1
+    · rw [(List.cons.inj eq).1]
+      exact ⟨rfl, rfl⟩
     · by_cases hz : ∃ m, z = .zaun m
       · rcases hz with ⟨m, rfl⟩
         have hp : plan = (Befehl.zugriff (Zugriffsform.zaun m)).form.plan (s.lokal c) v :=
           (List.cons.inj eq).1
-        simpa [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan, Wirkungsklasse.plan] using hp
+        rw [hp]
+        exact ⟨rfl, rfl⟩
       · have hf : ∀ m, z ≠ .zaun m := by
           intro m hzaun
           exact hz ⟨m, hzaun⟩
@@ -161,12 +164,11 @@ theorem quellSchrittGraphGleich (p : Fragment) (platform : Plattform) (f : Befeh
     (impl : ((system p.code).regel f).impl c s w [plan] u)
     (aus : FuehrtSchrittAus (p.einheit platform).einrichtung t c s u plan spur s') :
     s'.graph.ev = s.graph.ev := by
-  have planEq := quellSchrittPlanPrivat p f hgut leer impl
+  obtain ⟨reads, footprint⟩ := quellSchrittOhneSpeicher p f hgut leer impl
   have still : plan.aktion.Still := Befehl.impl_aktion_still f (w := w) (c := c) (s := s) (p := plan) (u := u) impl
   obtain ⟨_, _, sperren, v, aktion, folge, _⟩ := aus
   have hstill := FuehrtAus.still_erhaelt aktion still
-  rw [planEq] at folge
-  simp only [hstill.1, hstill.2.1, Semantik.plan, schreibEreignisse] at folge
+  simp only [hstill.1, hstill.2.1, reads, footprint, schreibEreignisse] at folge
   obtain ⟨_, gEq⟩ := speicherfolgeLeer folge
   rw [gEq]
 

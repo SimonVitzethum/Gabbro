@@ -58,7 +58,7 @@ theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
     (h : (einheitVon P t).system.ISchritt c s w [plan] u)
     (hsperre : plan.aktion = Aktion.sperre l a) : False := by
   obtain ⟨i, _, ideal⟩ := h
-  have still := i.impl_aktion_still ideal
+  have still := i.impl_aktion_still (c := c) (s := s) (w := w) (p := plan) (u := u) ideal
   rw [hsperre] at still
   exact still
 
