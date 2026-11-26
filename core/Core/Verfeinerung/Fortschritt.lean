@@ -152,20 +152,30 @@ theorem Laufabgleich.entladet (matchRun : Laufabgleich ρ η) (valid : Laeufe E 
   simp only [mark, decide_true] at never
   cases never
 
+/-- A checked family advances if a persistent lack of family progress would leave an
+    enabled obligation open on this same fair run. The obstruction is family-specific. -/
+theorem systemSchritt_aus_familienpflicht {forms : F → Prop}
+    (fair : FairLaeufe E.katalog η.umgebung ρ.hw)
+    (noHang : ∀ c, ¬ Haengt E ρ η c)
+    (family : ∀ a, SystemAktiv forms η a → ¬ SystemSchritt forms η a →
+      ∃ t c f, a ≤ t ∧ forms f ∧ BleibtOffen η c f t ∧ Aktiviert η c t) :
+    ∀ a, SystemAktiv forms η a → SystemSchritt forms η a := by
+  intro a active
+  by_contra absent
+  obtain ⟨t, c, f, _, _, opened, enabled⟩ := family a active absent
+  exact noHang c ⟨fair, t, f, opened, enabled⟩
+
 theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η) (valid : Laeufe E η)
     (bound : StotterSchranke η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw) :
     (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η := by
-  refine ⟨?_, fortschritt_im_lauf_koepfen valid pf.fertig pf.regeln pf.komponierbar, ?_⟩
-  · rintro c ⟨_, a, f, opened, enabled⟩
+  have noHang : ∀ c, ¬ Haengt E ρ η c := by
+    rintro c ⟨_, a, f, opened, enabled⟩
     exact matched.entladet valid bound pf fair opened enabled
-  · cases klasse with
-    | blockierend => trivial
-    | lockFree forms =>
-      intro a active
-      by_contra absent
-      obtain ⟨_, _, _, _, _, opened, enabled⟩ := pf.systemweit fair a active absent
-      exact matched.entladet valid bound pf fair opened enabled
+  refine ⟨noHang, fortschritt_im_lauf_koepfen valid pf.fertig pf.regeln pf.komponierbar, ?_⟩
+  cases klasse with
+  | blockierend => trivial
+  | lockFree forms => exact systemSchritt_aus_familienpflicht fair noHang (pf.systemweit fair)
 
 /-- Simulation, outside answers and fair progress refer to the same whole ideal run. -/
 theorem sim_ziel_fortschritt_im_lauf {h : Umgebung} (pflicht : SimPflichten E)
