@@ -232,7 +232,7 @@ theorem liesArray_hV (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
             cases hg
             let v : Vector (Wert (.int lo hi)) count := values
             exact liesArray_wertSat code basis count lo hi hmem
-              v[index.zahl.wert.toNat]'hbound L H hlook
+              (v.get ⟨index.zahl.wert.toNat, hbound⟩) L H hlook
           case neg =>
             have hnone : (((Befehl.liesArray basis (.int lo hi) count).auswerten frame live).temp
                 basis).bind alsGanzzahl = none := by
