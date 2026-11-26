@@ -78,10 +78,17 @@ theorem linker_akzeptiert_aus_guard_transfer (plan : Bauplan) (frag : Fragment)
   have hklauseln : (verknuepfteFragmente plan).klauseln = .leer :=
     verknuepfte_klauseln_leer hcompat
   let E := (verknuepfteFragmente plan).einheit plan.plattform
+  have hdom : DomaenenLokal E := by
+    refine ⟨eineTabelle_akzeptiert,
+      fun s c i hkopf _ _ _ _ _ w _ spur himpl haus => ?_⟩
+    have head' : kopf (verknuepfteFragmente plan).code s c = some i := hkopf
+    have hpriv_i := hpriv i (kopf_mem head')
+    obtain ⟨rfl, _⟩ := i.vollzug_genau (w := w) himpl haus hpriv_i
+    exact spurRespektiert_leer _ _ _
   refine ⟨⟨Plattform.katalog_wohlgeformt plan.plattform, fun b => Befehl.regelLokal _ _ b,
     ⟨Aussen.zulassung_m2 _, ?_⟩, Beobachtung.fragment_fluss_lokal _ _ hpriv,
     schrankenLokal_leer (E := E) rfl rfl rfl,
-    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb)⟩, ?_, ?_⟩
+    abschnittWartefrei_ohne_blockade E (fun _ _ _ hb => hb), hdom⟩, ?_, ?_⟩
   · apply aussen_gueltig_aus_kontext
     intro run t s c w spur next step
     cases step with

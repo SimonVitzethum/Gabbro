@@ -4,7 +4,7 @@
 
   `Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`: the perfect checker over the
   syntax, `I` and the catalogue only. Acceptance is a FUNCTION OF THE UNIT ALONE: the clause
-  table and the guard uses are the canonical values determined by the unit
+  table and the guard uses are the canonical values determined by   the unit
   (`kanonischeKlauseln`, `kanonischeVerwendung` — M6 computes them from the AST); `Akzeptiert`
   takes no type-class instance arguments, so no free choice of tables can make it hold
   trivially. `akzeptiert_erfuellbar` proves the three conjuncts hold jointly for a concrete
@@ -13,7 +13,9 @@
   obligations: `stale_nicht_aussen_gueltig` (a system emitting a stale-handle question fails
   `AussenGueltig`) and `unbefugt_nicht_regel_lokal` (a step touching an unowned location fails
   `RegelLokal`), beside their satisfiability (`akzeptiert_erfuellbar`, `befugt_mit_griff`,
-  `befugt_erfuellbar` in `Lokal.lean`).
+  `befugt_erfuellbar` in `Lokal.lean`). Meaning change (MK-17d): the isolation row of
+  `Lokal` binds the duty to the unit's own declared table (`Einheit.domaenen`), so an
+  accepted unit may record the accesses and questions its table declares.
 -/
 module
 
@@ -31,9 +33,12 @@ open Gabbro.Core.Katalog
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type}
 
 /-- **`Akzeptiert E := Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E`** (§3.2): the perfect
-    checker. It may use only the syntax, `I` and the catalogue — never the implementation
-    machine, images, runs or an error notion. `I` never mentions `Akzeptiert`. A function of
-    the unit alone: no instance arguments, the tables are canonical. -/
+    checker. It may use only the syntax, `I` and the catalogue — never images, runs or an
+    error notion. `I` never mentions `Akzeptiert`. A function of
+    the unit alone: no instance arguments, the tables are canonical. Meaning change (MK-17):
+    the isolation row of `Lokal` constrains the recorded implementation steps — every form
+    that can stand at a head respects every domain plan — so acceptance now reaches the
+    implementation machine's recorded cuts, but never its images or runs. -/
 def Akzeptiert [DecidableEq L] (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι) :
     Prop :=
   Lokal E ∧ KlauselnWahr E ∧ WaechterHalten E
@@ -53,6 +58,11 @@ theorem akzeptiert_fluss [DecidableEq L]
     {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) :
     Beobachtung.FlussLokal E :=
   h.1.2.2.2.1
+
+theorem akzeptiert_domaenen [DecidableEq L]
+    {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι} (h : Akzeptiert E) :
+    DomaenenLokal E :=
+  h.1.2.2.2.2.2.2
 
 /-- The trivial rule: no implementation step, no `I` step. -/
 def trivialesRegel
@@ -74,7 +84,7 @@ def trivialeEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := trivialesSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
@@ -97,7 +107,7 @@ theorem triviale_regel_lokal (i : Unit) : RegelLokal trivialeEinheit i := by
     (open by default, so the bounds row holds unconditionally). -/
 theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit),
     Akzeptiert E := by
-  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_⟩,
+  refine ⟨trivialeEinheit, ⟨Plattform.katalog_wohlgeformt .x86_64, ?_, ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_, ?_⟩,
     ?_, ?_⟩
   · intro i
     exact triviale_regel_lokal i
@@ -115,6 +125,7 @@ theorem akzeptiert_erfuellbar : ∃ (E : Einheit Unit Unit Unit Unit Unit Unit U
       cases h.1
   · exact schrankenLokal_leer rfl rfl rfl
   · exact abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
+  · exact domaenenLokal_ohne_kopf _ eineTabelle_akzeptiert fun _ _ => rfl
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
@@ -162,7 +173,7 @@ def gebenDaten : Startdaten Unit Unit Unit Unit :=
 /-- The setup of the release witness: no authority questions, a true invariant. -/
 def gebenEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨gibtHalter, 0, fun _ => gebenDaten, fun _ _ => ()⟩,
+    ⟨0, 1⟩, ⟨gibtHalter, 0, fun _ => gebenDaten, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 /-- The release-witness system: the give-or-stutter rule, nothing finished, never blocked. -/
@@ -182,7 +193,7 @@ def E_geben : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
   schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
-    fun _ => none, fun _ => []⟩
+    fun _ => none, fun _ => [], (by intro _ l; rfl), (by intro _ l; rfl)⟩
 
 /-- The release-witness state: the holder owns the lock, the waiter is queued. -/
 def gebenZustand : Zustand Unit Unit Unit Unit Unit Unit :=
@@ -222,7 +233,7 @@ def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit wher
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := ⟨fun _ => ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩,
     fun _ _ => none, fun _ _ => False, wartefreiBlockiert⟩
   startdaten := fun _ => ⟨fun _ => (), fun _ => .ruht,
@@ -234,7 +245,7 @@ def wartefreiEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit wher
   stotterLaenge := fun _ => 0
   quelltabellen := .leer
   schranken := ⟨none, none, none, fun _ => some 3, fun _ => 0, fun _ => none, fun _ => [],
-    fun _ => none, fun _ => []⟩
+    fun _ => none, fun _ => [], (by intro _ l; rfl), (by intro _ l; rfl)⟩
 
 /-- The section-witness state: the holder owns `false`, queues at the head of `true`. -/
 def wartefreiZustand : Zustand Bool Unit Unit Unit Unit Unit :=
@@ -301,7 +312,7 @@ def kreuzEinheit : Einheit Bool Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := kreuzSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0
@@ -383,7 +394,7 @@ def staleEinheit : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit where
       fun _ => ⟨fun _ => (), fun _ => .ruht,
         fun _ => ⟨none, .nutzer, (), fun _ => true, 0, false, []⟩,
         ⟨fun _ => true, fun _ => 0⟩⟩,
-      fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+      fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
   system := staleSystem
   lokalerBezug := Eq
   stotterLaenge := fun _ => 0

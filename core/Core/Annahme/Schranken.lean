@@ -198,7 +198,7 @@ private def grenzenDaten : Startdaten Unit Unit Unit Unit :=
 private def grenzenEinrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (),
     fun _ _ _ => False, fun _ _ => True, ⟨0, 0⟩,
-    ⟨.faden 0, 0, fun _ => grenzenDaten, fun _ _ => ()⟩,
+    ⟨.faden 0, 0, fun _ => grenzenDaten, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 /-- A rule that never steps, in either machine. -/

@@ -368,7 +368,7 @@ def startdaten (scope : Scope) (eintritte : Kontext → Option Nat) (kern : Opti
 def einrichtung (scope : Scope) (eintritte : Kontext → Option Nat) (plan : Speicherplan) :
     Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit :=
   ⟨plan.initial, Zelle.sperre, fun _ => Zelle.aussen, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨eintritt, 0, fun _ => startdaten scope eintritte (some 0), fun _ _ => 0, id⟩,
     Zelle.objekt, Zustand.griff⟩
 
 /-- The model's entry slot. An image compiler and its byte-level proof are later milestones. -/
@@ -411,6 +411,11 @@ def Fragment.einheit (p : Fragment) (platform : Plattform) : Einheit where
 
 def elaborieren (platform : Plattform) {category : Category} (tree : category.Tree) : Einheit :=
   (fragment category tree).einheit platform
+
+/-- A source unit with the invariants it declares denotes the elaborated unit of the fragment
+    carrying the invariant denotations (`programmMitInvarianten`). -/
+def elaborierenMitInvarianten (platform : Plattform) (u : UnitMitInvarianten) : Einheit :=
+  (programmMitInvarianten u).einheit platform
 
 /-- Platform selection binds the hardware catalogue without changing the source system or its guards. -/
 theorem elaborieren_quellbedeutung (left right : Plattform) {category : Category}

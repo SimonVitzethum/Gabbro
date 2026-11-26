@@ -42,7 +42,7 @@ def einrichtung : Einrichtung Nat Gabbro.Core.Ast.Semantik.Zelle Int Nat
     Gabbro.Core.Ast.Semantik.Rahmen PUnit PUnit :=
   ⟨fun _ => 0, fun _ => .sperre 0, fun _ => .aussen, fun _ => 0,
     fun _ _ _ => False, fun _ _ => True, ⟨0, 1⟩,
-    ⟨.faden 0, 0, fun _ => daten, fun _ _ => 0⟩,
+    ⟨.faden 0, 0, fun _ => daten, fun _ _ => 0, id⟩,
     fun z => z.objekt, fun _ _ _ => none⟩
 
 def start : Zustand :=
@@ -55,7 +55,7 @@ def einheit (z : Zustand) (form : Formular) (quelltabellen : Quelltabellen Zusta
   ⟨katalog, bild, einrichtung,
     ⟨fun _ => ⟨fun c s _ plans u => form c s plans u, fun _ _ _ _ _ => False⟩,
       fun _ _ => some Gabbro.Core.Ast.Semantik.Befehl.ende, fun _ _ => False, fun _ _ _ => False⟩,
-    fun _ => daten, fun _ => 0, fun _ _ => some z, Eq, (fun _ => 0), quelltabellen, .leer, .leer, .leer⟩
+    fun _ => daten, fun _ => 0, fun _ _ => some z, Eq, (fun _ => 0), quelltabellen, eineTabelle, .leer, .leer, .leer⟩
 
 def umgebung (sicht : Sicht) := Umgebung.referenz katalog 2 sicht
 def hardware (sicht : Sicht) := Umgebung.referenzLauf katalog 2 sicht
