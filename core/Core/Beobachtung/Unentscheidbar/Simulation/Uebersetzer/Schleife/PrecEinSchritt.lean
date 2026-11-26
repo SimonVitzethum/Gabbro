@@ -156,7 +156,7 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hshiftR' : (Schritt prog)^[kR] (some r7) =
       some (mitPc 8 rR) := by
     change (Schritt (precSchleife cgBlk aus frei))^[kR] (some r7) = some (mitPc 8 rR)
-    simpa only [hmitPc7, hrunR] using hshiftR
+    simpa only [precSchleife, hmitPc7, hrunR] using hshiftR
   have hrunMitte : (Schritt prog)^[kR + 8] (some r) = some (mitPc 8 rR) := by
     rw [Function.iterate_add_apply, hrun8, hshiftR']
   let rE : Rahmen := mitPc 8 rR
@@ -175,11 +175,10 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       change (precSchleife cgBlk aus frei)[cgBlk.length + 96]? = some (.literal (frei + 3) 1)
       exact precSchleifeBeiEnde0 cgBlk aus frei
     change (Schritt prog)^[1] (some rE) = some (rE.schreibe (frei + 3) (some (natVal 1)))
-    simpa only [Function.iterate_one] using (schrittLiteral prog rE rE.pc (frei + 3) 1 rfl g)
+    simpa only [Rahmen.schreibe, Function.iterate_one] using (schrittLiteral prog rE rE.pc (frei + 3) 1 rfl g)
   have hpcE1 : rE1.pc = cgBlk.length + 97 := by
     change rE.pc + 1 = cgBlk.length + 97
     rw [hrEpc]
-    omega
   have hrE1s : rE1.temp (frei + 2) = some (natVal y) := by
     change (Function.update rE.temp (frei + 3) (some (natVal 1))) (frei + 2) = some (natVal y)
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (2 : Nat) ≠ 3))]
@@ -198,11 +197,10 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have eE1' : (Schritt prog)^[1] (some rE1) = some rE2 := by
     change (Schritt prog)^[1] (some rE1) =
       some (rE1.schreibe (frei + 2) (some (precAddWert y)))
-    simpa only [Function.iterate_one, precAddWert] using eE1
+    simpa only [Rahmen.schreibe, Function.iterate_one, precAddWert] using eE1
   have hpcE2 : rE2.pc = cgBlk.length + 98 := by
     change rE1.pc + 1 = cgBlk.length + 98
     rw [hpcE1]
-    omega
   have g2 : prog[rE2.pc]? = some (.zurueckSprung (cgBlk.length + 98)) := by
     rw [hpcE2]
     change (precSchleife cgBlk aus frei)[cgBlk.length + 98]? =
