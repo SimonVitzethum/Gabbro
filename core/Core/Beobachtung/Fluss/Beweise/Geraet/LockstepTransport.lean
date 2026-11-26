@@ -22,7 +22,7 @@ theorem geraete_aussen_schritt {s : State} {f : SpeicherAkteur Nat} {event : Ere
       [aussenEtikett (d.unit locals).einrichtung event]
       [(f, aussenEtikett (d.unit locals).einrichtung event)] g' := by
   have hliest : ¬ (aussenEtikett (d.unit locals).einrichtung event).art.liest := by
-    simp [aussenEtikett, Speicher.Art.liest]
+    simp only [aussenEtikett, Speicher.Art.liest, not_false_eq_true]
   obtain ⟨g', hs⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2 f
     (aussenEtikett (d.unit locals).einrichtung event) hliest
   refine ⟨g', ?_⟩
@@ -426,9 +426,11 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
         have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a := by
-          simp
+          rw [List.getElem_append_right (by omega)]
+          rfl
         have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a' := by
-          simp
+          rw [List.getElem_append_right (by omega)]
+          rfl
         rw [hgeta] at hzua
         rw [hgeta'] at hzua'
         have hqeq : s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ = s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ := rfl

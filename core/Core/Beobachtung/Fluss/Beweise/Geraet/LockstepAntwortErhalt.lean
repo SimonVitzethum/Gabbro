@@ -32,7 +32,7 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
       rw [stateEq]
-      cases hs : s.status c <;> simp [neuBeendet, hs, Zustand.antwort]
+      cases hs : s.status c <;> simp only [neuBeendet, hs, Zustand.antwort]
     rw [hnone] at hc
     cases hc
   rw [schrittBeob, hlabel, atS, atN]
