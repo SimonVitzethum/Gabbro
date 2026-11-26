@@ -113,7 +113,9 @@ theorem bleibtImBlockPrecSchleife (cgBlk : List Befehl) (aus frei : Nat)
         dsimp only [R]
         rw [← verschiebbarVonNull]
         exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
-      obtain ⟨_, hgetR0, hvb, hzd⟩ := hvR r0.pc hltMid
+      obtain ⟨w, hgetR0, hvb, hzd⟩ := hvR r0.pc hltMid
+      have hw : w = b := Option.some.inj (hgetR0.symm.trans hgetR)
+      subst w
       have hshift := auswertenMitPc 8 b r0 hvb hzd
       rw [hmr] at hshift
       have hle := bleibtImBlockPrecRumpf cgBlk aus frei hcg hvCg r0 b hltMid hgetR
