@@ -30,7 +30,7 @@ theorem precSchleifeRueckStark (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
   intro j i k
   induction k generalizing j i with
   | zero =>
-      intro v0 r rEnd schr hpc ha hk hy hi haus hcgf hcg hcgv hbl hrun hpcEnd
+      intro hpc ha hk hy hi haus hcgf hcg hcgv hbl hrun hpcEnd
       have hk0 : r.temp (frei + 1) = some (natVal j) := by
         simpa only [Nat.add_zero] using hk
       obtain ⟨rRef, hRef, hpcRef, hpresRef, hlokRef, hrueckRef, hstoppRef⟩ :=
@@ -50,7 +50,7 @@ theorem precSchleifeRueckStark (cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         exact hi
       exact ⟨i, rfl, hrEndAus⟩
   | succ k ih =>
-      intro v0 r rEnd schr hpc ha hk hy hi haus hcgf hcg hcgv hbl hrun hpcEnd
+      intro hpc ha hk hy hi haus hcgf hcg hcgv hbl hrun hpcEnd
       let V := precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]
       let Rm := precRumpf cgBlk aus frei
       let En := precEnde cgBlk frei
