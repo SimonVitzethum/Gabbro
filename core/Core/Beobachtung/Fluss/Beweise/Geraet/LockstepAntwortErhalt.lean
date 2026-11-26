@@ -71,7 +71,7 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
         | schritt impl =>
           have hstepTyp : ImplSchritt (d.unit locals).einrichtung (d.unit locals).system
               (d.unit locals).katalog ρ₁.hw t s₁ (.antwort a, spur) n₁ := by
-            rw [← Option.some.inj hlabel] at impl
+            rw [← Option.some.inj lab] at impl
             exact impl
         obtain ⟨hkein₁, h1⟩ := geraete_impl_antwort hstepTyp
         have h1typ : AntwortSchritt (d.unit locals).einrichtung (d.unit locals).katalog
