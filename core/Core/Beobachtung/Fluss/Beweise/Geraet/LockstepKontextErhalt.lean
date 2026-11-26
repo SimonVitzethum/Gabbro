@@ -169,16 +169,6 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | issue owned₂A idle₂A =>
-                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ uL := by
-                          dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
-                          rw [ruleEq]
-                          dsimp only [Rule.machine]
-                          exact ⟨plan', hplans', Rule.issue owned₁ idle₁⟩
-                        have impl₂Ideal : ((d.unit locals).system.regel ()).ideal c s₂ () _ u₂t := by
-                          dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
-                          rw [ruleEq]
-                          dsimp only [Rule.machine]
-                          exact ⟨plan'A, hplansA', Rule.issue owned₂A idle₂A⟩
                         obtain ⟨_, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁,
                           hbuchung₁, hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, _, hinitial₁,
                           hrechte₁, hleihen₁, _, _, _, _, _⟩ :=
@@ -199,7 +189,16 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                           simpa only [hfragen] using h
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
                           have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
-                            ⟨kopf₁, impl₁Ideal⟩ ⟨kopf₂, impl₂Ideal⟩).1
+                            ⟨kopf₁, by
+                              dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+                              rw [ruleEq]
+                              dsimp only [Rule.machine]
+                              exact ⟨plan', hplans', Rule.issue owned₁ idle₁⟩⟩
+                            ⟨kopf₂, by
+                              dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+                              rw [ruleEq]
+                              dsimp only [Rule.machine]
+                              exact ⟨plan'A, hplansA', Rule.issue owned₂A idle₂A⟩⟩).1
                           have n1lokal : n₁.lokal = uL.lokal := by rw [hlokal₁]; rfl
                           have n2lokal : n₂.lokal = u₂t.lokal := by rw [hlokal₂]; rfl
                           have n1status : n₁.status = uL.status := by rw [hstatus₁]; rfl
@@ -304,17 +303,6 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                       cases (laufA'.symm.trans lauf₁)
                       cases rule'A with
                       | @consume owned₂A answer₂A pending₂A ready₂A sameQuestion₂A =>
-                        have impl₁Ideal : ((d.unit locals).system.regel ()).ideal c s₁ () _ uL := by
-                          dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
-                          rw [ruleEq]
-                          dsimp only [Rule.machine]
-                          exact ⟨plan', hplans', Rule.consume owned₁ pending₁ ready₁ sameQuestion₁⟩
-                        have impl₂Ideal : ((d.unit locals).system.regel ()).ideal c s₂ () _ u₂t := by
-                          dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
-                          rw [ruleEq]
-                          dsimp only [Rule.machine]
-                          exact ⟨plan'A, hplansA',
-                            Rule.consume owned₂A pending₂A ready₂A sameQuestion₂A⟩
                         obtain ⟨_, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁,
                           hbuchung₁, hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, _, hinitial₁,
                           hrechte₁, hleihen₁, _⟩ :=
@@ -334,7 +322,18 @@ theorem geraete_kontext_erhalt (locals : Umgebung scope) (d : Denotation k scope
                             hbuchung₂.symm hstatus₂
                         have hquell : QuellzustandGleich (d.unit locals) n₁ n₂ := by
                           have hq := (geraeteSchrittNI locals d c s₁ s₂ () _ _ uL u₂t quell
-                            ⟨kopf₁, impl₁Ideal⟩ ⟨kopf₂, impl₂Ideal⟩).1
+                            ⟨kopf₁, by
+                              dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+                              rw [ruleEq]
+                              dsimp only [Rule.machine]
+                              exact ⟨plan', hplans',
+                                Rule.consume owned₁ pending₁ ready₁ sameQuestion₁⟩⟩
+                            ⟨kopf₂, by
+                              dsimp only [Denotation.unit, Gabbro.Core.Ast.LowLevel.Device.unit]
+                              rw [ruleEq]
+                              dsimp only [Rule.machine]
+                              exact ⟨plan'A, hplansA',
+                                Rule.consume owned₂A pending₂A ready₂A sameQuestion₂A⟩⟩).1
                           refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
                           · simpa only [hlokal₁, hlokal₂] using hq.1
                           · simpa only [hstatus₁, hstatus₂] using hq.2.1
