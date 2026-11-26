@@ -169,8 +169,10 @@ theorem precPaarPaarWert (aus frei y i a : Nat) (r rEnd : Rahmen) (k : Nat)
       rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   have hlen1 : 0 < (precPaarEins aus frei).length := by
     rw [precPaarEinsLaenge]
+    omega
   have hlen2 : 0 < (precPaarZwei aus frei).length := by
     rw [precPaarZweiLaenge]
+    omega
   have hpcEnd' : rEnd.pc = (precPaarEins aus frei ++ precPaarZwei aus frei).length := by
     rw [List.length_append, precPaarEinsLaenge, precPaarZweiLaenge]
     exact hpcEnd
@@ -232,9 +234,9 @@ theorem precPaarPaarWert (aus frei y i a : Nat) (r rEnd : Rahmen) (k : Nat)
   · intro s hs hneAus hne4 hne5
     rw [hEnd]
     change rEnd2.temp s = r.temp s
-    rw [hpres2 s (by omega) hneAus]
+    rw [hpres2 s (by omega) hne5]
     change r1.temp s = r.temp s
-    rw [hpres1 s (by omega) hne4 hne5]
+    rw [hpres1 s (by omega) hne4]
   · rw [hEnd]
     change rEnd2.lokale = r.lokale
     exact hlok2.trans hlok1
