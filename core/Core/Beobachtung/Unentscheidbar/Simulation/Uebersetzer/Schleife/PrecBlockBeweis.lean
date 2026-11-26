@@ -418,6 +418,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 2) = some (natVal 0)
       rw [updateHit]
     have hrP0v : rP0.temp aus = some (natVal v0) := by
+      change rP.temp aus = some (natVal v0)
       rw [hPendEq]
       dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) aus = some (natVal v0)
@@ -449,6 +450,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         rw [precSchleifeLaenge]
         omega) hneAus
       rw [hpresS']
+      change rP.temp s = r.temp s
       rw [hPendEq]
       dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) s = r.temp s
