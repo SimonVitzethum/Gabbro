@@ -23,6 +23,7 @@
 module
 
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.Kosten.KostenRahmen
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
 
