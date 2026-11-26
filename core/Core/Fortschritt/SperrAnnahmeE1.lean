@@ -327,7 +327,6 @@ theorem e1_sched : SchedulerFair E_1 ρ_1 := by
       · exact ⟨n, Nat.le_refl _, h⟩
       · refine ⟨n + 1, Nat.le_succ _, ?_⟩
         rw [Nat.add_mod, h]
-        decide
     exact ⟨t, ht1, spurw_step_A ht2⟩
   · by_cases hcB : c = B
     · subst hcB
@@ -335,7 +334,6 @@ theorem e1_sched : SchedulerFair E_1 ρ_1 := by
         rcases Nat.mod_two_eq_zero_or_one n with h | h
         · refine ⟨n + 1, Nat.le_succ _, ?_⟩
           rw [Nat.add_mod, h]
-          decide
         · exact ⟨n, Nat.le_refl _, h⟩
       exact ⟨t, ht1, spurw_step_B ht2⟩
     · obtain ⟨s, hzs, ⟨k, hdisp⟩, _, _, _⟩ := hready a (Nat.le_refl a)
