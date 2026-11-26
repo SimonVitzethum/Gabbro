@@ -72,7 +72,8 @@ theorem einheit_fortschrittsfelder_rein (rein : (Ast.Semantik.fragment Ast.Categ
     by_cases h : f.Privat
     · exact Ast.Semantik.Befehl.komponierbar (Ast.Semantik.fragment Ast.Category.unit t) P f h
     · intro t' s c w plans u hk _ _
-      exact absurd (rein f (Ast.Semantik.kopf_mem hk)) h
+      exact absurd (rein f (Ast.Semantik.kopf_mem
+        (code := (Ast.Semantik.fragment Ast.Category.unit t).code) hk)) h
   · intro s c bereit
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
