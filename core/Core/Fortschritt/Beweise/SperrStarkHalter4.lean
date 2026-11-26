@@ -88,7 +88,6 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     rcases hreg with ⟨_, hss, hpeq, hueq⟩ | ⟨_, hss, hpeq, hueq⟩
     · obtain rfl := (List.cons.inj hpeq).1
       rw [hueq] at hF
-      rw [hueq] at hziel
       have hlock_u := lockStatisch4_von (s := s) (u := u) (by rw [hueq]; rfl) hlock
       cases hF
       rw [hziel]
@@ -111,7 +110,8 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
       rw [hziel]
       rcases hcrash with hvor | hnach
       · refine ⟨?_, Or.inl ?_⟩
-        · obtain ⟨r, _, hnext⟩ := nimmt_inv hss
+        · cases hss with
+          | nehmen hn => obtain ⟨r, _, hnext⟩ := nimmt_inv hn
           rw [← hnext]
           simp only [Function.update_self]
           exact ⟨hs, by intro d hd; exact hlock_u.2 d hd⟩
@@ -125,7 +125,8 @@ theorem e4_kontext_inv {hw : HwLauf} {t : Nat} {c : Kontext}
     rw [hziel]
     rcases hcrash with hvor | hnach
     · refine ⟨?_, Or.inl ?_⟩
-      · obtain ⟨q, _, hnext⟩ := gibt_abgeben hss
+      · cases hss with
+        | geben hg => obtain ⟨q, _, hnext⟩ := gibt_abgeben hg
         rw [← hnext]
         cases q with
         | nil =>
