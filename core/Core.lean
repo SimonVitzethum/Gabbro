@@ -221,6 +221,9 @@ public import Core.Beobachtung.SchrankenBeweise.BindungRessourcen
 public import Core.Beobachtung.SchrankenBeweise.BindungOffen
 public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
+public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
+public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
