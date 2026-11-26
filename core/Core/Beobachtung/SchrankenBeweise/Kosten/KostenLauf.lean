@@ -98,7 +98,7 @@ theorem KostenGrenzen.startdaten (g : KostenGrenzen) (scope : Scope)
 /-- At every observed cut, all active and saved frames obey the cost limits if the
     three installing instructions have valid operands and site metadata. -/
 theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.Schrankendaten Nat Rahmen)
-    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Annahme.Umgebung}
+    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Katalog.Umgebung}
     (run : Laeufe { p.einheit P with schranken := bounds } h ρ)
     (installs : ∀ t s c b, ρ.zeit.zustand t = some s → g.ZustandGut s →
       (s.lokal c).Aktiv → p.code[(s.lokal c).pc]? = some b → g.Einrichtung b (s.lokal c))
@@ -146,5 +146,41 @@ theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.
           | absturz crash =>
             obtain ⟨_, _, _, _, rfl⟩ := crash
             exact g.startdaten _ _ _ _ _
+
+/-- Every populated loop slot comes from an installer targeting that address in
+    the executed fragment, and an installed measure has an owning function. -/
+def kostenSchreiborte (code : List Befehl) : KostenGrenzen where
+  zaehler test _ :=
+    (∃ pc src distance, code[pc]? = some (.setzePasszahl src distance) ∧ test = pc + distance) ∨
+    (∃ pc lo hi ty skip shadow missing,
+      code[pc]? = some (.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1)
+  zaehlerKleiner := fun _ _ _ _ h => h
+  obergrenze test _ :=
+    ∃ pc lo hi ty skip shadow missing,
+      code[pc]? = some (.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1
+  mass name _ := ∃ id slot pc, name = some id ∧ code[pc]? = some (.pruefeMass slot)
+
+/-- Installer provenance holds unconditionally in every frame of every
+    admitted fragment run, including frames suspended under nested calls. -/
+theorem kostenSchreiborte_lauf (p : Fragment) (P : Plattform)
+    (bounds : Beobachtung.Schrankendaten Nat Rahmen)
+    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Katalog.Umgebung}
+    (run : Laeufe { p.einheit P with schranken := bounds } h ρ) (t : Nat)
+    (cut : ρ.zeit.zustand t = some s) : (kostenSchreiborte p.code).ZustandGut s := by
+  apply KostenGrenzen.lauf p P bounds run _ t cut
+  intro _ before c b _ _ _ head
+  cases b <;> simp only [KostenGrenzen.Einrichtung]
+  all_goals try trivial
+  case setzePasszahl src distance =>
+    intro _ _
+    exact Or.inl ⟨(before.lokal c).pc, src, distance, head, rfl⟩
+  case forAnfang lower upper ty skip shadow missing =>
+    intro _ endpoint _ _ _
+    have origin : (kostenSchreiborte p.code).obergrenze ((before.lokal c).pc + 1) endpoint :=
+      ⟨(before.lokal c).pc, lower, upper, ty, skip, shadow, missing, head, rfl⟩
+    exact ⟨Or.inr origin, origin⟩
+  case pruefeMass slot =>
+    intro id _ named _ _
+    exact ⟨id, slot, (before.lokal c).pc, named, head⟩
 
 end Gabbro.Core.Ast.Semantik
