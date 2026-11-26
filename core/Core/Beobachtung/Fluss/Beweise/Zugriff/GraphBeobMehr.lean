@@ -15,8 +15,18 @@ open Katalog Maschine
 variable {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L] [DecidableEq Ort]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 
-abbrev SB [DecidableEq Ort] (x : Ort) : NiedrigesEreignis Ort Wert Grund Form → Bool :=
-  SchreibBeobBool (Wert := Wert) (Grund := Grund) (Form := Form) x
+/-- The boolean form of an observed write. -/
+def SB [DecidableEq Ort] (x : Ort) : NiedrigesEreignis Ort Wert Grund Form → Bool
+  | .speicher _ .schreiben ort _ _ _ => decide (ort = x)
+  | .speicher _ .rmw ort _ _ _ => decide (ort = x)
+  | _ => false
+
+theorem SB_iff (x : Ort) (ev : NiedrigesEreignis Ort Wert Grund Form) :
+    SB x ev = true ↔ SchreibBeob x ev := by
+  cases ev with
+  | speicher a art ort m g1 g2 =>
+    cases art <;> simp only [SB, SchreibBeob, Bool.false_eq_true, decide_eq_true_eq]
+  | _ => simp only [SB, SchreibBeob, Bool.false_eq_true]
 
 theorem filter_map_nil [DecidableEq α] (f : β → Bool) (g : α → β) (l : List α)
     (h : ∀ a, f (g a) = false) : (l.map g).filter f = [] := by
