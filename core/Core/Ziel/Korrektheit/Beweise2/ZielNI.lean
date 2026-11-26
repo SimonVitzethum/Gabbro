@@ -59,4 +59,27 @@ theorem zielNI_iff_vergleich (P : Katalog.Plattform) (B : FormBeleg) :
     cases tag
     exact vergleichsbeweis E akzeptiert ⟨links.2, rechts.2, umgebung, niedrig, gleich⟩
 
+/-- Quoted source units currently elaborate with public endpoint and object labels.
+    Even a question with arbitrarily many accessed objects therefore remains public. -/
+theorem zielNI_bezeichnet_frage_oeffentlich (P : Katalog.Plattform) (B : FormBeleg)
+    {a : (R₀ P B).Text} {E : (R₀ P B).Einheit}
+    (quelle : (R₀ P B).Bezeichnet a E) (q : Katalog.Frage) :
+    Beobachtung.oeffentlich (E.etiketten.frage q) = true := by
+  obtain ⟨tree, _, elaboriert, _⟩ := quelle
+  cases Ast.Semantik.elab_vollstaendig elaboriert
+  change Beobachtung.oeffentlich
+    ((q.zugriffe.map (fun _ => (∅ : Beobachtung.Etikett))).foldl (· ∪ ·) ∅) = true
+  induction q.zugriffe with
+  | nil => rfl
+  | cons _ _ ih =>
+    simpa only [List.map_cons, List.foldl_cons, Finset.empty_union] using ih
+
+/-- The secret-request part of M12 is already impossible for source-denoted units
+    in the concrete frame, before imposing acceptance or the paired-run premises. -/
+theorem zielNI_keine_geheime_quellfrage (P : Katalog.Plattform) (B : FormBeleg) :
+    ¬ ∃ (a : (R₀ P B).Text) (E : (R₀ P B).Einheit) (q : Katalog.Frage),
+      (R₀ P B).Bezeichnet a E ∧ Beobachtung.oeffentlich (E.etiketten.frage q) = false := by
+  rintro ⟨a, E, q, quelle, geheim⟩
+  rw [zielNI_bezeichnet_frage_oeffentlich P B quelle q] at geheim
+
 end Gabbro.Core.Ziel.Korrektheit
