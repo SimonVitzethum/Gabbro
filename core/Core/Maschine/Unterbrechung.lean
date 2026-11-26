@@ -60,6 +60,25 @@ def Zustandsrueckkehr (s : Zustand L Ort Wert Raum Lok Grund) (k : Kern) :
     Zustand L Ort Wert Raum Lok Grund :=
   { s with kerne := Function.update s.kerne k (s.kerne k).zurueck }
 
+/-- A terminal action can restore only the active interrupt frame on the handler's own core.
+    An ordinary thread has no interrupt frame to restore. -/
+def Abschlussrueckkehr (s u : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
+    Zustand L Ort Wert Raum Lok Grund :=
+  { u with kerne :=
+      match c with
+      | .faden _ => u.kerne
+      | .handler k _ _ | .nmi k _ =>
+        if (s.kerne k).laeuft = some c ∧ (s.kerne k).stapel ≠ [] then
+          Function.update u.kerne k (s.kerne k).zurueck
+        else u.kerne }
+
+theorem KehrtZurueck.abschluss {s u : Zustand L Ort Wert Raum Lok Grund} {c k}
+    (aktiv : KehrtZurueck s c k) (rahmen : u.kerne = s.kerne) :
+    Abschlussrueckkehr s u c = Zustandsrueckkehr u k := by
+  cases aktiv with
+  | handler aktiv frame | nmi aktiv frame =>
+    simp only [Abschlussrueckkehr, if_pos (And.intro aktiv frame), Zustandsrueckkehr, rahmen]
+
 theorem rueckkehr_setzt_fort (s : Zustand L Ort Wert Raum Lok Grund) (k : Kern)
     (id : Nat × Nat) (c : Kontext) (nmi : Bool) :
     ((Zustandsrueckkehr (Zustandseintritt s k id c nmi) k).kerne k).laeuft = (s.kerne k).laeuft ∧

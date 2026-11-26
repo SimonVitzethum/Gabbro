@@ -57,9 +57,114 @@ theorem fortschritt_akzeptiert_ohne_haengen (existiert : ZugriffSchrittExistiert
 
 open Katalog Fortschritt
 
+open Ast.Semantik in
+/-- A delivered handler writes its result and ends on its core. The implementation
+    and ideal machine take the same return, restoring the interrupted entry. -/
+theorem handler_abschluss_erfuellbar :
+    let handler := Kontext.handler 0 0 (Nat.pair 0 0)
+    let body := (Fragment.einzel (.literal 0 7)).anhaengen (.einzel (.faden (.beende 0)))
+    let p := (Fragment.einzel (.literal 0 1)).anhaengen (body.rumpf (fun c => decide (c = handler)))
+    let E := p.einheit .x86_64
+    ∃ H hw start entered ready returned ingress,
+      let z := (Maschine.I.start E start).2
+      FairLaeufe E.katalog H hw ∧
+      E.ZulStart H start ∧ E.laden start (H.lade E.bild) = some z ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 0 z (.interrupt (0, 0), ingress) entered ∧
+      (entered.kerne 0).laeuft = some handler ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 1 entered (.kontext handler (), ⟨[], []⟩) ready ∧
+      ImplSchritt E.einrichtung E.system E.katalog hw 2 ready (.kontext handler (), ⟨[], []⟩) returned ∧
+      Maschine.I.Schritt E.einrichtung E.system E.katalog hw 2 ready (.kontext handler (), ⟨[], []⟩) returned ∧
+      (returned.kerne 0).laeuft = some eintritt ∧ (returned.kerne 0).stapel = (z.kerne 0).stapel ∧
+      returned.status handler = .beendet (.wert 7) ∧ returned.lokal eintritt = z.lokal eintritt ∧
+      returned.rechte = z.rechte ∧ returned.buchung = z.buchung ∧ returned.graph = ready.graph := by
+  intro handler body p E
+  obtain ⟨start, zul⟩ := zulStart_erfuellbar fairV.hardware
+    (bildGueltig .x86_64 trivialUnit (trivialUnit_zugelassen .x86_64))
+  obtain ⟨kern, assigned⟩ := zul.2.2.1 0 (Nat.zero_lt_succ 0)
+  have kernZero : kern = 0 := by
+    have bound := (zul.2.2.2.1 0 kern assigned).2
+    rw [HV1] at bound
+    omega
+  subst kern
+  let z := (Maschine.I.start E start).2
+  have loaded : E.laden start (HV.lade E.bild) = some z :=
+    Beobachtung.fragment_geladen p .x86_64 fairV.hardware zul
+  let event := Ereignis.interrupt 0 irqV .handler
+  let label := aussenEtikett E.einrichtung event
+  obtain ⟨graph, append⟩ := Speicher.Zustand.schritt_ohne_lesen
+    (Z := z.graph) Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
+    .aussen label (fun h => nomatch h)
+  let entered := { Zustandseintritt z 0 (0, 0) handler false with graph := graph }
+  let ingress : SchrittSpur Zelle Int := ⟨[(.aussen, label)], [event]⟩
+  have deliver : UnterbrechungsSchritt E.einrichtung hwV 0 (0, 0) z ingress entered :=
+    ⟨0, irqV, handler, false, rfl,
+      ⟨Nat.le_refl _, Nat.le_refl _, pendingV0, List.not_mem_nil, auswahlV0⟩,
+      NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl _), rfl, rfl,
+      .cons (.ohne (Or.inl rfl)) append (.nil _), rfl⟩
+  let write : Befehl := .literal 0 7
+  let ready := write.nach handler entered
+  have calculate : E.system.ImplSchritt handler entered () [Ast.Semantik.plan] ready :=
+    ⟨write, by
+      change kopf p.code (Zustandseintritt z 0 (0, 0) handler false) handler = some write
+      exact (handler_beginnt_im_rumpf p .x86_64 start 0 (0, 0) handler false
+        (fun h => Kontext.noConfusion h) (pos := 1) rfl).trans rfl, rfl, rfl⟩
+  have writeExec : FuehrtSchrittAus E.einrichtung 1 handler entered ready Ast.Semantik.plan ⟨[], []⟩ ready := by
+    exact write.vollzug E.einrichtung 1 handler entered (Or.inl rfl)
+  let finish : Befehl := .faden (.beende 0)
+  let plan := finish.plan (ready.lokal handler) 0
+  let u := finish.form.faedenNach handler ready
+  have finishHead : E.system.kopf ready handler = some finish := by
+    exact kopf_laufend (code := p.code) (s := ready) (c := handler)
+      (by simp only [ready, Befehl.nach, entered, Zustandseintritt, Function.update_self])
+      (by simp only [ready, Befehl.nach, Function.update_self]; rfl)
+      (by simp only [ready, Befehl.nach, Function.update_self]; rfl) |>.trans (by
+        simp only [ready, Befehl.nach, Function.update_self]
+        rfl)
+  have rule : finish.ideal handler ready () [plan] u := by
+    change (_ ∨ (_ = true ∧ _ ∧ _))
+    exact Or.inr ⟨by simp only [ready, Befehl.nach, Function.update_self]; rfl, rfl, rfl⟩
+  let returned := Abschlussrueckkehr ready u handler
+  have ended : u.status handler = .beendet (.wert 7) := by
+    simp only [u, Schrittform.faedenNach, finish, Befehl.form, Befehl.klasse, Fadenform.klasse,
+      ready, Befehl.nach, Function.update_self]
+    rfl
+  have frame : Zustandsrahmen ready u :=
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  have execute : FuehrtSchrittAus E.einrichtung 2 handler ready u plan ⟨[], []⟩ returned :=
+    ⟨frame, fun _ h => (List.not_mem_nil h).elim, [], returned, FuehrtAus.beende ended, .nil _, rfl⟩
+  have enteredDispatch : (entered.kerne 0).laeuft = some handler := by
+    simp only [entered, Zustandseintritt, Function.update_self, KernZustand.unterbrechen]
+  have enteredLive : entered.status handler = .laeuft := by
+    simp only [entered, Zustandseintritt, Function.update_self]
+  have readyOnCore : KannSchreiten hwV 2 handler ready := ⟨0, rfl, enteredDispatch, enteredLive⟩
+  have active : KehrtZurueck ready handler 0 := .handler enteredDispatch (by
+    simp only [ready, Befehl.nach, entered, Zustandseintritt, KernZustand.unterbrechen,
+      Function.update_self]
+    exact fun h => nomatch h)
+  have restored : returned = Zustandsrueckkehr u 0 := active.abschluss frame.kerne
+  have dispatch : (z.kerne 0).laeuft = some eintritt := by
+    change (if some 0 = start.assignment 0 then some eintritt else none) = _
+    rw [assigned, if_pos rfl]
+  refine ⟨HV, hwV, start, entered, ready, returned, ingress, fairV, zul, loaded,
+    .interrupt rfl deliver, enteredDispatch,
+    .kontext rfl ⟨0, rfl, enteredDispatch, enteredLive⟩ calculate writeExec,
+    .kontext rfl readyOnCore ⟨finish, finishHead, rule⟩ execute,
+    .kontext rfl readyOnCore ⟨finish, finishHead, rule⟩ execute,
+    ?_, ?_, ended, ?_, rfl, rfl, rfl⟩
+  · rw [restored]
+    exact (rueckkehr_setzt_fort z 0 (0, 0) handler false).1.trans dispatch
+  · rw [restored]
+    exact (rueckkehr_setzt_fort z 0 (0, 0) handler false).2
+  · change Function.update ready.lokal handler
+      (finish.form.uebertrag (ready.lokal handler) ready.regionLive 0) eintritt = z.lokal eintritt
+    have different : eintritt ≠ handler := fun h => Kontext.noConfusion h
+    rw [Function.update_of_ne different]
+    exact write.nach_lokal_anderer different entered
+
 /-- The accepted empty source unit can lose its entry dispatch on a hardware-fair run.
     Hardware selects a maskable interrupt at tick zero and offers the core thereafter.
-    Interrupt entry replaces the dispatch, and no later transition restores it. -/
+    The empty unit supplies no handler body with an explicit end, so no later transition
+    reaches the interrupt return. -/
 theorem einheitVon_fair_ohne_rueckkehr :
     ∃ (t : Ast.Unit) (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon .x86_64 t)),
       Annahme.Akzeptiert (einheitVon .x86_64 t) ∧

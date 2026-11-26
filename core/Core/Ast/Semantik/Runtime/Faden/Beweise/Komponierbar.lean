@@ -81,13 +81,13 @@ theorem verbindeKomponierbar : VerbindeKomponierbarAussage := by
     { u with erzeuger := Function.update u.erzeuger kind none }
     rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.verbinde hfertig herz)⟩
 
-/-- **Composability of an accepted end** (`BeendeKomponierbarAussage`). The outcome the form sets in
-    the acting thread's status is exactly the premise of `FuehrtAus.beende`. -/
+/-- **Composability of an accepted end** (`BeendeKomponierbarAussage`). The form sets the outcome
+    and the protocol restores the interrupted dispatch when the acting context is an active handler. -/
 theorem beendeKomponierbar : BeendeKomponierbarAussage := by
   intro p platform z t s c w plan u _hkopf hstep hakt hfertig
   obtain ⟨rahmen, hlesen, hfuss⟩ := faden_schritt_fakten hstep
   obtain ⟨ausgang, hfertig⟩ := hfertig
-  exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan u
+  exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan (Abschlussrueckkehr s u c)
     rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.beende hfertig)⟩
 
 /-- **Composability of an accepted switch** (`WechsleKomponierbarAussage`). The free core, the running
@@ -114,7 +114,7 @@ private theorem ausfuehrbar_fuehrtAus (e : Einrichtung Nat Zelle Int Nat Rahmen 
     exact ⟨_, FuehrtAus.verbinde hfertig herz⟩
   | beende =>
     obtain ⟨ausgang, hfertig⟩ := h
-    exact ⟨u, FuehrtAus.beende hfertig⟩
+    exact ⟨_, FuehrtAus.beende hfertig⟩
   | wechsle kern kind =>
     rcases h with ⟨hfrei, hlaeuft, hnirgends, handers⟩
     exact ⟨_, FuehrtAus.wechsle hfrei hlaeuft hnirgends handers⟩

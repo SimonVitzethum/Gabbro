@@ -168,8 +168,9 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
       (erz : s.erzeuger kind = some c) :
       FuehrtAus t c s u (.verbinde kind) [] []
         { u with erzeuger := Function.update u.erzeuger kind none }
-  /-- **A thread end.** The form sets the outcome in the status of the acting thread. -/
-  | beende {ausgang} (ende : u.status c = .beendet ausgang) : FuehrtAus t c s u .beende [] [] u
+  /-- The form sets the acting context's outcome. An active handler restores its interrupt frame. -/
+  | beende {ausgang} (ende : u.status c = .beendet ausgang) :
+      FuehrtAus t c s u .beende [] [] (Abschlussrueckkehr s u c)
   /-- **A switch and a core start.** The acting context holds the core or the core is idle; the context
        switched to runs, rests on no core and is no other than the acting one. The core then runs it. -/
   | wechsle {kern kind} (frei : (s.kerne kern).laeuft = some c ∨ (s.kerne kern).laeuft = none)
