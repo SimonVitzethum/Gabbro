@@ -426,11 +426,9 @@ theorem geraete_antwort_eindeutig {k : Katalog} {binding : Binding k}
         have hzua := hfa.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hzua' := hfa'.get (i := s.antworten.length) (by simp only [List.length_append, List.length_singleton]; omega) (by rw [hnm]; omega)
         have hgeta : (s.antworten ++ [a]).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a := by
-          rw [List.getElem_append_right (by omega)]
-          rfl
+          simp only [List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
         have hgeta' : (s.antworten ++ [a']).get ⟨s.antworten.length, by simp only [List.length_append, List.length_singleton]; omega⟩ = a' := by
-          rw [List.getElem_append_right (by omega)]
-          rfl
+          simp only [List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
         rw [hgeta] at hzua
         rw [hgeta'] at hzua'
         have hqeq : s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ = s.fragen.get ⟨s.antworten.length, by rw [hnm]; omega⟩ := rfl
