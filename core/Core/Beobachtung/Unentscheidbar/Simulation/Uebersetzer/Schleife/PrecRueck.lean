@@ -12,7 +12,7 @@ open Gabbro.Core.Ast.Semantik
 
 /-- The check and its untaken conditional, run inside their own eight-instruction
     block: the counter is below the limit, so the jump is not taken. -/
-theorem precCheckCondLauf (cgBlk aus frei y k : Nat) (r : Rahmen)
+theorem precCheckCondLauf (cgBlk : List Befehl) (aus frei y k : Nat) (r : Rahmen)
     (hpc : r.pc = 0) (hy : r.temp (frei + 2) = some (natVal y))
     (hk : r.temp (frei + 1) = some (natVal k)) (hyk : y < k) :
     ∃ r7 : Rahmen,
@@ -45,6 +45,7 @@ theorem precCheckCondLauf (cgBlk aus frei y k : Nat) (r : Rahmen)
     (cgBlk.length + 92) hpcC hCbool (by decide) hget7
   let r7 : Rahmen := { rC with pc := 8 }
   have eJump' : (Schritt V)^[1] (some rC) = some r7 := by
+    change Schritt V (some rC) = some r7
     rw [eJump]
     congr 1
     rw [hpcC]
@@ -96,7 +97,7 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     rw [← List.append_assoc]
     simpa only [precRumpf, paar1, paar2] using hpcEnd
   obtain ⟨j1, r1, hj1k, hrunC1, hrun1, hpc1⟩ :=
-    randAusEndePrefix paar1 (paar2 ++ cgBlk) hlocal1 hlen1 hlenRest r k rEnd rfl hk' hpcEnd'
+    randAusEndePrefix paar1 (paar2 ++ cgBlk) hlocal1 hlen1 hlenRest r k rEnd hpc hk' hpcEnd'
   obtain ⟨hr1q, hpres1, hlok1, hrueck1, hstopp1⟩ :=
     paarRueck (frei + 2) aus (frei + 4) (frei + 10) r y i rfl hy hi
       (by omega) (by omega) j1 r1 hrun1 hpc1
