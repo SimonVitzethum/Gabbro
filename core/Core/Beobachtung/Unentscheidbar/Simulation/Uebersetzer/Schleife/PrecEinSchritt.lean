@@ -67,35 +67,20 @@ theorem precSchleifeBeiEnde2 (cgBlk : List Befehl) (aus frei : Nat) :
   simpa only [pre, precSchleife, precEnde, List.getElem?_cons_succ,
     List.getElem?_cons_zero] using hget
 
-/-- One iteration of the primitive-recursion loop when the counter is still
-    below the limit: check, fall through the conditional, run the body and take
-    the back edge. The counter grows by one and the accumulator holds the step
-    result; no slot below `frei` other than `aus` changes. -/
-theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
-    (a aus frei freiCg y k i v : Nat) (r : Rahmen)
-    (hpc : r.pc = 0)
-    (ha : r.temp (frei + 0) = some (natVal a))
-    (hk : r.temp (frei + 1) = some (natVal k))
-    (hy : r.temp (frei + 2) = some (natVal y))
-    (hi : r.temp aus = some (natVal i))
-    (hyk : y < k)
-    (hausFrei : aus < frei)
-    (hfreiCg : frei + 20 ≤ freiCg)
-    (hcg : BlockKorrekt cgBlk cg (frei + 5) aus freiCg)
-    (hvCg : VerschiebbaresProgramm cgBlk)
-    (hv : Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair y i)) = Part.some v) :
-    ∃ kSchr rEnd, (Schritt (precSchleife cgBlk aus frei))^[kSchr] (some r) = some rEnd ∧
-      rEnd.pc = 0 ∧
-      rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
-      rEnd.temp aus = some (natVal v) ∧
-      (∀ s, s < frei → s ≠ aus → rEnd.temp s = r.temp s) ∧
-      rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
-  let prog := precSchleife cgBlk aus frei
+/-- The check and the not-taken conditional of one iteration advance the
+    program counter from zero to eight without touching any slot outside the
+    two comparison slots. -/
+theorem precCheckSprungLauf (cgBlk : List Befehl) (aus frei y k : Nat) (r : Rahmen)
+    (hpc : r.pc = 0) (hy : r.temp (frei + 2) = some (natVal y))
+    (hk : r.temp (frei + 1) = some (natVal k)) (hyk : y < k) :
+    ∃ r7 : Rahmen, (Schritt (precSchleife cgBlk aus frei))^[8] (some r) = some r7 ∧
+      r7.pc = 8 ∧
+      (∀ s, s ≠ frei + 6 → s ≠ frei + 7 → r7.temp s = r.temp s) ∧
+      r7.lokale = r.lokale ∧ r7.rueckgabe = r.rueckgabe ∧ r7.stopp = r.stopp := by
   obtain ⟨rC, hrunC, hpcC, hCb, hCk, hCpres, hlokC, hrueckC, hstoppC⟩ :=
     precCheckLauf r frei y k hpc hy hk
   have hbleibC := laufBleibtVorEnde (precCheck frei) r 7 rC hrunC hpcC
-  have hrunC' : (Schritt prog)^[7] (some r) = some rC := by
-    change (Schritt (precSchleife cgBlk aus frei))^[7] (some r) = some rC
+  have hrunC' : (Schritt (precSchleife cgBlk aus frei))^[7] (some r) = some rC := by
     rw [precSchleife, List.append_assoc, List.append_assoc]
     exact (laufAnhang (precCheck frei)
       ([.springeWenn (frei + 6) false (cgBlk.length + 92)] ++
@@ -108,66 +93,32 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     change some (precBoolWert y k) = some ⟨.bool, true⟩
     congr 1
     simp only [precBoolWert, hboolval]
-  have eJump : (Schritt prog)^[1] (some rC) =
+  have eJump : (Schritt (precSchleife cgBlk aus frei))^[1] (some rC) =
       some { rC with pc := rC.pc + 1 } := by
-    have g7 : prog[7]? = some (.springeWenn (frei + 6) false (cgBlk.length + 92)) := by
-      change (precSchleife cgBlk aus frei)[7]? =
-        some (.springeWenn (frei + 6) false (cgBlk.length + 92))
-      exact precSchleifeBei7 cgBlk aus frei
-    exact schrittSpringeWennFalsch prog rC 7 (frei + 6) false true (cgBlk.length + 92)
-      hpcC hCbool (by decide) g7
+    exact schrittSpringeWennFalsch (precSchleife cgBlk aus frei) rC 7 (frei + 6)
+      false true (cgBlk.length + 92) hpcC hCbool (by decide)
+      (precSchleifeBei7 cgBlk aus frei)
   let r7 : Rahmen := { rC with pc := 8 }
-  have eJump' : (Schritt prog)^[1] (some rC) = some r7 := by
+  have eJump' : (Schritt (precSchleife cgBlk aus frei))^[1] (some rC) = some r7 := by
     rw [eJump]
     congr 1
     rw [hpcC]
-  have hrun8 : (Schritt prog)^[8] (some r) = some r7 := by
-    rw [show (8 : Nat) = 1 + 7 by omega, Function.iterate_add_apply, hrunC', eJump']
-  let r7_0 : Rahmen := { r7 with pc := 0 }
-  have hr7_0pc : r7_0.pc = 0 := rfl
-  have hr7_0y : r7_0.temp (frei + 2) = some (natVal y) := by
-    change rC.temp (frei + 2) = some (natVal y)
-    rw [hCpres (frei + 2) (by omega) (by omega)]
-    exact hy
-  have hr7_0i : r7_0.temp aus = some (natVal i) := by
-    change rC.temp aus = some (natVal i)
-    rw [hCpres aus (by omega) (by omega)]
-    exact hi
-  have hr7_0a : r7_0.temp (frei + 0) = some (natVal a) := by
-    change rC.temp (frei + 0) = some (natVal a)
-    rw [hCpres (frei + 0) (by omega) (by omega)]
-    exact ha
-  have hmitPc7 : mitPc 8 r7_0 = r7 := by
-    rfl
-  obtain ⟨kR, rR, hrunR, hpcR, hrRaus, hpresR, hlokR, hrueckR, hstoppR⟩ :=
-    precRumpfLauf cgBlk cg aus frei freiCg y i a v r7_0 hr7_0pc hr7_0y hr7_0i hr7_0a
-      hausFrei hfreiCg hcg hvCg hv
-  rw [precRumpfLaenge] at hpcR
-  have hbleibR := laufBleibtVorEnde (precRumpf cgBlk aus frei) r7_0 kR rR hrunR
-    (by rw [hpcR, precRumpfLaenge])
-  have hvR : VerschiebbaresProgramm (precRumpf cgBlk aus frei) := by
-    rw [← verschiebbarVonNull]
-    exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
-  have hshiftR := laufMitPc (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)])
-    (precRumpf cgBlk aus frei) (precEnde cgBlk frei) hvR r7_0 kR hbleibR
-  have hpreLen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]).length = 8 := by
-    simp only [List.length_append, precCheckLaenge, List.length_cons, List.length_nil]
-  rw [hpreLen] at hshiftR
-  have hshiftR' : (Schritt prog)^[kR] (some r7) =
-      some (mitPc 8 rR) := by
-    change (Schritt (precSchleife cgBlk aus frei))^[kR] (some r7) = some (mitPc 8 rR)
-    simpa only [precSchleife, hmitPc7, hrunR] using hshiftR
-  have hrunMitte : (Schritt prog)^[kR + 8] (some r) = some (mitPc 8 rR) := by
-    rw [Function.iterate_add_apply, hrun8, hshiftR']
-  let rE : Rahmen := mitPc 8 rR
-  have hrEpc : rE.pc = cgBlk.length + 96 := by
-    change 8 + rR.pc = cgBlk.length + 96
-    rw [hpcR]
-    omega
-  have hrEy : rE.temp (frei + 2) = some (natVal y) := by
-    change rR.temp (frei + 2) = some (natVal y)
-    rw [hpresR (frei + 2) (by omega) (by omega) (by omega) (by omega)]
-    exact hr7_0y
+  refine ⟨r7, ?_, rfl, ?_, hlokC, hrueckC, hstoppC⟩
+  · rw [show (8 : Nat) = 1 + 7 by omega, Function.iterate_add_apply, hrunC', eJump']
+  · intro s hs6 hs7
+    change rC.temp s = r.temp s
+    exact hCpres s hs6 hs7
+
+/-- The last three instructions of the loop increment the counter and jump back
+    to its first instruction. -/
+theorem precEndeGanzLauf (cgBlk : List Befehl) (aus frei y : Nat) (rE : Rahmen)
+    (hrEpc : rE.pc = cgBlk.length + 96)
+    (hy : rE.temp (frei + 2) = some (natVal y)) :
+    ∃ rEnd : Rahmen, (Schritt (precSchleife cgBlk aus frei))^[3] (some rE) = some rEnd ∧
+      rEnd.pc = 0 ∧ rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
+      (∀ s, s ≠ frei + 2 → rEnd.temp s = rE.temp s) ∧
+      rEnd.lokale = rE.lokale ∧ rEnd.rueckgabe = rE.rueckgabe ∧ rEnd.stopp = rE.stopp := by
+  let prog := precSchleife cgBlk aus frei
   let rE1 : Rahmen := rE.schreibe (frei + 3) (some (natVal 1))
   have eE0 : (Schritt prog)^[1] (some rE) = some rE1 := by
     have g : prog[rE.pc]? = some (.literal (frei + 3) 1) := by
@@ -175,14 +126,15 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       change (precSchleife cgBlk aus frei)[cgBlk.length + 96]? = some (.literal (frei + 3) 1)
       exact precSchleifeBeiEnde0 cgBlk aus frei
     change (Schritt prog)^[1] (some rE) = some (rE.schreibe (frei + 3) (some (natVal 1)))
-    simpa only [Rahmen.schreibe, Function.iterate_one] using (schrittLiteral prog rE rE.pc (frei + 3) 1 rfl g)
+    simpa only [Rahmen.schreibe, Function.iterate_one] using
+      (schrittLiteral prog rE rE.pc (frei + 3) 1 rfl g)
   have hpcE1 : rE1.pc = cgBlk.length + 97 := by
     change rE.pc + 1 = cgBlk.length + 97
     rw [hrEpc]
   have hrE1s : rE1.temp (frei + 2) = some (natVal y) := by
     change (Function.update rE.temp (frei + 3) (some (natVal 1))) (frei + 2) = some (natVal y)
     rw [updateMiss _ _ _ _ (addNeLinks (by decide : (2 : Nat) ≠ 3))]
-    exact hrEy
+    exact hy
   have hrE1e : rE1.temp (frei + 3) = some (natVal 1) := by
     change (Function.update rE.temp (frei + 3) (some (natVal 1))) (frei + 3) = some (natVal 1)
     rw [updateHit]
@@ -217,40 +169,111 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     congr 1
     rw [hpcE2]
     rfl
-  have hrunEnde : (Schritt prog)^[3] (some rE) = some rEnd := by
-    rw [show (3 : Nat) = 1 + 1 + 1 by omega, Function.iterate_add_apply,
+  refine ⟨rEnd, ?_, rfl, ?_, ?_, rfl, rfl, rfl⟩
+  · rw [show (3 : Nat) = 1 + 1 + 1 by omega, Function.iterate_add_apply,
       Function.iterate_add_apply, eE0, eE1', eE2']
-  refine ⟨3 + kR + 8, rEnd, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [Function.iterate_add_apply, hrunMitte, hrunEnde]
-  · rfl
-  · change rE2.temp (frei + 2) = some (natVal (y + 1))
-    change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
+  · change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) (frei + 2) =
       some (natVal (y + 1))
     rw [updateHit]
     congr 1
     exact packAddSucc y
-  · change rE2.temp aus = some (natVal v)
-    change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) aus = some (natVal v)
+  · intro s hs
+    change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) s = rE.temp s
+    rw [updateMiss _ _ _ _ (Ne.symm hs)]
+    change (Function.update rE.temp (frei + 3) (some (natVal 1))) s = rE.temp s
     rw [updateMiss _ _ _ _ (by omega)]
-    change (Function.update rE.temp (frei + 3) (some (natVal 1))) aus = some (natVal v)
-    rw [updateMiss _ _ _ _ (by omega)]
+
+/-- One iteration of the primitive-recursion loop when the counter is still
+    below the limit: check, fall through the conditional, run the body and take
+    the back edge. The counter grows by one and the accumulator holds the step
+    result; no slot below `frei` other than `aus` changes. -/
+theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
+    (a aus frei freiCg y k i v : Nat) (r : Rahmen)
+    (hpc : r.pc = 0)
+    (ha : r.temp (frei + 0) = some (natVal a))
+    (hk : r.temp (frei + 1) = some (natVal k))
+    (hy : r.temp (frei + 2) = some (natVal y))
+    (hi : r.temp aus = some (natVal i))
+    (hyk : y < k)
+    (hausFrei : aus < frei)
+    (hfreiCg : frei + 20 ≤ freiCg)
+    (hcg : BlockKorrekt cgBlk cg (frei + 5) aus freiCg)
+    (hvCg : VerschiebbaresProgramm cgBlk)
+    (hv : Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair y i)) = Part.some v) :
+    ∃ kSchr rEnd, (Schritt (precSchleife cgBlk aus frei))^[kSchr] (some r) = some rEnd ∧
+      rEnd.pc = 0 ∧
+      rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
+      rEnd.temp aus = some (natVal v) ∧
+      (∀ s, s < frei → s ≠ aus → rEnd.temp s = r.temp s) ∧
+      rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
+  let prog := precSchleife cgBlk aus frei
+  obtain ⟨r7, hrun7, hpc7, hpres7, hlok7, hrueck7, hstopp7⟩ :=
+    precCheckSprungLauf cgBlk aus frei y k r hpc hy hk hyk
+  let r7_0 : Rahmen := { r7 with pc := 0 }
+  have hr7_0pc : r7_0.pc = 0 := rfl
+  have hr7_0y : r7_0.temp (frei + 2) = some (natVal y) := by
+    change r7.temp (frei + 2) = some (natVal y)
+    rw [hpres7 (frei + 2) (by omega) (by omega)]
+    exact hy
+  have hr7_0i : r7_0.temp aus = some (natVal i) := by
+    change r7.temp aus = some (natVal i)
+    rw [hpres7 aus (ltNeAdd hausFrei) (ltNeAdd hausFrei)]
+    exact hi
+  have hr7_0a : r7_0.temp (frei + 0) = some (natVal a) := by
+    change r7.temp (frei + 0) = some (natVal a)
+    rw [hpres7 (frei + 0) (addNeLinks (by decide : (0 : Nat) ≠ 6))
+      (addNeLinks (by decide : (0 : Nat) ≠ 7))]
+    exact ha
+  have hmitPc7 : mitPc 8 r7_0 = r7 := by
+    change { r7 with pc := 8 + 0 } = r7
+    rfl
+  obtain ⟨kR, rR, hrunR, hpcR, hrRaus, hpresR, hlokR, hrueckR, hstoppR⟩ :=
+    precRumpfLauf cgBlk cg aus frei freiCg y i a v r7_0 hr7_0pc hr7_0y hr7_0i hr7_0a
+      hausFrei hfreiCg hcg hvCg hv
+  rw [precRumpfLaenge] at hpcR
+  have hbleibR := laufBleibtVorEnde (precRumpf cgBlk aus frei) r7_0 kR rR hrunR
+    (by rw [hpcR, precRumpfLaenge])
+  have hvR : VerschiebbaresProgramm (precRumpf cgBlk aus frei) := by
+    rw [← verschiebbarVonNull]
+    exact verschiebbarPrecRumpf 0 cgBlk aus frei hvCg
+  have hshiftR := laufMitPc (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)])
+    (precRumpf cgBlk aus frei) (precEnde cgBlk frei) hvR r7_0 kR hbleibR
+  have hpreLen : (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]).length = 8 := by
+    simp only [List.length_append, precCheckLaenge, List.length_cons, List.length_nil]
+  rw [hpreLen] at hshiftR
+  have hshiftR' : (Schritt prog)^[kR] (some r7) = some (mitPc 8 rR) := by
+    change (Schritt (precSchleife cgBlk aus frei))^[kR] (some r7) = some (mitPc 8 rR)
+    simpa only [precSchleife, hmitPc7, hrunR] using hshiftR
+  have hrunMitte : (Schritt prog)^[kR + 8] (some r) = some (mitPc 8 rR) := by
+    rw [Function.iterate_add_apply, hrun7, hshiftR']
+  let rE : Rahmen := mitPc 8 rR
+  have hrEpc : rE.pc = cgBlk.length + 96 := by
+    change 8 + rR.pc = cgBlk.length + 96
+    rw [hpcR]
+  have hrEy : rE.temp (frei + 2) = some (natVal y) := by
+    change rR.temp (frei + 2) = some (natVal y)
+    rw [hpresR (frei + 2) (by omega) (by omega) (by omega) (by omega)]
+    exact hr7_0y
+  obtain ⟨rEnd, hrunEnde, hpcEnde, hrEndY, hpresEnde, hlokEnde, hrueckEnde, hstoppEnde⟩ :=
+    precEndeGanzLauf cgBlk aus frei y rE hrEpc hrEy
+  refine ⟨3 + kR + 8, rEnd, ?_, hpcEnde, hrEndY, ?_, ?_, ?_, ?_⟩
+  · rw [Function.iterate_add_apply, hrunMitte, hrunEnde]
+  · change rEnd.temp aus = some (natVal v)
+    rw [hpresEnde aus (by omega)]
     change rR.temp aus = some (natVal v)
     exact hrRaus
   · intro s hs hne
-    change rE2.temp s = r.temp s
-    change (Function.update rE1.temp (frei + 2) (some (precAddWert y))) s = r.temp s
-    rw [updateMiss _ _ _ _ (by omega)]
-    change (Function.update rE.temp (frei + 3) (some (natVal 1))) s = r.temp s
-    rw [updateMiss _ _ _ _ (by omega)]
+    rw [hpresEnde s (by omega)]
     change rR.temp s = r.temp s
     rw [hpresR s (by omega) hne (by omega) (by omega)]
-    change rC.temp s = r.temp s
-    rw [hCpres s (by omega) (by omega)]
-  · change rE2.lokale = r.lokale
-    exact hlokR.trans hlokC
-  · change rE2.rueckgabe = r.rueckgabe
-    exact hrueckR.trans hrueckC
-  · change rE2.stopp = r.stopp
-    exact hstoppR.trans hstoppC
+    change r7_0.temp s = r.temp s
+    rw [hpres7 s (ltNeAdd hs) (ltNeAdd hs)]
+    rfl
+  · change rEnd.lokale = r.lokale
+    exact hlokEnde.trans (hlokR.trans hlok7)
+  · change rEnd.rueckgabe = r.rueckgabe
+    exact hrueckEnde.trans (hrueckR.trans hrueck7)
+  · change rEnd.stopp = r.stopp
+    exact hstoppEnde.trans (hstoppR.trans hstopp7)
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
