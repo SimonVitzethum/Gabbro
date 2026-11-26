@@ -96,12 +96,12 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       precEinSchritt cgBlk cg a aus frei freiCg j (j + (k + 1)) i v1 r
         hpc ha hk hy hi hylt haus hcgf hcg hvCg hv1
     have hr1limit : r1.temp (frei + 1) = some (natVal ((j + 1) + k)) := by
-      rw [hpres1 (frei + 1) (by omega) (by omega) (by omega) (by omega) (by omega)]
+      rw [hpres1 (frei + 1) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
       rw [hk]
       congr 1
       omega
     have hr1a : r1.temp (frei + 0) = some (natVal a) := by
-      rw [hpres1 (frei + 0) (by omega) (by omega) (by omega) (by omega) (by omega)]
+      rw [hpres1 (frei + 0) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
       exact ha
     obtain ⟨kRest, rEnd, hrunRest, hpcEnd, hrEndaus, hpresRest, hlokRest, hrueckRest, hstoppRest⟩ :=
       ih (j + 1) v1 v1 r1 hpc1 hr1a hr1limit hr1y hr1aus hvRest
@@ -109,7 +109,7 @@ theorem precFolgeVonLauf (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     · rw [Function.iterate_add_apply, hrun1, hrunRest]
     · intro s hs hne
       rw [hpresRest s hs hne]
-      exact hpres1 s (by omega) (by omega) (by omega) hne (by omega) (by omega)
+      exact hpres1 s (by omega) (by omega) (by omega) hne (by omega) (by omega) (by omega) (by omega)
     · exact hlokRest.trans hlok1
     · exact hrueckRest.trans hrueck1
     · exact hstoppRest.trans hstopp1

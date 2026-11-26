@@ -228,7 +228,7 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
       rEnd.pc = 0 ∧
       rEnd.temp (frei + 2) = some (natVal (y + 1)) ∧
       rEnd.temp aus = some (natVal v) ∧
-      (∀ s, s < frei + 10 → s ≠ frei + 6 → s ≠ frei + 7 → s ≠ aus → s ≠ frei + 2 → s ≠ frei + 3 → rEnd.temp s = r.temp s) ∧
+      (∀ s, s < frei + 10 → s ≠ frei + 6 → s ≠ frei + 7 → s ≠ aus → s ≠ frei + 2 → s ≠ frei + 3 → s ≠ frei + 4 → s ≠ frei + 5 → rEnd.temp s = r.temp s) ∧
       rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := by
   let prog := precSchleife cgBlk aus frei
   obtain ⟨r7, hrun7, hpc7, hpres7, hlok7, hrueck7, hstopp7⟩ :=
@@ -287,10 +287,10 @@ theorem precEinSchritt (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     rw [hpresEnde aus (by omega) (by omega)]
     change rR.temp aus = some (natVal v)
     exact hrRaus
-  · intro s hs10 hs6 hs7 hneAus hs2 hs3
+  · intro s hs10 hs6 hs7 hneAus hs2 hs3 hs4 hs5
     rw [hpresEnde s hs2 hs3]
     change rR.temp s = r.temp s
-    rw [hpresR s hs10 hneAus (by omega) (by omega)]
+    rw [hpresR s hs10 hneAus hs4 hs5]
     change r7_0.temp s = r.temp s
     rw [hpres7 s hs6 hs7]
   · change rEnd.lokale = r.lokale
