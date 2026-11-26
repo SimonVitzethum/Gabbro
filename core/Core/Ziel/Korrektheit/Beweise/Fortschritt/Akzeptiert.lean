@@ -9,9 +9,9 @@
   `FortschrittsPflichten` are theorems of the elaborated system (`einheit_fortschrittsfelder`
   in `Beweise/Fortschritt/EinheitLaeufe.lean`). With them, `fortschritt_akzeptiert_ohne_haengen`
   is the strongest scheduler-free theorem here, leaving exactly the per-context no-hang leg
-  open. The two run premises that close it — `Maschine.SchedulerFair` and
-  `Maschine.VerdraengungKehrtZurueck` — deliver the selection duties in
-  `Beweise/Fortschritt/SchedulerEinheit.lean`.
+  open. Scheduler fairness is derived from the implementation transitions in
+  `EinheitLaeufe.lean`. The return premise still needed by `SchedulerEinheit.lean`
+  fails on an admitted hardware-fair run of the accepted empty unit.
 -/
 module
 
@@ -70,7 +70,7 @@ theorem einheitVon_fair_ohne_rueckkehr :
   let E := einheitVon .x86_64 trivialUnit
   have accepted := trivialUnit_akzeptiert Plattform.x86_64
   obtain ⟨s, zul⟩ := zulStart_erfuellbar fairV.hardware
-    (bildGueltig .x86_64 trivialUnit (by exact trivialUnit_zugelassen .x86_64))
+    (bildGueltig .x86_64 trivialUnit (trivialUnit_zugelassen .x86_64))
   obtain ⟨ρ, lauf, startEq, hwEq⟩ := fairer_lauf E zul fairV
   refine ⟨trivialUnit, HV, ρ, accepted, lauf, hwEq ▸ fairV,
     einheitVon_schedulerFair .x86_64 trivialUnit lauf, ?_⟩
@@ -107,7 +107,7 @@ theorem einheitVon_fair_ohne_rueckkehr :
       0, irqV, Hv, false, rfl, ⟨Nat.le_refl _, Nat.le_refl _, pendingV0, ?_, auswahlV0⟩,
       NimmtUnterbrechung.handler_bei ⟨rfl, rfl⟩ (Nat.le_refl _), rfl, rfl, ?_, rfl⟩
     · exact List.not_mem_nil
-    · exact .cons (.ohne (Or.inl (fun h => nomatch h))) append (.nil _)
+    · exact .cons (.ohne (Or.inl rfl)) append (.nil _)
   have first : ∃ id spur next, ρ.zeit.spur 0 = some (.interrupt id, spur) ∧
       ρ.zeit.zustand 1 = some next ∧ (next.kerne 0).laeuft ≠ some Ast.Semantik.eintritt ∧
       ∀ k, k ≠ 0 → (next.kerne k).laeuft ≠ some Ast.Semantik.eintritt := by
@@ -173,7 +173,7 @@ theorem einheitVon_fair_ohne_rueckkehr :
       rw [hu, cut] at ht
       cases ht with
       | wartet _ eq _ =>
-        cases eq
+        rw [Option.some.inj eq]
         exact ih u hu k
       | schritt _ step =>
         cases step with
