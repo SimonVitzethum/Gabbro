@@ -25,7 +25,7 @@ def daten : Startdaten Unit Unit Unit Unit :=
 
 def einrichtung : Einrichtung Unit Unit Unit Unit Unit Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False,
-    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => ()⟩,
+    fun _ _ => True, ⟨0, 1⟩, ⟨.faden 0, 0, fun _ => daten, fun _ _ => (), id⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 def start : Zustand :=

@@ -68,7 +68,7 @@ def deadSystem : MaschinenSystem Bool Unit Unit Unit Bool Unit Unit Unit Unit :=
 
 def deadEinrichtung : Einrichtung Bool Unit Unit Unit Bool Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten dispatch1, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨A, 0, fun _ => wDaten dispatch1, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 def deadStart : Zustand Bool Unit Unit Unit Bool Unit :=
   { (Zustand.start (fun _ => false) (fun _ => .laeuft)

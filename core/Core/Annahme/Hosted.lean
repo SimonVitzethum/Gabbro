@@ -44,7 +44,7 @@ def startDaten (s : AussenStart) : Startdaten Unit Unit (Option Handle) Unit :=
 
 def einrichtung : Einrichtung Unit Unit Unit Unit (Option Handle) Unit Unit :=
   ⟨fun _ => (), fun _ => (), fun _ => (), fun _ => (), fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 1⟩, ⟨kontext, 0, fun _ => daten none, fun _ _ => ()⟩, fun _ => 0, fun _ _ _ => none⟩
+    ⟨0, 1⟩, ⟨kontext, 0, fun _ => daten none, fun _ _ => (), id⟩, fun _ => 0, fun _ _ _ => none⟩
 
 def startZustand (s : AussenStart) : Zustand :=
   let d := startDaten s

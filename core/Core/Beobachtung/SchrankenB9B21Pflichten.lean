@@ -88,12 +88,12 @@ def unterbrechungErhaltenAussage : Prop :=
     StapelZustand E s' ∧ SpeicherZustand E s'
 
 /-- A crash preserves both bounds provided the recovery entry's start data meets them:
-    its locals are within the stack bound and its rights admit no live cell on the
+    its cleared locals are within the stack bound and its rights admit no live cell on the
     durable booking, so the wiped volatile state contributes nothing. Without that
     start-data discipline the memory leg is false (durable allocations survive the crash
     by design).
     Difficulty: mittel. Sketch: rewrite with `AbsturzSchritt.genau` to
-    `s.wiederanlauf`; the post-state takes locals and rights from `w.daten` and booking
+    `s.wiederanlauf`; the post-state takes cleared locals and rights from `w.daten` and booking
     from the durable snapshot; apply the two start-data hypotheses. -/
 def absturzSchrankenAussage : Prop :=
   ∀ {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
@@ -101,7 +101,7 @@ def absturzSchrankenAussage : Prop :=
     {region w k run t spur s s'},
     (∀ (p : PersistZustand) (c : Kontext),
       UnterGrenze E.schranken.stapel
-        (E.schranken.stapelTiefe ((w.daten p.dauerhaft).lokal c)) ∧
+        (E.schranken.stapelTiefe (w.verwerfen ((w.daten p.dauerhaft).lokal c))) ∧
       ∀ z, z ∈ LebendeZellen { s.wiederanlauf w t p with
         rechte := (w.daten p.dauerhaft).rechte } → False) →
     StapelZustand E s → SpeicherZustand E s →
