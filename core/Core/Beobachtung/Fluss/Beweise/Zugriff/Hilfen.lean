@@ -33,7 +33,7 @@ theorem fragment_zelle_oeffentlich (p : Ast.Semantik.Fragment) (plattform : Plat
     oeffentlich ((Ast.Semantik.Fragment.einheit p plattform).etiketten.ort x) = true := by
   simp only [Ast.Semantik.Fragment.einheit, Einheit.etiketten, Etiketten.leer, oeffentlich, decide_true]
 
-/-- Every state of an admitted run has a consistent complete graph. -/
+/-- Every state of an accepted run has a consistent complete graph. -/
 theorem fragment_speicher_gut {p : Ast.Semantik.Fragment} {plattform : Plattform}
     {h : Umgebung} {ρ : Lauf (p.einheit plattform)}
     (lauf : Laeufe (p.einheit plattform) h ρ) (t : Nat) :
