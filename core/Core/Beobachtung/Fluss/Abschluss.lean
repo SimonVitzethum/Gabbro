@@ -8,6 +8,7 @@ public import Core.Beobachtung.Fluss.Aggregat
 public import Core.Beobachtung.Fluss.Text
 public import Core.Beobachtung.Fluss.Variante
 public import Core.Beobachtung.Fluss.Beweise.Antwort
+public import Core.Beobachtung.Fluss.Beweise.ZugriffNI
 public import Core.Beobachtung.Fluss.Interrupt
 public import Core.Beobachtung.Fluss.Absturz
 
@@ -25,6 +26,7 @@ structure FragmentNIBeweise : Prop where
   aggregat : AggregatNIAussage
   text : TextNIAussage
   variante : VarianteNIAussage
+  zugriff : ZugriffNIAussage
   antwort : AntwortNIAussage
   interrupt : InterruptNIAussage
   absturz : AbsturzNIAussage
@@ -46,9 +48,7 @@ theorem akzeptiertes_fragment_ni (beweise : FragmentNIBeweise)
     | aggregat => exact beweise.aggregat p plattform f familie quelle
     | text => exact beweise.text p plattform f familie quelle
     | variante => exact beweise.variante p plattform f familie quelle
-    | zugriff =>
-      intro h₁ h₂ ρ₁ ρ₂ vergleich predictor t c w spur vor zustand kopf spurGlied kopplung
-      exact (Befehl.privat_ne_zugriff (rein f (Ast.Semantik.kopf_mem (code := p.code) kopf)) familie).elim
+    | zugriff => exact beweise.zugriff p plattform f familie quelle
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t w spur tick protokoll kopplung
     cases w with
     | kontext _ _ => exact False.elim protokoll
