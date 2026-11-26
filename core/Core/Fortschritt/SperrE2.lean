@@ -142,7 +142,7 @@ theorem ausfuehr_geben : FuehrtSchrittAus E_2.einrichtung 0 A s2_0 s2_0 wGebenPl
     ⟨g2_es, []⟩ s2_1 := by
   refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, _, s2_0,
-    .sperre (.geben (.besitzer A [])) (fun _ => trivial), g2_mem, rfl⟩
+    .sperre (.geben (.besitzer A [])) (fun _ _ => trivial), g2_mem, rfl⟩
 
 def spur2 : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
   | 0 => some (.kontext A (), ⟨g2_es, []⟩)
@@ -203,7 +203,7 @@ def takt2 : ∀ t, Takt (Lauffolge E_2 hw2) (KeinSchritt (Lauffolge E_2 hw2))
   | 0 =>
     .schritt spur2_0 (.schritt (ImplSchritt.kontext (hw2_crash 0)
       ⟨0, hw2_opp0 rfl, s2_0_kerne0, s2_0_live _⟩
-      ⟨(), rfl, Or.inr (Or.inr (Or.inl ⟨_, .geben (.besitzer A []), rfl, rfl⟩))⟩
+      ⟨(), rfl, Or.inr (Or.inr (Or.inl ⟨⟨none, []⟩, .geben (.besitzer A []), rfl, rfl⟩))⟩
       ausfuehr_geben))
   | (n + 1) => by
     by_cases hpar : (n + 1) % 2 = 0
@@ -298,7 +298,7 @@ theorem e2_bereit : ∀ t s', 0 ≤ t → ρ_2.zeit.zustand t = some s' →
     subst hss
     intro hne
     exact ⟨s2_0_live _, ⟨0, s2_0_kerne0⟩, (), wGebenPlan, s2_0,
-      ⟨(), rfl, Or.inr (Or.inr (Or.inl ⟨_, .geben (.besitzer A []), rfl, rfl⟩))⟩,
+      ⟨(), rfl, Or.inr (Or.inr (Or.inl ⟨⟨none, []⟩, .geben (.besitzer A []), rfl, rfl⟩))⟩,
       rfl, fun _ _ => trivial⟩
   | succ t =>
     have hss : s' = s2_1 := Option.some.inj (hzs.symm.trans rfl)
@@ -337,7 +337,7 @@ theorem e2_hagree : ∀ t s w plan u, 0 ≤ t → ρ_2.zeit.zustand t = some s �
         cases hG with
         | besitzer c r =>
           refine ⟨s2_0, ⟨(), rfl, Or.inr (Or.inr (Or.inl
-            ⟨_, .geben (.besitzer A []), rfl, rfl⟩))⟩, _, _, ?_⟩
+            ⟨⟨none, []⟩, .geben (.besitzer A []), rfl, rfl⟩))⟩, _, _, ?_⟩
           exact ⟨_, _, ausfuehr_geben⟩
     · have hcon : plan = stutterPlan := (List.cons.inj hpeq).1.symm
       subst hcon
