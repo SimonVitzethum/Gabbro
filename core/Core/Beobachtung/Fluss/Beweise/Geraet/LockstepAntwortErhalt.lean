@@ -212,6 +212,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     simp only [Zustand.naechsteAntwort, Zustand.angekommen, Zustand.antwort,
                       hantworten, hverbraucht, hverworfen, aeq]
                   · intro v w hv hw
+                    have hvEq : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
+                    have hwEq : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                     subst v
                     subst w
                     have hstate := (geraeteKopplung_kopplung hkopp).2.1 s₁ s₂ hz₁ hz₂
@@ -236,6 +238,8 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
                     simp only [NiedrigeBeob] at hlen
                     exact congrArg (fun n => n + (aussenBeob (d.unit locals) (.antwort a)).length) hlen
                   · intro v w hv hw
+                    have hvEq : v = n₁ := Option.some.inj (hv.symm.trans hn₁)
+                    have hwEq : w = n₂ := Option.some.inj (hw.symm.trans hn₂)
                     subst v
                     subst w
                     refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
