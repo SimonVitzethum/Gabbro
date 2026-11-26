@@ -6,6 +6,7 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAntwortErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInterruptErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepPauseErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKontextErhalt
 
 @[expose] public section
 
@@ -47,5 +48,10 @@ theorem geraete_kopplung_alle_aus {k : Katalog} {scope : Scope} {locals : Umgebu
               exact geraete_interrupt_erhalt locals d h₁ h₂ ρ₁ ρ₂ vergleich predictor t id spur ih hspur
           | absturz =>
               exact geraete_absturz_erhalt locals d h₁ h₂ ρ₁ ρ₂ vergleich predictor t spur ih hspur
+
+/-- The strengthened coupling holds at every cut of a compared device run with no
+    remaining hypothesis: the context-tick preservation unit is now itself proved. -/
+theorem geraete_kopplung_alle : GeraeteKopplungAlleAussage (d := d) (locals := locals) :=
+  geraete_kopplung_alle_aus (geraete_kontext_erhalt locals d)
 
 end Gabbro.Core.Beobachtung
