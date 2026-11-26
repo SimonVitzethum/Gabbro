@@ -167,6 +167,15 @@ def Befehl.maschinennach (b : Befehl) (c : Kontext) (s u : Zustand) : Zustand :=
   | .warte _ | .sperre _ _ | .frage _ | .verbrauche _ | .rueckkehr | .starte | .verbinde _ |
     .beende | .wechsle _ _ => u
 
+/-- **The machine transfer of a local or call step is the frame transfer**: its plan carries the
+    internal action, so the machine state is unchanged. -/
+theorem Befehl.maschinennach_lokal_ruf (b : Befehl) (h : b.klasse = .lokal ∨ b.klasse = .ruf)
+    (c : Kontext) (s u : Zustand) : b.maschinennach c s u = u := by
+  unfold Befehl.maschinennach
+  rcases h with h | h <;>
+    simp only [Befehl.plan, Schrittform.plan, Befehl.form, Wirkungsklasse.plan, h,
+      Semantik.plan]
+
 /-- The ideal step of a form of a frame-only class: the plan of its class and its frame transfer. -/
 theorem Schrittform.ideal_privat (F : Schrittform)
     (h : F.klasse = .lokal ∨ F.klasse = .ruf ∨ F.klasse = .maskiere ∨ F.klasse = .prioritaet ∨
