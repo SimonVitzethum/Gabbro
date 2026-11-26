@@ -179,4 +179,14 @@ theorem geraete_ankunft_invariant
     have hqalt := hcutalt q0 hq0mem
     omega
 
+/-- The pinned arrival statement, closed by `geraete_ankunft_invariant`. -/
+theorem geraeteAnkunftInvariant : GeraeteAnkunftInvariantAussage (k := k) := by
+  intro _ _ _ _ _ _ inv offered
+  exact geraete_ankunft_invariant inv offered
+
+/-- The pinned interrupt-entry statement, closed by `geraete_interrupt_invariant`. -/
+theorem geraeteInterruptInvariant : GeraeteInterruptInvariantAussage (k := k) := by
+  intro _ _ _ _ _ _ _ inv
+  exact geraete_interrupt_invariant inv
+
 end Gabbro.Core.Beobachtung
