@@ -129,8 +129,8 @@ theorem Etiketten.mem_frage (e : Etiketten Ort) (q : Frage) (teil : Nat) :
 theorem Etiketten.frage_hoch_iff (e : Etiketten Ort) (q : Frage) :
     oeffentlich (e.frage q) = false ↔ ∃ teil, teil ∈ e.endpunkt q.endpoint ∨
       ∃ a ∈ q.zugriffe, teil ∈ e.objekt a.handle.origin.object := by
-  rw [oeffentlich, decide_eq_false_iff_not, ← Finset.nonempty_iff_ne_empty]
-  exact exists_congr (e.mem_frage q)
+  rw [oeffentlich, decide_eq_false_iff_not]
+  exact Finset.nonempty_iff_ne_empty.symm.trans (exists_congr (e.mem_frage q))
 
 def sichtbar (label : Etikett) (datum : A) : Option A :=
   if oeffentlich label then some datum else none
