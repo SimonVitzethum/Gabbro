@@ -49,6 +49,13 @@ def tabKohaerent (tab : DomaenenTabelle) : Prop :=
     (∀ e ∈ tab.geraete, e.2 < tab.domaenen) ∧
     (∀ k ∈ tab.kanaele, k.1 < tab.domaenen ∧ k.2 < tab.domaenen)
 
+/-- **Structural well-formedness of the finite declaration** (independent of the checker's
+    verdict): a positive domain count and every declared channel between in-scope domains. The
+    assignment tables themselves are a separate, finite coherence condition in `tabKohaerent`. -/
+def DomaenenTabelle.wohlgeformt (tab : DomaenenTabelle) : Prop :=
+  0 < tab.domaenen ∧
+    ∀ k ∈ tab.kanaele, k.1 < tab.domaenen ∧ k.2 < tab.domaenen
+
 /-- The single-domain table: everything unlisted, hence owned by domain `0`. -/
 def eineTabelle : DomaenenTabelle where
   domaenen := 1
