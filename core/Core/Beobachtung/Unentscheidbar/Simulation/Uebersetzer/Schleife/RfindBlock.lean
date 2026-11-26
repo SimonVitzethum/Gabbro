@@ -27,6 +27,12 @@ def rfindSchleife (cfBlk : List Befehl) (aus frei : Nat) : List Befehl :=
       .zurueckSprung (49 + cfBlk.length)] ++
     kopie aus (frei + 2)
 
+/-- The `rfind'` block: read both components of the input, initialise the
+    candidate from `m`, then run the minimisation loop. -/
+def rfindBlk (cfBlk : List Befehl) (ein aus frei freiL : Nat) : List Befehl :=
+  (leftBlk ein (frei + 0) freiL ++ rightBlk ein (frei + 1) freiL) ++
+    kopie (frei + 2) (frei + 1) ++ rfindSchleife cfBlk aus frei
+
 /-- Forward convergence of the minimisation loop, as a pinned obligation. If
     `cf` evaluates to zero first at candidate `y0 >= m` and stays defined up to
     `y0`, the loop reaches its end with `y0` in the output slot. Difficulty:
@@ -57,10 +63,15 @@ def rfindKonvergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     the candidates and use `laufStirbtNicht_iff` from `Divergenz` to connect the
     zero-free search to `LaufStirbtNicht`. -/
 def rfindDivergenzAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
-    (a aus frei freiCf freiP : Nat) (m : Nat) (r : Rahmen) : Prop :=
-  ((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
-    (∀ y, m ≤ y → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0)) ↔
-    LaufStirbtNicht (rfindSchleife cfBlk aus frei) r
+    (a aus frei freiCf freiP : Nat) : Prop :=
+  ∀ (m : Nat) (r : Rahmen),
+    r.pc = 0 →
+    r.temp (frei + 0) = some (natVal a) →
+    r.temp (frei + 1) = some (natVal m) →
+    r.temp (frei + 2) = some (natVal m) →
+    ((∀ y, m ≤ y → ∃ v, Nat.Partrec.Code.eval cf (Nat.pair a y) = Part.some v) ∧
+      (∀ y, m ≤ y → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0)) ↔
+      LaufStirbtNicht (rfindSchleife cfBlk aus frei) r
 
 /-- Block correctness of the `rfind'` block, as a pinned obligation. The block
     reads both components of the input, initialises the candidate from `m` and
@@ -75,8 +86,7 @@ def blockRfindAussage (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
   BlockKorrekt cfBlk cf (frei + 4) (frei + 6) freiCf →
   BleibtImBlock cfBlk → VerschiebbaresProgramm cfBlk →
   rfindKonvergenzAussage cfBlk cf (frei + 0) aus frei freiCf freiP →
-  rfindDivergenzAussage cfBlk cf (frei + 0) aus frei freiCf freiP (frei + 1)
-    (startVon 0) →
-  BlockKorrekt (cfBlk ++ rfindSchleife cfBlk aus frei) (.rfind' cf) ein aus frei
+  rfindDivergenzAussage cfBlk cf (frei + 0) aus frei freiCf freiP →
+  BlockKorrekt (rfindBlk cfBlk ein aus frei freiL) (.rfind' cf) ein aus frei
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
