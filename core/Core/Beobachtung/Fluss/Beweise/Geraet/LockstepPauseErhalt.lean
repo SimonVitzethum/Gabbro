@@ -160,6 +160,9 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                     obtain ⟨_, plan', hplans', rule₂⟩ := geraete_kontext_regel ruleEq regel₂
                     have regel₂' := regel₂
                     rw [hplans'] at regel₂'
+                    have hplanEq := (List.cons.inj hplans').1
+                    have aus₂' := aus₂
+                    rw [hplanEq] at aus₂'
                     have keinAbsturz₁ : (ρ₁.hw.angebot t).crash = false := by
                       rw [hang]
                       exact keinAbsturz₂
@@ -183,7 +186,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                             (spur₁ := spur')
                             hkoppUmkehr hz₂ hz₁ gut₁
                             (Gabbro.Core.Ast.Semantik.Beobachtung.QuellzustandGleich.symm quell₁₂)
-                            regel₂' ruleEq aus₂ rfl rfl owned₂ idle₂
+                            regel₂' ruleEq aus₂' rfl rfl owned₂ idle₂
                         have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                             (.kontext c₂ w₂, spur₁') n₁' :=
                           .kontext keinAbsturz₁ bereit₁ regel₁ aus₁
@@ -199,7 +202,7 @@ theorem geraete_pause_erhalt (locals : Umgebung scope) (d : Denotation k scope) 
                             (spur₁ := spur') (answer := answer₂)
                             hkoppUmkehr hz₂ hz₁
                             (Gabbro.Core.Ast.Semantik.Beobachtung.QuellzustandGleich.symm quell₁₂)
-                            regel₂' ruleEq aus₂ rfl rfl owned₂ pending₂ ready₂ sameQuestion₂
+                            regel₂' ruleEq aus₂' rfl rfl owned₂ pending₂ ready₂ sameQuestion₂
                         have step₁ : ImplSchritt E.einrichtung E.system E.katalog ρ₁.hw t s₁
                             (.kontext c₂ w₂, spur₁') n₁' :=
                           .kontext keinAbsturz₁ bereit₁ regel₁ aus₁
