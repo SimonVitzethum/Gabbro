@@ -337,11 +337,11 @@ theorem stummer_schritt_koppelt
                       have i2 : b.initial = w₂.initial := by rw [(Option.some.inj hb).symm, hinitial₂]; rfl
                       simp only [i1, i2]
                       exact initialGleich x
-                    · have r1 : a.rechte = vor.rechte := by rw [hrechte₁]; rfl
+                    · have r1 : a.rechte = vor.rechte := by rw [(Option.some.inj ha).symm, hrechte₁]; rfl
                       have r2 : b.rechte = w₂.rechte := by rw [(Option.some.inj hb).symm, hrechte₂]; rfl
                       simp only [r1, r2]
                       exact rechteGleich
-                    · have l1 : a.leihen = vor.leihen := by rw [hleihen₁]; rfl
+                    · have l1 : a.leihen = vor.leihen := by rw [(Option.some.inj ha).symm, hleihen₁]; rfl
                       have l2 : b.leihen = w₂.leihen := by rw [(Option.some.inj hb).symm, hleihen₂]; rfl
                       simp only [l1, l2]
                       exact leihenGleich
@@ -359,7 +359,7 @@ theorem stummer_schritt_koppelt
                         simp only [Zustand.naechsteAntwort, Zustand.angekommen, e1, e2, e3]
                       rw [q1, q2]
                       exact antwortGleich d
-                    · have e1 : a.epoche = vor.epoche := by rw [hepoche₁]; rfl
+                    · have e1 : a.epoche = vor.epoche := by rw [(Option.some.inj ha).symm, hepoche₁]; rfl
                       have e2 : b.epoche = w₂.epoche := by rw [(Option.some.inj hb).symm, hepoche₂]; rfl
                       simp only [e1, e2, epocheEq]
                     · have g1 : a.geliefert = vor.geliefert := by rw [hgeliefert₁]; rfl
