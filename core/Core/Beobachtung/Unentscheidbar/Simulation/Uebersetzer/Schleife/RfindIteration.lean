@@ -215,10 +215,13 @@ theorem rfindNulltestNullLauf (cfBlk : List Befehl) (aus frei : Nat) (r : Rahmen
     rw [show (2 : Nat) = 1 + 1 by omega, Function.iterate_add_apply, e1', e2']
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
-  refine ⟨r3, hrun3, ?_, ?_, rfl, rfl, rfl⟩
+  refine ⟨r3, hrun3, ?_, ?_, ?_, rfl, rfl, rfl⟩
   · dsimp only [r3]
     omega
   · exact h25
+  · intro s hs
+    dsimp only [r3, r2, r1]
+    rw [updateMiss _ _ _ _ hs, updateMiss _ _ _ _ hs]
 
 /-- The increment and the back edge return to the loop entry with the successor candidate. -/
 theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
@@ -227,6 +230,7 @@ theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     ∃ r3 : Rahmen,
       (Schritt (rfindSchleife cfBlk aus frei))^[3] (some r) = some r3 ∧
       r3.pc = 0 ∧ r3.temp (frei + 2) = some (natVal (y + 1)) ∧
+      (∀ s, s ≠ frei + 2 → s ≠ frei + 3 → r3.temp s = r.temp s) ∧
       r3.lokale = r.lokale ∧ r3.rueckgabe = r.rueckgabe ∧ r3.stopp = r.stopp := by
   let blk := rfindSchleife cfBlk aus frei
   let r1 : Rahmen := { r with pc := r.pc + 1, temp := Function.update r.temp (frei + 3) (some (natVal 1)) }
@@ -257,12 +261,15 @@ theorem rfindRueckLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
     rw [show (2 : Nat) = 1 + 1 by omega, Function.iterate_add_apply, e1', e2']
   have hrun3 : (Schritt blk)^[3] (some r) = some r3 := by
     rw [show (3 : Nat) = 1 + 2 by omega, Function.iterate_add_apply, hrun2, e3']
-  refine ⟨r3, hrun3, ?_, ?_, rfl, rfl, rfl⟩
+  refine ⟨r3, hrun3, ?_, ?_, ?_, rfl, rfl, rfl⟩
   · dsimp only [r3]
     rw [hpc2]
     omega
   · dsimp only [r3, r2]
     rw [updateHit]
+  · intro s hs2 hs3
+    dsimp only [r3, r2, r1]
+    rw [updateMiss _ _ _ _ hs2, updateMiss _ _ _ _ hs3]
 
 /-- The copy segment writes the candidate into the output slot and stops at the loop end. -/
 theorem rfindKopieLauf (cfBlk : List Befehl) (aus frei y : Nat) (r : Rahmen)
