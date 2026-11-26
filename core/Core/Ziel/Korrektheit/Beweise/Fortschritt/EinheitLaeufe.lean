@@ -336,7 +336,8 @@ theorem einheitVon_schreitet_bei_gelegenheit (P : Katalog.Plattform) (t : Ast.Un
         obtain ⟨_, _, _, _, _, pending, _, _, _, _, _⟩ := enters
         obtain ⟨k, hk, _, _⟩ := ready
         have reserved := (lauf.2.1.2 tick).interrupt_reserviert pending.2.2.2.2
-        exact (Option.noConfusion (reserved.2.1.symm.trans hk))
+        have impossible := reserved.2.1.symm.trans hk
+        cases impossible
       | absturz crash =>
         have hc := crash.1.2
         rw [noCrash] at hc

@@ -1,11 +1,11 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise/Fortschritt/SchedulerEinheit.lean
-  Subject:   THE SCHEDULER LEG FOR ELABORATED UNITS — the two run premises deliver the
-             selection duties for every unit, and the pinned progress statement.
+  Subject:   THE SCHEDULER LEG FOR ELABORATED UNITS — the return premise and runtime
+             scheduling deliver the selection duties and the pinned progress statement.
 
   On an open suffix no live context is ever displaced (`einheitVon_keine_verdraengung`,
   via the return premise), so the dispatch core is constant (`einheitVon_dispatch_konstant_neu`).
-  Scheduler fairness on that constant core serves the context infinitely often
+  Scheduler fairness follows from the elaborated transitions and serves the context infinitely often
   (`einheitVon_scheduler_pflichten`): the recorded run itself selects (`nutzbar` = the run's
   own context steps, so `wahl` is immediate and `angebot` follows from the step's
   opportunity), and an open, enabled context is offered again past every cut. Lock
@@ -14,7 +14,7 @@
   The duties are built for every fragment, frame-only or with accesses: the head-based
   composability field of `FortschrittsPflichten` is supplied by `einheit_fortschrittsfelder`
   (`komponierbar_koepfe`), which holds for an access head because the step the memory model
-  offers composes. The two owner-approved run premises plus memory liveness close the pinned
+  offers composes. The return premise plus memory liveness close the pinned
   `FortschrittAkzeptiertAussage` (`fortschritt_akzeptiert`); its statement is unchanged.
   The scheduler selection premise itself is proved here (`schedulerFortschrittVoraussetzung`),
   so no free scheduler parameter remains. A fair run without preemption satisfies both run
@@ -35,7 +35,7 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-/-- The selection duties hold for every elaborated unit under the two run premises: take the run's
+/-- The selection duties hold for every elaborated unit under the return premise: take the run's
     own context steps as the selection. Offering follows from the step's physical opportunity,
     choice is immediate, and an open, enabled context is served infinitely often by scheduler
     fairness on its constant dispatch core. The four form-side fields come from
@@ -121,8 +121,7 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
     preemption of every accepted elaborated unit, the matched ideal run admits a selection
     predicate `nutzbar` for which the four dispatch and selection duties hold: `angebot`, `wahl`,
     `individuell` and `systemweit` (the system-wide duty is vacuous for `blockierend`). The two run
-    premises are the same as those of `FortschrittAkzeptiertAussage`; without them a fair run may
-    starve a live context, so they are load-bearing. The four form-side fields, including
+    premises are the same as those of `FortschrittAkzeptiertAussage`; dispatch return is the remaining run obligation. The four form-side fields, including
     composability at an access head, come from `einheit_fortschrittsfelder`. -/
 def SchedulerFortschrittVoraussetzungAussage : Prop :=
   ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
@@ -139,7 +138,7 @@ def SchedulerFortschrittVoraussetzungAussage : Prop :=
           ρ η nutzbar
 
 /-- The selection premise holds for every elaborated unit, frame-only or with accesses: the run's
-    own context steps are the selection and the two run premises discharge `individuell`. -/
+    own context steps are the selection and runtime scheduler fairness and the return premise discharge `individuell`. -/
 theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAussage) :
     SchedulerFortschrittVoraussetzungAussage := by
   intro P t _ H ρ lauf _ _ ret η valid matched environment
