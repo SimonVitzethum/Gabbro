@@ -66,7 +66,7 @@ structure Zustand (L Ort Wert Raum Lok Grund : Type) where
       (its consumption by delivery is future work). -/
   software : List (Nat × Unterbrechung) := []
   /-- **The routing table** (MK-20): `leiteLeitung` maps a line to its target core and priority. -/
-  leitung : Nat → Nat × Nat := fun _ => (0, 0)
+  leitung : Nat → Nat × Nat := fun _leitung => (0, 0)
 
 namespace Zustand
 
