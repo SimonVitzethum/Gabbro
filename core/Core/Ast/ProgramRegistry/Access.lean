@@ -62,6 +62,82 @@ theorem access_am_ort (scope : Scope) (result : Option (Ty .value)) :
         List.getElem?_cons_zero]
     · simp only [List.length_append, List.length_cons, List.length_nil]
       omega
+  | swap name ordinary written valid region visible receiverOrdinary index value mode =>
+    change (((((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (Befehl.zugriff (.tausche 0 region.index 0 1 written.type mode.modus)))).anhaengen
+      (.einzel (Befehl.bindeWert 0 written.type false))).code[
+        (expr 0 index).code.length + (expr 1 value).code.length]? =
+      some (Befehl.zugriff (.tausche 0 region.index 0 1 written.type mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt : (expr 0 index).code.length + (expr 1 value).code.length <
+      (((expr 0 index).code ++ (expr 1 value).code) ++
+        [Befehl.zugriff (.tausche 0 region.index 0 1 written.type mode.modus)]).length := by
+      simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    rw [List.getElem?_append_left hlt]
+    rw [List.getElem?_append_right]
+    · simp only [List.length_append, Nat.sub_self, List.getElem?_cons_zero]
+    · simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+  | vergleicheTausche name ordinary written valid region visible receiverOrdinary index expected neu mode =>
+    change ((((((expr 0 index).anhaengen (expr 1 expected)).anhaengen (expr 2 neu)).anhaengen
+      (.einzel (Befehl.zugriff (.vergleicheTausche 0 region.index 0 1 2 written.type mode.modus)))).anhaengen
+      (.einzel (Befehl.bindeWert 0 written.type false))).code[
+        (expr 0 index).code.length + (expr 1 expected).code.length + (expr 2 neu).code.length]? =
+      some (Befehl.zugriff (.vergleicheTausche 0 region.index 0 1 2 written.type mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt : (expr 0 index).code.length + (expr 1 expected).code.length + (expr 2 neu).code.length <
+      ((((expr 0 index).code ++ (expr 1 expected).code) ++ (expr 2 neu).code) ++
+        [Befehl.zugriff (.vergleicheTausche 0 region.index 0 1 2 written.type mode.modus)]).length := by
+      simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    rw [List.getElem?_append_left hlt]
+    rw [List.getElem?_append_right]
+    · simp only [List.length_append, Nat.sub_self, List.getElem?_cons_zero]
+    · simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+  | holeUndAddiere name ordinary written valid region visible receiverOrdinary index betrag mode =>
+    change (((((expr 0 index).anhaengen (expr 1 betrag)).anhaengen
+      (.einzel (Befehl.zugriff (.holeUndAddiere 0 region.index 0 1 written.type mode.modus)))).anhaengen
+      (.einzel (Befehl.bindeWert 0 written.type false))).code[
+        (expr 0 index).code.length + (expr 1 betrag).code.length]? =
+      some (Befehl.zugriff (.holeUndAddiere 0 region.index 0 1 written.type mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt : (expr 0 index).code.length + (expr 1 betrag).code.length <
+      (((expr 0 index).code ++ (expr 1 betrag).code) ++
+        [Befehl.zugriff (.holeUndAddiere 0 region.index 0 1 written.type mode.modus)]).length := by
+      simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    rw [List.getElem?_append_left hlt]
+    rw [List.getElem?_append_right]
+    · simp only [List.length_append, Nat.sub_self, List.getElem?_cons_zero]
+    · simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+  | erwarte name ordinary written valid region visible receiverOrdinary index marker mode =>
+    change ((((expr 0 index).anhaengen
+      (.einzel (Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))).anhaengen
+      (.einzel (Befehl.bindeWert 0 written.type false))).code[(expr 0 index).code.length]? =
+      some (Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    have hlt : (expr 0 index).code.length <
+      ((expr 0 index).code ++ [Befehl.zugriff (.erwarte 0 region.index 0 marker written.type mode.modus)]).length := by
+      simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
+    rw [List.getElem?_append_left hlt]
+    rw [List.getElem?_append_right]
+    · simp only [Nat.sub_self, List.getElem?_cons_zero]
+    · omega
+
+  | veroeffentliche region visible receiverOrdinary index value mode =>
+    change ((((expr 0 index).anhaengen (expr 1 value)).anhaengen
+      (.einzel (Befehl.zugriff (.veroeffentliche region.index 0 1 mode.modus)))).code[(expr 0 index).code.length + (expr 1 value).code.length]? =
+      some (Befehl.zugriff (.veroeffentliche region.index 0 1 mode.modus)))
+    simp only [Fragment.anhaengen, Fragment.einzel]
+    rw [List.getElem?_append_right]
+    · simp only [List.length_append, List.length_cons, List.length_nil, Nat.sub_self,
+        List.getElem?_cons_zero]
+    · simp only [List.length_append, List.length_cons, List.length_nil]
+      omega
 
 -- Mirror forRange_realisiert at the actual access instruction.
 theorem access_realisiert (scope : Scope) (result : Option (Ty .value)) :

@@ -57,6 +57,51 @@ theorem AccessReads.consumes (read : AccessReads scope input tree rest) : rest <
     have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans valueRead.consumes
     have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
     exact ((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | swap name ordinary written valid region visible receiverOrdinary typeRead indexRead valueRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans valueRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    have h4 : rest <:+ _ :=
+      (((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        typeRead.consumes
+    exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | vergleicheTausche name ordinary written valid region visible receiverOrdinary typeRead indexRead expectedRead
+      neuRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans neuRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans expectedRead.consumes
+    have h4 : rest <:+ _ := (h3.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    have h5 : rest <:+ _ :=
+      (((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        typeRead.consumes
+    exact ((h5.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | holeUndAddiere name ordinary written valid region visible receiverOrdinary typeRead indexRead betragRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans betragRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    have h4 : rest <:+ _ :=
+      (((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        typeRead.consumes
+    exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+  | erwarte name ordinary written valid region visible receiverOrdinary typeRead indexRead markerRead modeRead =>
+    have signed_suffix : ∀ {inp n out}, SignedReads inp n out → out <:+ inp := by
+      intro inp n out read
+      cases read with
+      | positive => exact List.suffix_cons _ _
+      | negative => exact (List.suffix_cons _ _).trans (List.suffix_cons _ _)
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans (signed_suffix markerRead)
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    have h4 : rest <:+ _ :=
+      (((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans
+        typeRead.consumes
+    exact ((h4.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
+
+  | veroeffentliche region visible receiverOrdinary indexRead valueRead modeRead =>
+    have h1 : rest <:+ _ := (List.suffix_cons _ _).trans modeRead.consumes
+    have h2 : rest <:+ _ := (h1.trans (List.suffix_cons _ _)).trans valueRead.consumes
+    have h3 : rest <:+ _ := (h2.trans (List.suffix_cons _ _)).trans indexRead.consumes
+    exact ((h3.trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)).trans (List.suffix_cons _ _)
 
 local macro "statement_suffix" recursor:ident read:term : tactic =>
   `(tactic|
