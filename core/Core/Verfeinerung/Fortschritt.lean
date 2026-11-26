@@ -68,7 +68,9 @@ structure FortschrittsPflichten (klasse : FortschrittsKlasse F)
     (ρ : Maschine.Lauf E) (η : Lauf E) (nutzbar : Nat → Kontext → Prop) : Prop where
   fertig : ∀ s c, E.system.kopf s c = none → E.system.fertig s c
   regeln : ∀ f, Gabbro.Core.Ideal.RegelFortschritt E.system f
-  komponierbar : ∀ f, RegelKomponierbar E.einrichtung E.system f
+  komponierbar : ∀ i t s c, E.system.kopf s c = some i → s.SpeicherGut →
+    ∃ w plan u spur s', (E.system.regel i).ideal c s w [plan] u ∧
+      FuehrtSchrittAus E.einrichtung t c s u plan spur s'
   eindeutig : ∀ s c, Bereit (E := E) s c → ¬ E.system.fertig s c ∧ ∀ b, ¬ E.system.blockiert s c b
   angebot : ∀ t c, nutzbar t c →
     ∃ k, ((η.zeit.zustand t).kerne k).laeuft = some c ∧ η.hw.gelegenheit t k
@@ -96,7 +98,7 @@ theorem FortschrittsPflichten.vollzug (pf : FortschrittsPflichten klasse ρ η n
   obtain ⟨k, dispatch, offer⟩ := pf.angebot t c slot
   obtain ⟨notDone, notBlocked⟩ := pf.eindeutig _ c bereit
   rcases
-    fortschritt_im_lauf valid pf.fertig pf.regeln pf.komponierbar t c live ⟨k, dispatch⟩
+    fortschritt_im_lauf_koepfen valid pf.fertig pf.regeln pf.komponierbar t c live ⟨k, dispatch⟩
     with crash | done | ⟨b, blocked⟩ | step | withheld
   · obtain ⟨_, _, crash⟩ := crash
     cases crash with
@@ -154,7 +156,7 @@ theorem Laufabgleich.fortschritt (matched : Laufabgleich ρ η) (valid : Laeufe 
     (bound : StotterSchranke η) (pf : FortschrittsPflichten klasse ρ η nutzbar)
     (fair : FairLaeufe E.katalog η.umgebung ρ.hw) :
     (∀ c, ¬ Haengt E ρ η c) ∧ FortschrittDerKlasse klasse η := by
-  refine ⟨?_, fortschritt_im_lauf valid pf.fertig pf.regeln pf.komponierbar, ?_⟩
+  refine ⟨?_, fortschritt_im_lauf_koepfen valid pf.fertig pf.regeln pf.komponierbar, ?_⟩
   · rintro c ⟨_, a, f, opened, enabled⟩
     exact matched.entladet valid bound pf fair opened enabled
   · cases klasse with

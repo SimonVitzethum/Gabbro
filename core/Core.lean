@@ -229,6 +229,11 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeVorwaerts
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBleibt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueck
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueckRand
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRueckSchleife
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlockHilfen
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlockBeweis
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeStark
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindBlock
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.RfindSchleifeLage
@@ -251,6 +256,7 @@ public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
 public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
+public import Core.Beobachtung.SchrankenBeweise.Kosten.KostenGegenbeispiel
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
@@ -317,6 +323,9 @@ public import Core.Ziel.Korrektheit.Waechter.WaechterTransfer
 public import Core.Ziel.Korrektheit.Waechter.WaechterSchritt
 public import Core.Ziel.Korrektheit.Waechter.WaechterWert
 public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
+public import Core.Ziel.Korrektheit.Waechter.WaechterRahmen
+public import Core.Ziel.Korrektheit.Waechter.WaechterBedarf
+public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher
