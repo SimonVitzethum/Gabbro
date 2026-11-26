@@ -128,7 +128,13 @@ theorem ohneFensterung_akkumuliert (ρ : Lauf E) (c : Kontext) (a m n Ebound : N
     (hE : 0 < Ebound) :
     ¬ Kontextkosten ρ c a (m + n) ≤ Ebound := by
   rw [kontextkosten_segmente, h1, h2]
-  omega
+  intro h
+  have h2 : Ebound + Ebound ≤ Ebound + 0 := by
+    simpa only [two_mul, Nat.add_zero] using h
+  have hle : Ebound ≤ 0 := Nat.le_of_add_le_add_left h2
+  have h0 : Ebound = 0 := Nat.le_zero.mp hle
+  rw [h0] at hE
+  exact Nat.lt_irrefl 0 hE
 
 /-- **The finite cost and hold duties from estimator correctness.** An open ceiling is
     vacuous; a finite ceiling closes its cost legs by `E ≤ K` and the window monotonicity,

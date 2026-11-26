@@ -228,7 +228,12 @@ theorem kostenSchaetzer_nichtTrivial :
     ⟨Katalog.Plattform.x86_64, ⟨engerBaum, engeDeklaration⟩, [],
       Wirkungsklasse.kostenZeile, rfl⟩, ?_⟩
   intro Ebound hE h
-  omega
+  have h2 : Ebound + Ebound ≤ Ebound + 0 := by
+    simpa only [two_mul, Nat.add_zero] using h
+  have hle : Ebound ≤ 0 := Nat.le_of_add_le_add_left h2
+  have h0 : Ebound = 0 := Nat.le_zero.mp hle
+  rw [h0] at hE
+  exact Nat.lt_irrefl 0 hE
 
 /-- Sharpness for the step correspondence: some unit has no estimator value, and
     some declaration is refused by the endliche line. The correspondence is claimed
