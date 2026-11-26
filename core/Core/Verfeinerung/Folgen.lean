@@ -129,8 +129,9 @@ theorem antwortbuch_im_lauf
           cases step with
           | kontext _ _ _ execute =>
             obtain ⟨frame, _, _, _, action, _, state⟩ := execute
+            have accounted := aktions_antwortbuch frame action
             rw [state]
-            exact aktions_antwortbuch frame action
+            exact accounted
           | antwort _ arrives =>
             obtain ⟨trace, book, _⟩ := arrives.ankunft E.einrichtung
             rw [book]
