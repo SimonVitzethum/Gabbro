@@ -104,6 +104,9 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepHilfe
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAbsturzErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepTransport
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepAntwortErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKontextErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInterruptErhalt
+public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepPauseErhalt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
@@ -211,6 +214,9 @@ public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.Pr
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecFolge
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchritt
 public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecIteration
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecRumpf
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecEinSchritt
+public import Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.Schleife.PrecSchleifeVorwaerts
 public import Core.Beobachtung.SchrankenBeweise.Leicht
 public import Core.Beobachtung.SchrankenBeweise.Mittel
 public import Core.Beobachtung.SchrankenBeweise.Schwer
@@ -228,6 +234,7 @@ public import Core.Beobachtung.SchrankenBeweise.BindungKlasse
 public import Core.Beobachtung.SchrankenBeweise.SchrankenSpielraum
 public import Core.Beobachtung.SchrankenBeweise.KostenSchaetzer
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
 public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
@@ -288,6 +295,11 @@ public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.PrueferKlauseln
 public import Core.Ziel.Korrektheit.PrueferRestBeweis
 public import Core.Ziel.Korrektheit.PrueferWaechterBeweise
+public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
+public import Core.Ziel.Korrektheit.Waechter.WaechterTransfer
+public import Core.Ziel.Korrektheit.Waechter.WaechterSchritt
+public import Core.Ziel.Korrektheit.Waechter.WaechterWert
+public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher

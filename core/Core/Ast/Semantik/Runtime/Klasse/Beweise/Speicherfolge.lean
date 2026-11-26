@@ -380,7 +380,7 @@ theorem klassenSpeicherbein_zugriff (k : Wirkungsklasse) (m : Modus)
       have hgebucht : ∃ a : Adresse, vor.adresse c l.ort = some a ∧ Speicherzugriff vor c l a := by
         exact adresse_speicherzugriff (c := c) (z := (F.operand (vor.lokal c)).ort) (l := l)
           (Aenderung.art_ne_aussen _ _) (Aenderung.art_ne_zaun _ _) (by simp only [l]) (fun _ => hBef.1)
-          (fun _ => hBef.2)
+          (fun _ => hBef.2.1)
       have hwirk : nach.buchung.wirkungen = vor.buchung.wirkungen := by
         rw [hnach]
         simp only [Schrittform.zugriffNach, Schrittform.buchungNach]
