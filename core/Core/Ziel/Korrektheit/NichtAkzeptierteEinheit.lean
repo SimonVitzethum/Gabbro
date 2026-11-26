@@ -17,8 +17,8 @@ module
 
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.Zusammensetzung
-public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Annahme.Annahme
 public import Core.Ast.TextValue.IndexProofs
@@ -274,10 +274,17 @@ theorem sTxt2_zahl1 (s : AussenStart) :
       some (⟨0, 0, Zahl.literal 0⟩ : Ganzzahl) := by
   rfl
 
-/-- The witness source unit is not accepted: its elaboration indexes an empty text at
-    offset `0`, and the pinned guard row for `.index` refuses the canonical demand. -/
-theorem textIndexUnit_nicht_akzeptiert :
-    ¬ Annahme.Akzeptiert (einheitVon Katalog.Plattform.x86_64 textIndexUnit) := by
+/-- The witness run forces the canonical guard demand: from the guard premise alone,
+    without any acceptance assumption. The two wrappers below feed the guard
+    conjunct of `WaechterHalten` and of `Akzeptiert` respectively. -/
+theorem textIndexUnit_guardVersagt
+    (hG : ∀ (ρ : Maschine.I.Lauf textIndexEinheit),
+      Maschine.I.Laeufe textIndexEinheit ρ →
+      ∀ (t : Maschine.I.Schnitt textIndexEinheit ρ) (op : PartielleOperation)
+        (args : Operanden op),
+        (kanonischeVerwendung textIndexEinheit).bedarf ρ t op args →
+          waechterBedarf op args) :
+    False := by
   obtain ⟨h, hwF, hardwareH, fairH⟩ :=
     katalog_nichtLeer textIndexEinheit.katalog (Plattform.katalog_wohlgeformt .x86_64)
   have imageH : textIndexEinheit.bild.gueltig textIndexEinheit.katalog.plattform.ziel :=
@@ -377,63 +384,37 @@ theorem textIndexUnit_nicht_akzeptiert :
   let cut : I.Schnitt textIndexEinheit ρ := ⟨2, Or.inr ⟨1, ev1, rfl, hspur1⟩⟩
   have need2 : (kanonischeVerwendung textIndexEinheit).bedarf ρ cut .index (0, 0) :=
     ⟨eintritt, .textIndex 0 (sourceUtf8 []).size, head2, guard2⟩
-  intro ha
-  have hbad := ha.2.2.1 ρ hρ cut .index (0, 0) need2
+  have hbad := hG ρ hρ cut .index (0, 0) need2
   simp only [waechterBedarf] at hbad
   exact (Nat.lt_irrefl 0) hbad
+
+/-- The witness source unit is not accepted: its elaboration indexes an empty text at
+    offset `0`, and the pinned guard row for `.index` refuses the canonical demand. -/
+theorem textIndexUnit_nicht_akzeptiert :
+    ¬ Annahme.Akzeptiert (einheitVon Katalog.Plattform.x86_64 textIndexUnit) := by
+  intro ha
+  exact textIndexUnit_guardVersagt ha.2.2.1
+
+/-- The witness unit fails the guard conjunct: `WaechterHalten` already fails. -/
+theorem textIndexUnit_nicht_waechter :
+    ¬ Annahme.WaechterHalten textIndexEinheit := by
+  intro hW
+  exact textIndexUnit_guardVersagt hW.1
+
+/-- The witness unit lies on the decidable guard fragment. -/
+theorem textIndexFragment : WaechterAnalyse.waechterFragmentCode textIndexCode = true := by
+  rw [textIndexUnit_code]
+  rfl
+
+/-- The computable guard checker refuses the witness unit. -/
+theorem textIndexRefusiert : WaechterAnalyse.waechterPruefeCode textIndexCode = false := by
+  rw [textIndexUnit_code]
+  rfl
 
 /-- The witness: a source unit whose elaboration is not accepted. -/
 theorem nichtAkzeptierteEinheit :
     ∃ P t, ¬ Annahme.Akzeptiert (einheitVon P t) :=
   ⟨Katalog.Plattform.x86_64, textIndexUnit, textIndexUnit_nicht_akzeptiert⟩
-
-/-- The deciding checker accepts the accepted empty unit, so the first half of its
-    non-triviality is realised with a real decision. -/
-theorem prueferEntscheidet_akzeptiertTrivial :
-    ∃ P t, prueferEntscheidet.pruefe P t = true := by
-  refine ⟨Katalog.Plattform.x86_64, trivialUnit, ?_⟩
-  have hA := trivialUnit_akzeptiert Katalog.Plattform.x86_64
-  have hL : (if Annahme.Lokal (einheitVon Katalog.Plattform.x86_64 trivialUnit) then true
-      else false) = true := by
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.1).elim
-  have hK : (if Annahme.KlauselnWahr
-      (Ast.Semantik.elaborierenMitInvarianten Katalog.Plattform.x86_64 ⟨trivialUnit, []⟩)
-      then true else false) = true := by
-    rw [← einheitVon_mitInvarianten]
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.2.1).elim
-  have hW : (if Annahme.WaechterHalten (einheitVon Katalog.Plattform.x86_64 trivialUnit) then true
-      else false) = true := by
-    split
-    · rfl
-    · rename_i h
-      exact (h hA.2.2).elim
-  simp only [Pruefer.pruefe, prueferEntscheidet, hL, hK, hW]
-  rfl
-
-/-- The deciding checker is non-trivial in both directions: the witness closes the
-    second half, which is exactly the premise that was missing. -/
-theorem prueferEntscheidet_nichtTrivial : PrueferNichtTrivialAussage prueferEntscheidet := by
-  constructor
-  · exact prueferEntscheidet_akzeptiertTrivial
-  · obtain ⟨P, t, hn⟩ := nichtAkzeptierteEinheit
-    refine ⟨P, t, rfl, ?_, hn⟩
-    simp only [Pruefer.pruefe, prueferEntscheidet]
-    split
-    · rename_i hL
-      split
-      · rename_i hK
-        split
-        · rename_i hW
-          exact False.elim (hn ⟨hL, hK, hW⟩)
-        · rfl
-      · rfl
-    · rfl
 
 /-- The refused-unit leg of `ZielInhaltAussage` at the concrete frame: the text-index
     source unit has an elaboration that is not accepted. The three other legs have
