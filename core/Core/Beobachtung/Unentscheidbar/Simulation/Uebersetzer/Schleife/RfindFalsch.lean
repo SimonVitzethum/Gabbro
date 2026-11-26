@@ -41,7 +41,7 @@ theorem rfindDivergenzAussageFalsch :
         change (rfindSchleife cfBlk 0 10)[244]? = none
         exact getLenKein _ 244 (by rw [hlen]; omega)
       simp only [Schritt, hget]
-    change Schritt (rfindSchleife cfBlk 0 10) (some r) = none at hr'
+    simp only [Function.iterate_one] at hr'
     rw [hnone] at hr'
     cases hr'
   exact hNotLive (hEquiv.mp hLeft)
