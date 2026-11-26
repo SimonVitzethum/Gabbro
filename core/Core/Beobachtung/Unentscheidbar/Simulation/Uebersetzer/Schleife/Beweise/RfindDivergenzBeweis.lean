@@ -41,7 +41,7 @@ theorem rfindDivergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
         obtain ⟨k1, r1, hk1pos, hrun1, rpc1, ra1, rm1, ry1, _, _, _⟩ :=
           rfindWeiterIter cfBlk cf a aus frei freiCf m (m + t) rt rpc ra rm ry
             hcfBlk hvBlk hdef hnz
-        refine ⟨K + k1, by omega, r1, ?_, rpc1, ra1, rm1, ?_⟩
+        refine ⟨k1 + K, by omega, r1, ?_, rpc1, ra1, rm1, ?_⟩
         · rw [Function.iterate_add_apply, hrun, hrun1]
         · rw [ry1]
           congr 1
