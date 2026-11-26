@@ -46,13 +46,17 @@ def e1Schranken : Schrankendaten Unit Bool :=
   { kosten := none, speicher := none, stapel := none, halten := fun _ => some 5,
     stapelTiefe := fun _ => 0, zeit := fun _ => none, zeitstand := fun _ => [] }
 
+/-- The all-high label: nothing is public. -/
+def e1Hoch : Beobachtung.Etikett := {0}
+
 def E_1 : Einheit Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
   ⟨Plattform.x86_64.katalog, wBild, wEinrichtung dispatch2, e1System,
     fun _ => wDaten dispatch2, fun _ => 0,
     fun _ _ => some (Zustand.start (fun _ => false) (fun _ => .laeuft)
       (fun j => ⟨dispatch2 j, .nutzer, (), fun _ => false, 0, false, []⟩)
       ⟨fun _ => false, fun _ => 0⟩ (fun _ => ()) (.leer (fun _ => 0))),
-    Eq, fun _ => 1, .leer, eineTabelle, e1Schranken, .leer, .leer⟩
+    Eq, fun _ => 1, .leer, eineTabelle, e1Schranken,
+    { lokal := fun _ => .ganz e1Hoch, kontrolle := fun _ => e1Hoch }, .leer⟩
 
 def zE0 : Zustand Unit Unit Unit Unit Bool Unit := (I.start E_1 s0).2
 
