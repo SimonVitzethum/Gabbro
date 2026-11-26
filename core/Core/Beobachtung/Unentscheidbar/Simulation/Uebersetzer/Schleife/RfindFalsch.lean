@@ -19,9 +19,10 @@ theorem rfindDivergenzAussageFalsch :
   intro hDiv
   let cfBlk : List Befehl := [.springe 200]
   let rBasis : Rahmen := Rahmen.start []
-  let r : Rahmen := { rBasis with temp :=
+  let temp' : Nat → Option Dynamisch :=
     Function.update (Function.update (Function.update rBasis.temp 10 (some (natVal 0)))
-      11 (some (natVal 0))) 12 (some (natVal 0)) }
+      11 (some (natVal 0))) 12 (some (natVal 0))
+  let r : Rahmen := { rBasis with temp := temp' }
   have hpc : r.pc = 0 := rfl
   have ha : r.temp (10 + 0) = some (natVal 0) := by
     simp only [r, Nat.add_zero, Function.update_self, Function.update_of_ne]
