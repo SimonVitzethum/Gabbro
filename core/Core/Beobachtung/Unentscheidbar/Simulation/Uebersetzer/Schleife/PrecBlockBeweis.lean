@@ -384,16 +384,16 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       by_contra hne
       rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
       · exact laufStirbtNach (Q ++ I) rQ (jP - jI) 1 rP rPRef hPfromQ
-          (by rw [hpcP_Q]) eQI hpcPRef hlt
-      · exact laufStirbtNach (Q ++ I) rQ 1 (jP - jI) rPRef rP eQI hpcPRef
-          hPfromQ (by rw [hpcP_Q]) hgt
+          (hpcP_Q.trans (@List.length_append Befehl Q I).symm) eQI hlt
+      · exact laufStirbtNach (Q ++ I) rQ 1 (jP - jI) rPRef rP eQI hpcPRef hPfromQ hgt
     have hPendEq0 : rP = rPRef := by
       have hEq : (Schritt (Q ++ I))^[1] (some rQ) = some rP := by
         simpa only [hdiff] using hPfromQ
-      exact Option.some.inj (eQI.symm.trans hEq)
+      exact Option.some.inj (hEq.symm.trans eQI)
     have hPendEq : rP = mitPc Q.length (rQ0.schreibe (frei + 2) (some (natVal 0))) := hPendEq0
     have hrP0a : rP0.temp (frei + 0) = some (natVal a) := by
       rw [hPendEq]
+      dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 0) = some (natVal a)
       rw [updateMiss rQ.temp (frei + 0) (frei + 2) (some (natVal 0)) (by omega)]
       change rQ.temp (frei + 0) = some (natVal a)
@@ -403,6 +403,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       exact hrLR0a
     have hrP0k : rP0.temp (frei + 1) = some (natVal kk) := by
       rw [hPendEq]
+      dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 1) = some (natVal kk)
       rw [updateMiss rQ.temp (frei + 1) (frei + 2) (some (natVal 0)) (by omega)]
       change rQ.temp (frei + 1) = some (natVal kk)
@@ -413,10 +414,12 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
       exact hrLRk0
     have hrP0c : rP0.temp (frei + 2) = some (natVal 0) := by
       rw [hPendEq]
+      dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) (frei + 2) = some (natVal 0)
       rw [updateHit]
     have hrP0v : rP0.temp aus = some (natVal v0) := by
       rw [hPendEq]
+      dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) aus = some (natVal v0)
       rw [updateMiss rQ.temp aus (frei + 2) (some (natVal 0)) (by omega)]
       change rQ.temp aus = some (natVal v0)
@@ -447,6 +450,7 @@ theorem blockPrec (cfBlk cgBlk : List Befehl) (cf cg : Nat.Partrec.Code)
         omega) hneAus
       rw [hpresS']
       rw [hPendEq]
+      dsimp only [rPRef, mitPc, rQ0]
       change (Function.update rQ.temp (frei + 2) (some (natVal 0))) s = r.temp s
       rw [updateMiss rQ.temp s (frei + 2) (some (natVal 0)) (by omega)]
       change rQ.temp s = r.temp s
