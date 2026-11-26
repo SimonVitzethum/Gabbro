@@ -54,8 +54,7 @@ theorem rmw_folge_gut4 {g : SpeicherGraph Unit Unit} (hk : g.graph.Konsistent)
   cases r
   exact ⟨es, g', folge, (folge.viele.gut hk hv).1, (folge.viele.gut hk hv).2⟩
 
-noncomputable def g4_wit : rmw_folge_gut4 s4_0_graph_gut.1 s4_0_graph_gut.2 A
-  (E_4.einrichtung.sperrOrt ()) :=
+noncomputable def g4_wit :=
   rmw_folge_gut4 s4_0_graph_gut.1 s4_0_graph_gut.2 A (E_4.einrichtung.sperrOrt ())
 
 noncomputable def g4_es : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
@@ -74,8 +73,7 @@ theorem g4_gut : g4_g.graph.Konsistent ∧ g4_g.graph.Vollstaendig :=
 noncomputable def s4_1 : Zustand Unit Unit Unit Unit Bool Unit :=
   { s4_0 with sperren := Function.update s4_0.sperren () ⟨some A, [B]⟩, graph := g4_g }
 
-noncomputable def g5_wit : schreiben_folge_gut4 g4_gut.1 g4_gut.2 B
-  (E_4.einrichtung.sperrOrt ()) :=
+noncomputable def g5_wit :=
   schreiben_folge_gut4 g4_gut.1 g4_gut.2 B (E_4.einrichtung.sperrOrt ())
 
 noncomputable def g5_es : List (SpeicherAkteur Unit × Speicher.Etikett Unit Unit) :=
@@ -128,7 +126,7 @@ theorem ausfuehr_nehmen0 : FuehrtSchrittAus E_4.einrichtung 0 A s4_0 s4_0 nehmen
     ⟨g4_es, []⟩ s4_1 := by
   have hF : FuehrtAus E_4.einrichtung 0 A s4_0 s4_0 (.sperre () .nehmen)
       [⟨.rmw, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_1 :=
-    .sperre (SperrSchritt.nehmen s4_0_nimmt) (fun _ => trivial)
+    .sperre (e := E_4.einrichtung) (t := 0) (c := A) (s := s4_0) (u := s4_0) (SperrSchritt.nehmen s4_0_nimmt) (fun _ => trivial)
   exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, _, _, hF, g4_mem, rfl⟩
 
@@ -136,7 +134,7 @@ theorem ausfuehr_geben1 : FuehrtSchrittAus E_4.einrichtung 2 A s4_1 s4_1 wGebenP
     ⟨g5_es, []⟩ s4_2 := by
   have hF : FuehrtAus E_4.einrichtung 2 A s4_1 s4_1 (.sperre () .geben)
       [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_2 :=
-    .sperre (SperrSchritt.geben s4_1_gibt) (fun _ => trivial)
+    .sperre (e := E_4.einrichtung) (t := 2) (c := A) (s := s4_1) (u := s4_1) (SperrSchritt.geben s4_1_gibt) (fun _ => trivial)
   exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, _, _, hF, g5_mem, rfl⟩
 
@@ -144,7 +142,7 @@ theorem ausfuehr_geben2 : FuehrtSchrittAus E_4.einrichtung 3 B s4_2 s4_2 wGebenP
     ⟨g6_es, []⟩ s4_3 := by
   have hF : FuehrtAus E_4.einrichtung 3 B s4_2 s4_2 (.sperre () .geben)
       [⟨.schreiben, (E_4.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s4_3 :=
-    .sperre (SperrSchritt.geben s4_2_gibt) (fun _ => trivial)
+    .sperre (e := E_4.einrichtung) (t := 3) (c := B) (s := s4_2) (u := s4_2) (SperrSchritt.geben s4_2_gibt) (fun _ => trivial)
   exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     fun _ h => (List.not_mem_nil h).elim, _, _, hF, g6_mem, rfl⟩
 
@@ -158,11 +156,11 @@ theorem z4_ge4 (t : Nat) : z4 (t + 4) = s4_3 := by
   rw [if_neg (by omega : ¬ (t + 4 = 1 ∨ t + 4 = 2))]
   rw [if_neg (by omega : ¬ t + 4 = 3)]
 
-theorem z4_kerne (t : Nat) : (z4 t).kerne = zE0.kerne := by
+theorem z4_kerne (t : Nat) : (z4 t).kerne = s4_0.kerne := by
   unfold z4
   split_ifs <;> rfl
 
-theorem z4_status (t : Nat) : (z4 t).status = zE0.status := by
+theorem z4_status (t : Nat) : (z4 t).status = s4_0.status := by
   unfold z4
   split_ifs <;> rfl
 
