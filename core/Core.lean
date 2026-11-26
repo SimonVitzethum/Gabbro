@@ -108,6 +108,8 @@ public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKontextErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepInterruptErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepPauseErhalt
 public import Core.Beobachtung.Fluss.Beweise.Geraet.LockstepKopplungAlle
+public import Core.Beobachtung.Fluss.Beweise.Geraet.GeraeteProtokollNI
+public import Core.Beobachtung.Fluss.Beweise.Geraet.GeraeteNI
 public import Core.Beobachtung.Fluss.Beweise.ZugriffSchritt
 public import Core.Beobachtung.Fluss.Beweise.ZugriffKopplung
 public import Core.Beobachtung.Fluss.Beweise.Zugriff.Hilfen
