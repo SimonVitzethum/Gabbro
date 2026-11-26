@@ -306,10 +306,7 @@ theorem precRumpfRueck (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
   have hr2_0p : r2_0.temp (frei + 5) = some (natVal (Nat.pair a (Nat.pair y i))) := hr2pair
   obtain ⟨v, hvEval, hrCgaus, hpresCg, hlokCg, hrueckCg, hstoppCg⟩ :=
     (hcgNr (Nat.pair a (Nat.pair y i)) r2_0 rfl hr2_0p).2 (k - j1) rCg hrunCg hpcCg
-  have hEqEnd : rEnd = mitPc 44 rCg := by
-    rw [hEqCg]
-    dsimp only [P]
-    rw [precPaarEinsLaenge, precPaarZweiLaenge, List.length_append, mitPc]
+  have hEqEnd : rEnd = mitPc P.length rCg := hEqCg
   refine ⟨v, hvEval, ?_, ?_, ?_, ?_, ?_⟩
   · rw [hEqEnd]
     change rCg.temp aus = some (natVal v)
