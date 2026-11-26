@@ -1,0 +1,195 @@
+module
+
+public import Core.Beobachtung.SchrankenBeweise.Kosten.KostenRahmen
+public import Core.Ast.Semantik.Elaborierung
+
+@[expose] public section
+
+namespace Gabbro.Core.Ast.Semantik
+
+open Maschine Katalog
+
+def KostenGrenzen.ZustandGut (g : KostenGrenzen) (s : Zustand) : Prop :=
+  ∀ c, g.RahmenGut (s.lokal c)
+
+variable {g : KostenGrenzen} {s u : Zustand} {b : Befehl} {c : Kontext}
+
+private theorem update_rahmen {frames : Kontext → Rahmen} {r : Rahmen}
+    (ok : ∀ d, g.RahmenGut (frames d)) (new : g.RahmenGut r) :
+    ∀ d, g.RahmenGut (Function.update frames c r d) := by
+  intro d
+  by_cases h : d = c
+  · subst d
+    simpa only [Function.update_self] using new
+  · simpa only [Function.update_of_ne h] using ok d
+
+private theorem nach_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lokal c)) (v : Int) :
+    g.ZustandGut (b.form.nach c s v) :=
+  update_rahmen ok (KostenGrenzen.uebertrag (ok c) install s.regionLive v)
+
+private theorem verbrauche_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lokal c)) :
+    g.ZustandGut (b.form.verbraucheNach c s) := by
+  unfold Schrittform.verbraucheNach
+  split
+  · exact nach_gut ok install 0
+  · split
+    · split
+      · unfold verbraucheSchreibe
+        split <;> exact update_rahmen ok (ok c)
+      · exact update_rahmen ok (ok c)
+    · exact update_rahmen ok (ok c)
+
+private theorem faeden_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lokal c)) :
+    g.ZustandGut (b.form.faedenNach c s) := by
+  have transfer : ∀ v, g.RahmenGut (b.form.uebertrag (s.lokal c) s.regionLive v) :=
+    KostenGrenzen.uebertrag (ok c) install s.regionLive
+  have child : g.RahmenGut { (b.form.operand (s.lokal c)).faden.anfang with fortsetzungen := [] } := by
+    cases b <;> try exact g.start []
+    case zugriff z =>
+      cases z <;> simp only [Befehl.form, Befehl.operand, Zugriffsform.operand]
+      all_goals repeat' first | exact g.start [] | split | unfold Rahmen.zugriffOperand
+    case aussen z => cases z <;> exact g.start []
+    case faden z =>
+      cases z <;> exact g.start []
+  unfold Schrittform.faedenNach
+  dsimp only
+  split
+  all_goals try exact nach_gut ok install 0
+  · apply update_rahmen (update_rahmen ok (transfer _)) child
+  · split
+    · exact update_rahmen ok (transfer _)
+    · exact update_rahmen ok (ok c)
+    · exact ok
+    · exact ok
+
+private theorem ideal_gut (ok : g.ZustandGut s) (install : g.Einrichtung b (s.lokal c))
+    (step : b.ideal c s w plans u) : g.ZustandGut u := by
+  change b.form.ideal c s w plans u at step
+  unfold Schrittform.ideal at step
+  split at step
+  all_goals first
+  | (obtain ⟨_, rfl⟩ := step; exact nach_gut ok install 0)
+  | (obtain ⟨_, rfl⟩ := step; exact verbrauche_gut ok install)
+  | (rcases step with ⟨_, _, rfl⟩ | ⟨_, v, _, _, rfl⟩
+     · exact update_rahmen ok (ok c)
+     · exact nach_gut ok install v)
+  | (rcases step with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩
+     · exact update_rahmen ok (ok c)
+     · exact faeden_gut ok install)
+
+private theorem protokoll_lokal {e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit}
+    {v : Zustand} (action : FuehrtAus e t c s u a labels events v) : v.lokal = u.lokal := by
+  cases action <;> rfl
+
+private theorem kopf_position {code : List Befehl} (head : kopf code s c = some b) :
+    code[(s.lokal c).pc]? = some b := by
+  unfold kopf at head
+  cases hstatus : s.status c <;> rw [hstatus] at head
+  case ruht => cases head
+  case beendet => cases head
+  case laeuft =>
+    cases hreturn : (s.lokal c).rueckgabe <;> rw [hreturn] at head
+    case some => cases head
+    case none =>
+      cases hstop : (s.lokal c).stopp <;> rw [hstop] at head
+      case some => cases head
+      case none => exact head
+
+
+/-- At every observed cut, all active and saved frames obey the cost limits if the
+    three installing instructions have valid operands and site metadata. -/
+theorem KostenGrenzen.lauf (p : Fragment) (P : Plattform) (bounds : Beobachtung.Schrankendaten Nat Rahmen)
+    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Katalog.Umgebung}
+    (run : Laeufe { p.einheit P with schranken := bounds } h ρ)
+    (installs : ∀ t s c b, ρ.zeit.zustand t = some s → g.ZustandGut s →
+      kopf p.code s c = some b → g.Einrichtung b (s.lokal c))
+    (t : Nat) (cut : ρ.zeit.zustand t = some s) : g.ZustandGut s := by
+  induction t generalizing s with
+  | zero =>
+    have loaded := run.2.2.2
+    rw [cut] at loaded
+    change some s = laden p.eingang p.eintritte p.speicher P ρ.start (h.lade _) at loaded
+    unfold laden at loaded
+    split at loaded
+    · cases loaded
+      exact fun _ => g.start p.eingang
+    · cases loaded
+  | succ t ih =>
+    have tick := ρ.zeit.takt t
+    rw [cut] at tick
+    cases before : ρ.zeit.zustand t with
+    | none =>
+      rw [before] at tick
+      cases tick with
+      | wartet _ same _ => cases same
+      | schritt _ step => cases step
+    | some prev =>
+      rw [before] at tick
+      have ok := ih before
+      cases tick with
+      | wartet _ same _ => cases same; exact ok
+      | schritt _ step =>
+        cases step with
+        | schritt step =>
+          cases step with
+          | kontext _ _ rule effect =>
+            obtain ⟨b, head, instruction⟩ := rule
+            have good := ideal_gut (w := PUnit.unit) ok (installs t _ _ _ before ok head) instruction
+            obtain ⟨_, _, _, v, protocol, _, after⟩ := effect
+            rw [after]
+            intro d
+            change g.RahmenGut (v.lokal d)
+            rw [protokoll_lokal protocol]
+            exact good d
+          | antwort _ answer =>
+            obtain ⟨_, _, _, after⟩ := answer
+            rw [after]
+            exact ok
+          | interrupt _ interrupt =>
+            obtain ⟨_, _, _, _, _, _, _, _, _, _, after⟩ := interrupt
+            rw [after]
+            exact ok
+          | absturz crash =>
+            obtain ⟨_, _, _, _, rfl⟩ := crash
+            exact fun _ => g.start p.eingang
+
+/-- Every populated loop slot comes from an installer targeting that address in
+    the executed fragment, and an installed measure has an owning function. -/
+def kostenSchreiborte (code : List Befehl) : KostenGrenzen where
+  zaehler test _ :=
+    (∃ pc src distance, code[pc]? = some (Befehl.setzePasszahl src distance) ∧ test = pc + distance) ∨
+    (∃ pc lo hi ty skip shadow missing,
+      code[pc]? = some (Befehl.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1)
+  zaehlerKleiner := by
+    intro _ _ _ _ origin
+    exact origin
+  obergrenze test _ :=
+    ∃ pc lo hi ty skip shadow missing,
+      code[pc]? = some (Befehl.forAnfang lo hi ty skip shadow missing) ∧ test = pc + 1
+  mass name _ := ∃ (id : Identifier) (slot pc : Nat), name = some id ∧ code[pc]? = some (Befehl.pruefeMass slot)
+
+/-- Installer provenance holds unconditionally in every frame of every
+    admitted fragment run, including frames suspended under nested calls. -/
+theorem kostenSchreiborte_lauf (p : Fragment) (P : Plattform)
+    (bounds : Beobachtung.Schrankendaten Nat Rahmen)
+    {ρ : Lauf { p.einheit P with schranken := bounds }} {h : Katalog.Umgebung}
+    (run : Laeufe { p.einheit P with schranken := bounds } h ρ) (t : Nat)
+    (cut : ρ.zeit.zustand t = some s) : (kostenSchreiborte p.code).ZustandGut s := by
+  apply KostenGrenzen.lauf p P bounds run _ t cut
+  intro _ before c b _ _ current
+  have head := kopf_position current
+  cases b <;> simp only [KostenGrenzen.Einrichtung]
+  all_goals try trivial
+  case setzePasszahl src distance =>
+    intro _ _
+    exact Or.inl ⟨(before.lokal c).pc, src, distance, head, rfl⟩
+  case forAnfang lower upper ty skip shadow missing =>
+    intro _ endpoint _ _ _
+    have origin : (kostenSchreiborte p.code).obergrenze ((before.lokal c).pc + 1) endpoint :=
+      ⟨(before.lokal c).pc, lower, upper, ty, skip, shadow, missing, head, rfl⟩
+    exact ⟨Or.inr origin, origin⟩
+  case pruefeMass slot =>
+    intro id _ _ _ _
+    exact ⟨id, slot, (before.lokal c).pc, rfl, head⟩
+
+end Gabbro.Core.Ast.Semantik
