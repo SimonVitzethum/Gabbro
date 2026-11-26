@@ -96,14 +96,14 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           cases tick₂ with
           | wartet lab₂ _ hkein => exact (hkein (.antwort a, spur₂) _ st₂).elim
           | schritt lab₂ step₂ =>
-            cases step₂ with
-            | schritt impl₂ =>
-              cases hn₂ : ρ₂.zeit.zustand (t + 1) with
-              | none =>
-                exfalso
-                cases impl₂
-              | some n₂ =>
-                rw [hn₂] at impl₂
+            cases hn₂ : ρ₂.zeit.zustand (t + 1) with
+            | none =>
+              rw [hn₂] at step₂
+              cases step₂
+            | some n₂ =>
+              rw [hn₂] at step₂
+              cases step₂ with
+              | schritt impl₂ =>
                 have hinv₂ : GeraeteInvariantAussage d.binding s₂ :=
                   geraete_lauf_invariante vergleich.rechts t hz₂
                 obtain ⟨hfragen, hverlauf, hantworten, _, _⟩ :=
