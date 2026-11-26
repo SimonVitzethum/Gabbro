@@ -60,7 +60,6 @@ theorem SchreibSeitAbsturz_append (x : Ort)
   | cons e es ih =>
     rw [List.cons_append]
     cases hbe : AbsturzBeob e
-    · simpa only [SchreibSeitAbsturz, hbe] using ih
     · simp only [SchreibSeitAbsturz, hbe]
       have happ : HatAbsturz (es ++ b) = (HatAbsturz es || HatAbsturz b) := hatAbsturz_append es b
       cases hesa : HatAbsturz es <;> cases hbsa : HatAbsturz b <;>
@@ -70,6 +69,7 @@ theorem SchreibSeitAbsturz_append (x : Ort)
       all_goals
         rw [ih]
         tauto
+    · simpa only [SchreibSeitAbsturz, hbe] using ih
 
 theorem SchreibSeitAbsturz_ohne_absturz (x : Ort)
     {l : List (NiedrigesEreignis Ort Wert Grund Form)} (h : ¬ HatAbsturz l) :
@@ -104,7 +104,7 @@ theorem SchreibSeitAbsturz_ohne_absturz (x : Ort)
       rcases he' with rfl | he'
       · simpa only [SchreibSeitAbsturz, hbe, hesF, hs', true_or]
       · have htail : SchreibSeitAbsturz x es := (ih hes).2 ⟨e', he', hs'⟩
-        simpa only [SchreibSeitAbsturz, hbe, hesF, htail, true_or]
+        simpa only [SchreibSeitAbsturz, hbe, hesF, htail, or_true]
 
 theorem SchreibSeitAbsturz_nach_absturz (x : Ort)
     {e : NiedrigesEreignis Ort Wert Grund Form}
@@ -164,11 +164,13 @@ theorem SchreibBeob_filterMap_speicherBeob
     have ho : SchreibBeobOpt x (speicherBeob (Grund := Grund) (Form := Form) label e) :=
       (speicherBeob_schreibt_iff (x := x) hpub e).2 hs
     cases hsome : speicherBeob (Grund := Grund) (Form := Form) label e with
-    | none => cases ho
+    | none =>
+      simp only [SchreibBeobOpt] at ho
+      cases ho
     | some ev =>
       refine ⟨ev, ?_, ?_⟩
       · rw [List.mem_filterMap]
-        exact ⟨e, he, rfl⟩
-      · exact ho
+        exact ⟨e, he, hsome⟩
+      · simpa only [SchreibBeobOpt] using ho
 
 end Gabbro.Core.Beobachtung
