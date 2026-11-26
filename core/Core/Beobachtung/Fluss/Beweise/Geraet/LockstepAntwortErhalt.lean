@@ -32,8 +32,8 @@ private theorem geraete_antwort_beob_tick {ρ : Lauf (d.unit locals)} {predictor
     rintro ⟨c, hc⟩
     have hnone : neuBeendet s n (d.unit locals).etiketten c = none := by
       have hn : n.status c = s.status c := by rw [stateEq]; rfl
-      cases hs : s.status c <;> cases hn' : n.status c <;>
-        simp only [neuBeendet, hs, hn', hn]
+      rw [← hn]
+      cases hs : s.status c <;> simp [neuBeendet, hs]
     rw [hnone] at hc
     cases hc
   rw [schrittBeob, hlabel, atS, atN]
@@ -66,9 +66,6 @@ theorem geraete_antwort_erhalt (locals : Umgebung scope) (d : Denotation k scope
           | interrupt _ _ => cases lab
           | antwort hkein₁ h1 =>
             obtain ⟨offered₁, spurEq₁, append₁, stateEq₁⟩ := h1
-            have hlab : (SchrittWahl.antwort a, spur) = (.antwort a, spur₁) :=
-              Option.some.inj lab
-            have hspurEq : spur = spur₁ := congrArg Prod.snd hlab
             obtain ⟨v₁, s₂, hv₁, hz₂⟩ := (geraete_zustand_gemeinsam vergleich t).resolve_left
               (by intro h; rw [hz₁] at h; cases h.1)
             have hvEq : v₁ = s₁ := Option.some.inj (hv₁.symm.trans hz₁)
