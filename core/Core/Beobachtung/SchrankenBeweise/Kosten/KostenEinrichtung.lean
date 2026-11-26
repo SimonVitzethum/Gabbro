@@ -163,4 +163,45 @@ theorem forRange_kostenEinrichtung {u : Ast.Unit} {low lowHi highLo high : Int}
   rw [position]
   simpa only [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using row
 
+/-- The declaration selected by the estimator contributes its own measure
+    prologue immediately after its declaration instruction. -/
+private theorem findeKern_prologImRumpf {source : UnitBody before after}
+    {name : Identifier} {kern : FunktionsKern} (found : findeKern source name = some kern) :
+    ∃ (pre post : List Befehl) (header : Befehl),
+      (unitBody source).code = (pre ++ [header]) ++ (measurePrologue kern.mass).code ++ post := by
+  induction source with
+  | done => cases found
+  | @step before middle after first rest ih =>
+    have next (lookup : findeKern rest name = some kern) :
+        ∃ (pre post : List Befehl) (header : Befehl),
+          (unitBody (.step first rest)).code =
+            (pre ++ [header]) ++ (measurePrologue kern.mass).code ++ post := by
+      obtain ⟨pre, post, header, layout⟩ := ih lookup
+      refine ⟨(decl first).code ++ pre, post, header, ?_⟩
+      simp only [unitBody, Fragment.anhaengen, layout, List.append_assoc]
+    cases first with
+    | function fn ordinary params result valid measure body distinct returns effects =>
+      rw [findeKern] at found
+      split at found
+      · cases found
+        let code := functionCode result measure body
+        refine ⟨[], (bracedBlock body).code ++ [.rueckVoid] ++ (unitBody rest).code,
+          functionInstruction before fn params result measure.isSome code (declaredEffects effects), ?_⟩
+        simp only [unitBody, decl, code, functionCode, Fragment.anhaengen,
+          Fragment.einzel, List.nil_append, List.append_assoc]
+      · exact next found
+    all_goals exact next found
+
+/-- Lookup yields the exact prefix ending at the declaration and the suffix
+    after the measured entry code, in the installed unit's instruction list. -/
+theorem findeKern_measurePrologue {u : Ast.Unit} {name : Identifier}
+    {kern : FunktionsKern} {m : Measure kern.koerper.1}
+    (found : findeKern u.2 name = some kern) (declared : kern.mass = some m) :
+    ∃ (pre post : List Befehl) (header : Befehl),
+      (programm u).code = (pre ++ [header]) ++ (measurePrologue (some m)).code ++ post := by
+  obtain ⟨pre, post, header, layout⟩ := findeKern_prologImRumpf found
+  refine ⟨pre, post ++ [.starte mainName, .ende], header, ?_⟩
+  simp only [programm, Fragment.anhaengen, Fragment.einzel, layout, declared,
+    List.append_assoc, List.singleton_append]
+
 end Gabbro.Core.Beobachtung
