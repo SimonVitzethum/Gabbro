@@ -16,7 +16,7 @@ theorem rfindKonvergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
     rfindKonvergenzAussage cfBlk cf a aus frei freiCf freiP := by
   intro m y0 v r rEnd schr hpc ha hm hy hmy hzero hdef hnz
     hcfBlk hvBlk hbleib hfreiCf hfreiP hrun hpcEnd
-  have hErreich : ∀ (m0 m1 y1 : Nat), m0 ≤ m1 → m1 ≤ y1 → ∀ (r1 : Rahmen),
+  have hErreich : ∀ d m0 m1 y1 : Nat, y1 - m1 = d → m0 ≤ m1 → m1 ≤ y1 → ∀ (r1 : Rahmen),
       r1.pc = 0 →
       r1.temp (frei + 0) = some (natVal a) →
       r1.temp (frei + 1) = some (natVal m0) →
@@ -26,13 +26,20 @@ theorem rfindKonvergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
       (∀ y, m1 ≤ y → y < y1 → Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0) →
       ∃ K rE, (Schritt (rfindSchleife cfBlk aus frei))^[K] (some r1) = some rE ∧
         rE.pc = (rfindSchleife cfBlk aus frei).length ∧ rE.temp aus = some (natVal y1) := by
-    intro m0 m1 y1 hm0m hmy
-    induction hgap : y1 - m1 generalizing m1 y1 with
+    intro d
+    induction d with
     | zero =>
-      intro r1 hpc1 ha1 hm1 hy1 hz hd hn
-      exact rfindExitIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1 hcfBlk hvBlk hz
+      intro m0 m1 y1 hgap hm0m hmy r1 hpc1 ha1 hm1 hy1 hz hd hn
+      have hy1m : y1 = m1 := by omega
+      have hzM : Nat.Partrec.Code.eval cf (Nat.pair a m1) = Part.some 0 := by
+        rw [← hy1m]
+        exact hz
+      obtain ⟨k, rE, hrunE, hpcE, haus⟩ :=
+        rfindExitIter cfBlk cf a aus frei freiCf m0 m1 r1 hpc1 ha1 hm1 hy1 hcfBlk hvBlk hzM
+      refine ⟨k, rE, hrunE, hpcE, ?_⟩
+      simpa only [hy1m] using haus
     | succ d ih =>
-      intro r1 hpc1 ha1 hm1 hy1 hz hd hn
+      intro m0 m1 y1 hgap hm0m hmy r1 hpc1 ha1 hm1 hy1 hz hd hn
       have hmlt : m1 < y1 := by omega
       have hdM : ∃ v', Nat.Partrec.Code.eval cf (Nat.pair a m1) = Part.some v' :=
         hd m1 (by omega) hmlt
@@ -51,10 +58,12 @@ theorem rfindKonvergenz (cfBlk : List Befehl) (cf : Nat.Partrec.Code)
           Nat.Partrec.Code.eval cf (Nat.pair a y) ≠ Part.some 0 :=
         fun y hy1 hy2 => hn y (by omega) hy2
       obtain ⟨k2, rE, hrun2, hpcE, hausE⟩ :=
-        ih hgap' (m1 + 1) y1 hm0' hmy' r2 rpc2 ra2 hm2 hy2 hz hd' hn'
-      refine ⟨k2 + k1, rE, ?_, hpcE, hausE⟩
-      rw [Function.iterate_add_apply, hrun1, hrun2]
-  obtain ⟨K, rE, hrunK, hpcK, hausK⟩ := hErreich m m y0 (Nat.le_refl _) hmy r hpc ha hm hy hzero hdef hnz
+        ih m0 (m1 + 1) y1 hgap' hm0' hmy' r2 rpc2 ra2 hm2 hy2 hz hd' hn'
+      refine ⟨k2 + k1, rE, ?_, hpcE, ?_⟩
+      · rw [Function.iterate_add_apply, hrun1, hrun2]
+      · exact hausE
+  obtain ⟨K, rE, hrunK, hpcK, hausK⟩ :=
+    hErreich (y0 - m) m m y0 rfl (Nat.le_refl _) hmy r hpc ha hm hy hzero hdef hnz
   have hKle : K ≤ schr := by
     by_contra hnot
     have hlt : schr < K := Nat.lt_of_not_ge hnot
