@@ -379,7 +379,7 @@ theorem stummer_schritt_koppelt
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
-                        rfl
+                        exact kerneEq
                       · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
                         rw [(List.cons.inj hplan₂).1, hR] at aktion₂
@@ -387,11 +387,8 @@ theorem stummer_schritt_koppelt
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         funext k
-                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                          rw [kerneEq]
-                        rw [hc]
-                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                        simp only [Befehl.nach]
+                        rw [kerneEq]
                       · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .prioritaet g1 := haktEq.symm.trans hL
                         rw [(List.cons.inj hplan₂).1, hR] at aktion₂
@@ -399,18 +396,15 @@ theorem stummer_schritt_koppelt
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
                         funext k
-                        have hb : ((f.nach c vor).kerne k) = ((f.nach c w₂).kerne k) := congrFun kerneEq k
-                        have hc : ((vor.kerne k).laeuft = some c) = ((w₂.kerne k).laeuft = some c) := by
-                          rw [kerneEq]
-                        rw [hc]
-                        by_cases h : (w₂.kerne k).laeuft = some c <;> simp only [h, hb]
+                        simp only [Befehl.nach]
+                        rw [kerneEq]
                       · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
                         rw [(List.cons.inj hplan₂).1, hR] at aktion₂
                         cases aktion₁
                         cases aktion₂
                         rw [(Option.some.inj ha).symm, (Option.some.inj hb).symm, stateEq₁, stateEq₂]
-                        rfl
+                        exact kerneEq
                       · rw [(List.cons.inj hplan₁).1, hL] at aktion₁
                         have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
                         rw [(List.cons.inj hplan₂).1, hR] at aktion₂
