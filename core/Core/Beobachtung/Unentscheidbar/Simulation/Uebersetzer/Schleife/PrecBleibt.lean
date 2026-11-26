@@ -50,7 +50,7 @@ theorem bleibtImBlockPrecCheck (frei : Nat) : BleibtImBlock (precCheck frei) := 
     simp only [Befehl.auswerten, Rahmen.schreibe] <;> (try split) <;> omega
 
 /-- The conditional of the check stays inside its one-instruction block. -/
-theorem bleibtImBlockPrecCond (cgBlk frei : Nat) :
+theorem bleibtImBlockPrecCond (cgBlk : List Befehl) (frei : Nat) :
     BleibtImBlock [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)] := by
   unfold BleibtImBlock
   rintro ⟨pc, temp, lok, rueck, stopp, z, o, g, fs, f, fu, m, ar, pl, env⟩ b hlt hget
@@ -62,7 +62,7 @@ theorem bleibtImBlockPrecCond (cgBlk frei : Nat) :
   simp only [Befehl.auswerten] <;> (try split) <;> omega
 
 /-- The back edge stays inside its three-instruction block. -/
-theorem bleibtImBlockPrecEnde (cgBlk frei : Nat) : BleibtImBlock (precEnde cgBlk frei) := by
+theorem bleibtImBlockPrecEnde (cgBlk : List Befehl) (frei : Nat) : BleibtImBlock (precEnde cgBlk frei) := by
   unfold BleibtImBlock
   rintro ⟨pc, temp, lok, rueck, stopp, z, o, g, fs, f, fu, m, ar, pl, env⟩ b hlt hget
   rw [precEndeLaenge] at hlt ⊢
@@ -85,15 +85,10 @@ theorem schrittMitPcBeiVon (pre mid post : List Befehl)
     · exact (getNachPrefix pre mid r.pc hlt).trans hb
     · simp only [List.length_append]
       omega
-  have hzb : ∀ d, b = .zurueckSprung d → d ≤ (mitPc pre.length r).pc := by
-    intro d hd
-    have hd0 := hzd d hd
-    simp only [mitPc]
-    omega
   have hgetConcat' : (pre ++ mid ++ post)[(mitPc pre.length r).pc]? = some b := by
     simpa only [mitPc] using hgetConcat
   have e2 : b.auswerten (mitPc pre.length r) = mitPc pre.length (b.auswerten r) :=
-    auswertenMitPc pre.length b r hvb hzb
+    auswertenMitPc pre.length b r hvb hzd
   simp only [Schritt, hgetConcat', hb]
   rw [e2]
 
@@ -144,7 +139,7 @@ theorem bleibtImBlockAppendVon (blkA blkB : List Befehl)
     omega
 
 /-- The comparison plus its conditional stays inside its eight instructions. -/
-theorem bleibtImBlockPrecV (cgBlk frei : Nat) :
+theorem bleibtImBlockPrecV (cgBlk : List Befehl) (frei : Nat) :
     BleibtImBlock (precCheck frei ++ [(.springeWenn (frei + 6) false (cgBlk.length + 92) : Befehl)]) := by
   apply bleibtImBlockAppend
   · exact bleibtImBlockPrecCheck frei
