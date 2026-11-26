@@ -66,7 +66,7 @@ theorem einheitVon_kein_sperre (P : Katalog.Plattform) (t : Ast.Unit)
     subst hplan
     cases hsperre
   · subst same
-    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z ideal
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern (w := w) z ideal
     rw [hakt] at hsperre
     cases hsperre
 
@@ -127,7 +127,7 @@ theorem einheitVon_kontext_erhaelt (P : Katalog.Plattform) (t : Ast.Unit)
   · subst same
     have hschritt : (Ast.Semantik.Befehl.zugriff z).form.zugriffsschritt c s [plan] u :=
       (Ast.Semantik.Zugriffsform.ideal_iff z c s w [plan] u).1 ideal
-    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z ideal
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern (w := w) z ideal
     have hstatus : u.status = s.status := by
       rcases hschritt with ⟨_, _, rfl⟩ | ⟨_, v, _, _, rfl⟩ <;> rfl
     obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
@@ -170,7 +170,7 @@ theorem einheitVon_kontext_erhaelt_impl (P : Katalog.Plattform) (t : Ast.Unit)
     have idealB : (Ast.Semantik.Befehl.zugriff z).ideal c s w [plan] u := implB
     have hschritt : (Ast.Semantik.Befehl.zugriff z).form.zugriffsschritt c s [plan] u :=
       (Ast.Semantik.Zugriffsform.ideal_iff z c s w [plan] u).1 idealB
-    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern z idealB
+    have hakt := Ast.Semantik.Zugriffsform.ideal_aktion_intern (w := w) z idealB
     have hstatus : u.status = s.status := by
       rcases hschritt with ⟨_, _, rfl⟩ | ⟨_, v, _, _, rfl⟩ <;> rfl
     obtain ⟨rahmen, _, _, _, fuaus, _, seq⟩ := aus
