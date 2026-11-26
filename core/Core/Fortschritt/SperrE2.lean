@@ -157,13 +157,16 @@ theorem e2_ideal_geben (w : Unit) : E_2.system.ISchritt A s2_0 w [wGebenPlan] s2
 theorem ausfuehr_geben : FuehrtSchrittAus E_2.einrichtung 0 A s2_0 s2_0 wGebenPlan
     ⟨g2_es, []⟩ s2_1 := by
   have hF : FuehrtAus E_2.einrichtung 0 A s2_0 s2_0 (.sperre () .geben)
-      [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] [] s2_0 :=
+      [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] []
+      { s2_0 with sperren := Function.update s2_0.sperren () ⟨none, []⟩ } :=
     .sperre (SperrSchritt.geben s2_0_gibt) (fun _ => trivial)
   have hM : Speicherfolge s2_0.initial (SpeicherAkteur.kontext A) s2_0.graph
       [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] g2_es g2_g :=
     g2_mem
   exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
-    fun _ h => (List.not_mem_nil h).elim, _, s2_0, hF, hM, rfl⟩
+    fun _ h => (List.not_mem_nil h).elim, _,
+    { s2_0 with sperren := Function.update s2_0.sperren () ⟨none, []⟩ },
+    hF, hM, rfl⟩
 
 noncomputable def spur2 : Nat → Option (SchrittWahl Unit × SchrittSpur Unit Unit)
   | 0 => some (.kontext A (), ⟨g2_es, []⟩)
