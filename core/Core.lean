@@ -51,8 +51,9 @@ public import Core.Fortschritt.SperrFairBeweis
 public import Core.Fortschritt.SperrE2
 public import Core.Fortschritt.SperrAnnahmeE1
 public import Core.Fortschritt.SperrErfuellbar
-public import Core.Fortschritt.Beweise.SperrStarkEinheit
-public import Core.Fortschritt.Beweise.SperrStarkLauf
+public import Core.Fortschritt.Beweise.SperrStarkEinheit4
+public import Core.Fortschritt.Beweise.SperrStarkHalter4
+public import Core.Fortschritt.Beweise.SperrStarkLauf4
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
