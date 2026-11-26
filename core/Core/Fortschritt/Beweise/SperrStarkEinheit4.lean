@@ -193,9 +193,10 @@ theorem e4_aussen_gueltig : AussenGueltig E_4 := by
     cases i
     rcases hideal with ⟨_, ⟨_, _, hpeq, hueq⟩ | ⟨_, _, hpeq, hueq⟩⟩ |
       ⟨_, _, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
-    · obtain rfl := (List.cons.inj hpeq).1
-      obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
-      have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
+  · obtain rfl := (List.cons.inj hpeq).1
+    subst hueq
+    obtain ⟨_, _, _, _, hF, _, hziel⟩ := aus
+    have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
       rw [hakt] at hF
       obtain ⟨_, au⟩ := spur
       cases hF
