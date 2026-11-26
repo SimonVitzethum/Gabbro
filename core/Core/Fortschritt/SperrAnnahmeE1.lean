@@ -129,8 +129,6 @@ theorem e1_klauseln : KlauselnWahr E_1 := by
   exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
     fun _ _ _ h => (List.not_mem_nil h).elim⟩
 
-/-- One ideal step preserves the free lock: tickets keep the owner, takes are
-    impossible, answers and interrupts preserve the lock state, crashes wipe it. -/
 /-- A context step preserves the free lock: tickets keep the owner, the stutter keeps
     the state. -/
 theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
@@ -149,6 +147,7 @@ theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit U
     have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
     rw [hakt] at hF
     generalize hau : spur.aussen = au
+    clear hau
     cases hF with
     | sperre hF' _ =>
       cases hF' with
@@ -162,6 +161,7 @@ theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit U
     have hakt : stutterPlan.aktion = .intern := rfl
     rw [hakt] at hF
     generalize hau : spur.aussen = au
+    clear hau
     cases hF with
     | intern =>
       rw [heq]
@@ -176,7 +176,10 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
     (s'.sperren ()).besitzer = none := by
   cases step with
-  | kontext _ _ hreg haus => exact e1_kontext_erhaelt hpre hreg haus
+  | kontext _ _ hreg haus =>
+    obtain ⟨i, _, hreg⟩ := hreg
+    cases i with
+    | unit => exact e1_kontext_erhaelt hpre hreg haus
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
     rw [heq]
