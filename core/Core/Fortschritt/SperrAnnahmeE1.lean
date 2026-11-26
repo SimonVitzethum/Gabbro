@@ -229,4 +229,124 @@ theorem akzeptiert_E_1 : Akzeptiert E_1 :=
       exact hblock,
     e1_halter⟩⟩
 
+/-- The start state dispatches `A` on core zero and keeps everyone live. -/
+theorem zE0_kerne0 : (zE0.kerne 0).laeuft = some A := rfl
+
+theorem zE0_kerne1 : (zE0.kerne 1).laeuft = some B := rfl
+
+theorem zE0_live : ∀ c, zE0.status c = .laeuft := fun _ => rfl
+
+/-- The witness run for the waiting bound: the `ρ'` trace under a chosen start. -/
+noncomputable def ρ_1 : Maschine.Lauf E_1 :=
+  ⟨s2_start, hw2, ρ'.zeit⟩
+
+theorem ρ_1_zustand (t : Nat) (s : Zustand Unit Unit Unit Unit Bool Unit)
+    (hzs : ρ_1.zeit.zustand t = some s) : s = zwSt t :=
+  Option.some.inj (hzs.symm.trans rfl)
+
+theorem e1_lauf : Laeufe E_1 h2 ρ_1 :=
+  ⟨fair2.hardware, fair2.konform, zul_2, rfl⟩
+
+/-- The witness run never waits behind a duplicate. -/
+theorem e1_nodup_Sc : (S_c.sperren ()).schlange.Nodup := by
+  rw [qc]
+  exact List.nodup_singleton _
+
+/-- The witness run is crash-free on hardware. -/
+theorem e1_crash_hw : ∀ k, 1 ≤ k → (ρ_1.hw.angebot k).crash = false :=
+  fun k _ => hw2_crash k
+
+/-- The witness run never records an interrupt. -/
+theorem e1_ret : VerdraengungKehrtZurueck E_1 ρ_1 := by
+  intro c k t _ hsp
+  obtain ⟨id, spur, hsp⟩ := hsp
+  have hcon : spurw t = some (.interrupt id, spur) := hsp
+  cases t with
+  | zero =>
+    rw [spurw0] at hcon
+    simp only [ticketA] at hcon
+    have hfst := congrArg Prod.fst (Option.some.inj hcon)
+    cases hfst
+  | succ t =>
+    cases t with
+    | zero =>
+      rw [spurw1] at hcon
+      simp only [ticketB] at hcon
+      have hfst := congrArg Prod.fst (Option.some.inj hcon)
+      cases hfst
+    | succ n =>
+      by_cases h : (n + 2) % 2 = 0
+      · rw [spurw_ge2 n h] at hcon
+        simp only [ticketA] at hcon
+        have hfst := congrArg Prod.fst (Option.some.inj hcon)
+        cases hfst
+      · have h1 : (n + 2) % 2 = 1 := by
+          rcases Nat.mod_two_eq_zero_or_one (n + 2) with h0 | h1
+          · exact (h h0).elim
+          · exact h1
+        rw [spurw_ge2' n h1] at hcon
+        simp only [ticketB] at hcon
+        have hfst := congrArg Prod.fst (Option.some.inj hcon)
+        cases hfst
+
+/-- The stutter step is always available. -/
+theorem e1_stutter_bereit (t : Nat) (c : Kontext)
+    (s : Zustand Unit Unit Unit Unit Bool Unit) :
+    ∃ w plan u spur s', E_1.system.ImplSchritt c s w [plan] u ∧
+      FuehrtSchrittAus E_1.einrichtung t c s u plan spur s' :=
+  ⟨(), [stutterPlan], s, ⟨[], []⟩, s,
+    ⟨(), rfl, Or.inr ⟨rfl, rfl⟩⟩, e1StotterAusfuehr t c s⟩
+
+/-- Every even cut steps `A`. -/
+theorem spurw_step_A {t : Nat} (h : t % 2 = 0) :
+    ∃ w spur, spurw t = some (.kontext A w, spur) := by
+  by_cases ht0 : t = 0
+  · subst ht0
+    exact ⟨(), _, spurw0⟩
+  · have h2 : 2 ≤ t := by omega
+    have heq : t - 2 + 2 = t := Nat.sub_add_cancel h2
+    rw [← heq]
+    exact ⟨(), _, spurw_ge2 _ (by rw [heq]; exact h)⟩
+
+/-- Every odd cut steps `B`. -/
+theorem spurw_step_B {t : Nat} (h : t % 2 = 1) :
+    ∃ w spur, spurw t = some (.kontext B w, spur) := by
+  have hpos : 0 < t := by omega
+  have hge : 1 ≤ t := hpos
+  cases t with
+  | zero => exact absurd hpos (by decide)
+  | succ t =>
+    cases t with
+    | zero => exact ⟨(), _, spurw1⟩
+    | succ n => exact ⟨(), _, spurw_ge2' n h⟩
+
+/-- The witness run is scheduler-fair: `A` and `B` step alternately forever, so every
+    continuously dispatched context is stepped infinitely often; no other context is
+    ever dispatched. -/
+theorem e1_sched : SchedulerFair E_1 ρ_1 := by
+  intro a c hready _hopp n _
+  by_cases hcA : c = A
+  · subst hcA
+    obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 0 := ⟨n + n % 2, by omega, by omega⟩
+    exact ⟨t, ht1, spurw_step_A ht2⟩
+  · by_cases hcB : c = B
+    · subst hcB
+      obtain ⟨t, ht1, ht2⟩ : ∃ t, n ≤ t ∧ t % 2 = 1 := ⟨n + 1 - n % 2, by omega, by omega⟩
+      exact ⟨t, ht1, spurw_step_B ht2⟩
+    · obtain ⟨s, hzs, k, hdisp, _, _, _⟩ := hready a (Nat.le_refl a)
+      have hss := ρ_1_zustand a s hzs
+      subst hss
+      rw [zwSt_kerne] at hdisp
+      have hdk : dispatch2 k = some c := hdisp
+      cases k with
+      | zero =>
+        exact absurd (Option.some.inj hdk).symm hcA
+      | succ k =>
+        cases k with
+        | zero => exact absurd (Option.some.inj hdk).symm hcB
+        | succ k =>
+          have hnone : dispatch2 (Nat.succ (Nat.succ k)) = none := rfl
+          rw [hdk] at hnone
+          cases hnone
+
 end Gabbro.Core.Fortschritt
