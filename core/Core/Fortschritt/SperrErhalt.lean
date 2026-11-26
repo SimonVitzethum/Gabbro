@@ -19,7 +19,7 @@
 -/
 module
 
-public import Core.Fortschritt.SperrHilfen
+public import Core.Fortschritt.Beweise.SperrHilfen
 
 @[expose] public section
 
