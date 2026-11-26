@@ -52,8 +52,12 @@ theorem speicherGraphKopplung_aus_invariante
     (inv : SpeicherGraphBeobachtungsInvarianteAussage) : SpeicherGraphKopplungAussage := by
   intro p plattform h₁ h₂ ρ₁ ρ₂ vergleich predictor t kopplung v w hv hw x hpub
   let E := p.einheit plattform
-  have inv1 := inv p plattform (h := h₁) (ρ := ρ₁) vergleich.links predictor t x v hv
-  have inv2 := inv p plattform (h := h₂) (ρ := ρ₂) vergleich.rechts predictor t x w hw
+  have inv1base := inv p plattform (h := h₁) (ρ := ρ₁) vergleich.links predictor t x
+  have inv2base := inv p plattform (h := h₂) (ρ := ρ₂) vergleich.rechts predictor t x
+  have inv1 : HatQuelle v.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₁ predictor t) :=
+    inv1base v hv
+  have inv2 : HatQuelle w.graph x ↔ SchreibSeitAbsturz x (NiedrigeBeob E ρ₂ predictor t) :=
+    inv2base w hw
   have len : (NiedrigeBeob E ρ₁ predictor t).length = (NiedrigeBeob E ρ₂ predictor t).length :=
     kopplung.2.2
   have cov := kopplung.1
