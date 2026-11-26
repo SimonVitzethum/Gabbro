@@ -323,6 +323,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Kopplung, 9717577342816087505),
   (`Gabbro.Core.Beobachtung.PauseNIAussage, 17385992757121114702),
   (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 8080221433026878282),
+  (`Gabbro.Core.Ziel.Korrektheit.VergleichSpurenAussage, 16871293226565467644),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 9319740293710160447),
   (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 13682582986139934904),
   (`Gabbro.Core.Linken.LinkErfuellbarAussage, 7405225745480840365),
