@@ -23,7 +23,6 @@ public import Core.Speicher.Review.Befunde
 public import Core.Maschine
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start
-public import Core.Maschine.SchedulerFair
 public import Core.Ideal.Eigenschaften
 public import Core.Ideal.Komposition
 public import Core.Ideal.Linearisierung
