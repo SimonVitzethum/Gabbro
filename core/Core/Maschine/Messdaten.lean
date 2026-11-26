@@ -91,6 +91,47 @@ def Etiketten.frage (e : Etiketten Ort) (q : Frage) : Etikett :=
 def oeffentlich (label : Etikett) : Bool :=
   decide (label = ∅)
 
+private theorem mem_foldl_etiketten (teil : Nat) (etiketten : List Etikett) (anfang : Etikett) :
+    teil ∈ etiketten.foldl (· ∪ ·) anfang ↔
+      teil ∈ anfang ∨ ∃ e ∈ etiketten, teil ∈ e := by
+  induction etiketten generalizing anfang with
+  | nil => simp only [List.foldl_nil, List.not_mem_nil, false_and, exists_false, or_false]
+  | cons e rest ih =>
+    rw [List.foldl_cons, ih, Finset.mem_union]
+    constructor
+    · rintro ((start | first) | ⟨later, mem, part⟩)
+      · exact Or.inl start
+      · exact Or.inr ⟨e, List.mem_cons_self, first⟩
+      · exact Or.inr ⟨later, List.mem_cons_of_mem _ mem, part⟩
+    · rintro (start | ⟨label, mem, part⟩)
+      · exact Or.inl (Or.inl start)
+      · rcases List.mem_cons.mp mem with rfl | later
+        · exact Or.inl (Or.inr part)
+        · exact Or.inr ⟨label, later, part⟩
+
+/-- Each compartment of a question comes from its endpoint or the origin object of one of
+    its handles, including the primary operand and every additional access. -/
+theorem Etiketten.mem_frage (e : Etiketten Ort) (q : Frage) (teil : Nat) :
+    teil ∈ e.frage q ↔ teil ∈ e.endpunkt q.endpoint ∨
+      ∃ a ∈ q.zugriffe, teil ∈ e.objekt a.handle.origin.object := by
+  rw [Etiketten.frage, mem_foldl_etiketten]
+  constructor
+  · rintro (endpoint | ⟨label, mem, part⟩)
+    · exact Or.inl endpoint
+    · obtain ⟨a, access, rfl⟩ := List.mem_map.mp mem
+      exact Or.inr ⟨a, access, part⟩
+  · rintro (endpoint | ⟨a, access, part⟩)
+    · exact Or.inl endpoint
+    · exact Or.inr ⟨_, List.mem_map_of_mem access, part⟩
+
+/-- A question is high exactly when at least one of its classification sources contributes
+    a compartment under the existing public projection. -/
+theorem Etiketten.frage_hoch_iff (e : Etiketten Ort) (q : Frage) :
+    oeffentlich (e.frage q) = false ↔ ∃ teil, teil ∈ e.endpunkt q.endpoint ∨
+      ∃ a ∈ q.zugriffe, teil ∈ e.objekt a.handle.origin.object := by
+  rw [oeffentlich, decide_eq_false_iff_not]
+  exact Finset.nonempty_iff_ne_empty.symm.trans (exists_congr (e.mem_frage q))
+
 def sichtbar (label : Etikett) (datum : A) : Option A :=
   if oeffentlich label then some datum else none
 
