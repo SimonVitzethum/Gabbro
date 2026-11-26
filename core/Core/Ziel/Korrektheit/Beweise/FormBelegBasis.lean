@@ -25,6 +25,7 @@ open Gabbro.Core
 open Gabbro.Core.Ast
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Katalog
+open Gabbro.Core.Waechter
 
 /-- The basic scalar arithmetic family: exactly the two registered expression constructors for
     which `exprSchema` supplies complete Parse/Elaboriert/Realisiert/locality/satisfiability
@@ -34,14 +35,14 @@ inductive BasisForm where
   | binary
 
 /-- A reserved ordinary name for the single constant of a witness unit. -/
-private def basisName : Identifier :=
+def basisName : Identifier :=
   keywordName 'x' [] (by decide) (fun _ member => (List.not_mem_nil member).elim)
 
-private theorem basisName_ordinary : ordinaryLocal basisName :=
+theorem basisName_ordinary : ordinaryLocal basisName :=
   (directName_of_singleton (name := basisName) rfl).1
 
 /-- A source unit whose only declaration computes one basic arithmetic expression. -/
-private def basisUnit : BasisForm → Ast.Unit
+def basisUnit : BasisForm → Ast.Unit
   | .lit =>
       let written : WrittenType := .integer false 8 none
       let value : Expr [] (.int 1 1) := .lit 1
@@ -68,43 +69,43 @@ private def basisUnit : BasisForm → Ast.Unit
             omega)) .done⟩
 
 /-- The elaborated code of each witness unit, used for admission and acceptance. -/
-private theorem basisUnit_code_lit :
+theorem basisUnit_code_lit :
     (Ast.Semantik.fragment Ast.Category.unit (basisUnit .lit)).code =
       [.literal 0 1, .bindeWert 0 (.int 0 255) true,
         .starte Ast.Semantik.mainName, .ende] := rfl
 
-private theorem basisUnit_code_binary :
+theorem basisUnit_code_binary :
     (Ast.Semantik.fragment Ast.Category.unit (basisUnit .binary)).code =
       [.literal 0 1, .literal 1 2, .binaer .add 0,
         .bindeWert 0 (.int 0 255) true, .starte Ast.Semantik.mainName, .ende] := rfl
 
 /-- Each witness unit is admitted on every platform: its code is frame-only and its type is
     platform-independent. -/
-private theorem basisUnit_zugelassen (f : BasisForm) (P : Plattform) :
+theorem basisUnit_zugelassen (f : BasisForm) (P : Plattform) :
     Ast.Semantik.zugelassen P Ast.Category.unit (basisUnit f) := by
   cases f
   · change (Ast.Semantik.fragment Ast.Category.unit (basisUnit .lit)).environmentAllowed P.katalog ∧
       (Ast.Semantik.fragment Ast.Category.unit (basisUnit .lit)).code.all
         (Ast.Semantik.Befehl.platformAllowed P) = true
-    refine ⟨⟨List.nodup_singleton _, ?_⟩, ?_⟩
+    refine ⟨⟨List.nodup_nil, ?_⟩, ?_⟩
     · intro e present
       cases present
     · rw [basisUnit_code_lit]
-      simp only [Ast.Semantik.Befehl.platformAllowed, List.all_cons, List.all_nil,
-        Bool.true_and]
+      simp only [Ast.Semantik.Befehl.platformAllowed, Ast.Semantik.platformType,
+        List.all_cons, List.all_nil, Bool.true_and]
   · change (Ast.Semantik.fragment Ast.Category.unit (basisUnit .binary)).environmentAllowed P.katalog ∧
       (Ast.Semantik.fragment Ast.Category.unit (basisUnit .binary)).code.all
         (Ast.Semantik.Befehl.platformAllowed P) = true
-    refine ⟨⟨List.nodup_singleton _, ?_⟩, ?_⟩
+    refine ⟨⟨List.nodup_nil, ?_⟩, ?_⟩
     · intro e present
       cases present
     · rw [basisUnit_code_binary]
-      simp only [Ast.Semantik.Befehl.platformAllowed, List.all_cons, List.all_nil,
-        Bool.true_and]
+      simp only [Ast.Semantik.Befehl.platformAllowed, Ast.Semantik.platformType,
+        List.all_cons, List.all_nil, Bool.true_and]
 
 /-- Each witness unit has no clauses, no guarded instruction and only frame-only code, so it is
     accepted by the existing guard-free-fragment rule. -/
-private theorem basisUnit_akzeptiert (f : BasisForm) (P : Plattform) :
+theorem basisUnit_akzeptiert (f : BasisForm) (P : Plattform) :
     Annahme.Akzeptiert (einheitVon P (basisUnit f)) := by
   cases f
   · let p := Ast.Semantik.fragment Ast.Category.unit (basisUnit .lit)
@@ -165,15 +166,16 @@ def basisBeleg : FormBeleg where
 theorem basisBeleg_gedeckt : FormenGedecktAussage Plattform.x86_64 basisBeleg := by
   intro f
   refine ⟨Ast.print (category := Ast.Category.unit) (basisUnit f),
-    einheitVon Plattform.x86_64 (basisUnit f), rfl, ?_, ?_, ?_⟩
+    einheitVon Plattform.x86_64 (basisUnit f), ?_, ?_, ?_, ?_⟩
+  · simp [basisBeleg]
   · exact ⟨basisUnit f, Ast.parse_print (category := Ast.Category.unit) (basisUnit f),
       ⟨rfl, basisUnit_zugelassen f Plattform.x86_64⟩⟩
   · exact basisUnit_akzeptiert f Plattform.x86_64
-  · exact ⟨rfl, rfl⟩
+  · simp [basisBeleg]
 
 /-- The family is genuinely backed by the existing registry: each form maps to a constructor of
     the root-imported `Expr` family whose complete typed `RegistryEntry` is already registered. -/
-private def basisFormConstructor : BasisForm → Lean.Name
+def basisFormConstructor : BasisForm → Lean.Name
   | .lit => ``Expr.lit
   | .binary => ``Expr.binary
 
