@@ -214,6 +214,7 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
           · rw [hstate]
             simp only [Befehl.nach, hEqS]
           · rw [hstate]
+            trace_state
             simp only [Befehl.nach]
             funext k
             by_cases hk : (((ρ.zeit.zustand t).kerne k).laeuft = some eintritt)
