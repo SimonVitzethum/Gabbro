@@ -20,7 +20,7 @@
                 that Befehl is one the estimator charged (`f ∈ (programm u.baum).code`,
                 whose class rows the estimator sums in `fragmentKosten`); loop counters
                 (`zaehler`/`obergrenzen`) stay below the estimator value; installed
-                measures stay inside their static `decreases` span. Proof sketch:
+                measures stay inside their static `decreases` interval. Proof sketch:
                 heads come from the elaborated fragment (`Fragment.einheit` rules are
                 exactly the code); the counter bounds follow the loop-entry commands
                 (`setzePasszahl`, `forAnfang`) with the static trip bounds
@@ -102,7 +102,7 @@ def EintrittSegmentAussage (P : Katalog.Plattform) (u : UnitMitSchranken)
     for every accepted unit whose estimator is defined, every context step of every
     admitted run executes the Befehl at its head, and that Befehl is one the
     estimator charged; loop counters stay below the estimator value; installed
-    measures stay inside their static `decreases` span. Open for Hy4; the sketch is
+    measures stay inside their static `decreases` interval. Open for Hy4; the sketch is
     in the file header. Difficulty: schwer. -/
 def KostenSchrittKorrespondenzAussage : Prop :=
   ∀ (P : Katalog.Plattform) (u : UnitMitSchranken) (tab : KostenTabelle)
@@ -123,12 +123,12 @@ def KostenSchrittKorrespondenzAussage : Prop :=
       (∀ t s (c : Kontext) (pc : Nat) (b : Ganzzahl),
         ρ.zeit.zustand t = some s →
         (s.lokal c).obergrenzen pc = some b → b.zahl.wert.toNat ≤ E) ∧
-      ∀ t s (c : Kontext) (name : Identifier) (n span : Nat)
+      ∀ t s (c : Kontext) (name : Identifier) (n : Nat) (lo hi : Int)
         (kern : FunktionsKern),
         ρ.zeit.zustand t = some s →
         (s.lokal c).funktion = some name → (s.lokal c).mass = some n →
-        findeKern u.baum.2 name = some kern → kern.spanne = some span →
-        n ≤ span
+        findeKern u.baum.2 name = some kern → kern.massIntervall = some (lo, hi) →
+        lo ≤ (n : Int) ∧ (n : Int) ≤ hi
 
 /-- **Correctness of the structural estimator** (`KostenSchaetzerKorrektAussage`):
     for every accepted unit whose estimator is defined, each invocation window of

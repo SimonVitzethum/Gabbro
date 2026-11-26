@@ -1,20 +1,14 @@
 /-
   File:      core/Core/Beobachtung/SchrankenBeweise/Kosten/KostenGegenbeispiel.lean
-  Subject:   THE FINITE-BOUND STEP CORRESPONDENCE IS FALSE AS PINNED. The measure
-              leg of `KostenSchrittKorrespondenzAussage` claims that every installed
-              `mass` value is below the static `decreases` span. Elaboration installs
-              the mass from the measure expression's *absolute* value (type
-              `.int lo hi`, `lo ≥ 0`), while `massSpanne` is the interval *width*
-              `(hi - lo).toNat`. For a constant measure `6` (interval `[6,6]`) the
-              installed mass is `6` but the span is `0`. A unit whose `main` declares
-              that measure is accepted by the endliche line (empty declaration,
-              defined estimator); its loader-start run reaches the installed mass in
-              four private context steps. Hence `KostenSchrittKorrespondenzAussage`
-              is refuted; the claim must not be weakened to fit the proof.
+  Subject:   A NONZERO MEASURE AND AN UNDERESTIMATED ENTRY SEGMENT.
+              The accepted unit installs mass six in the singleton interval [6,6].
+              The elaborated measure prologue contributes two private context ticks
+              that the structural estimator does not charge.
 -/
 module
 
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
+public import Core.Beobachtung.SchrankenBeweise.BindungKosten
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 public import Core.Ast.Semantik.Runtime.Atom.Rein
 public import Core.Sicherheit.Praefix
@@ -45,9 +39,9 @@ private def kkBaum : Ast.Unit :=
 
 private def kkUnit : UnitMitSchranken := ⟨kkBaum, Schrankendeklaration.leer⟩
 
-/-- The checker looks up the declared measure span: zero, not six. -/
-private theorem kk_spanne :
-    (findeKern kkBaum.2 mainName).map FunktionsKern.spanne = some (some 0) := by
+/-- Function lookup returns the declared interval. -/
+private theorem kk_intervall :
+    (findeKern kkBaum.2 mainName).map FunktionsKern.massIntervall = some (some (6, 6)) := by
   rfl
 
 /-- Installing the constant measure writes the absolute value six. -/
@@ -156,10 +150,11 @@ private theorem kk_akk :
 private theorem kk_schaetze : schaetzeEinheit Wirkungsklasse.kostenZeile [] kkBaum = some 5 := by
   rfl
 
-/-- An admitted run of the counterexample unit reaches a state whose installed mass is six. -/
+/-- The admitted run installs mass six and takes six entry ticks without a crash. -/
 private theorem kk_lauf :
     ∃ (h : Umgebung) (ρ : Lauf (einheitMitSchranken Plattform.x86_64 kkUnit)),
       Laeufe (einheitMitSchranken Plattform.x86_64 kkUnit) h ρ ∧
+      (∀ t, t < 6 → ρ.zeit.spur t = some (.kontext eintritt (), ⟨[], []⟩)) ∧
       ∃ s, ρ.zeit.zustand 4 = some s ∧
         (s.lokal eintritt).funktion = some mainName ∧ (s.lokal eintritt).mass = some 6 := by
   let platform := Plattform.x86_64
@@ -168,10 +163,14 @@ private theorem kk_lauf :
   let b0 : Befehl := (p.code[0]?).getD Befehl.ende
   let b1 : Befehl := (p.code[1]?).getD Befehl.ende
   let b2 : Befehl := (p.code[2]?).getD Befehl.ende
+  let b3 : Befehl := (p.code[3]?).getD Befehl.ende
+  let b4 : Befehl := (p.code[4]?).getD Befehl.ende
   let b5 : Befehl := (p.code[5]?).getD Befehl.ende
   have e0 : p.code[0]? = some b0 := by rfl
   have e1 : p.code[1]? = some b1 := by rfl
   have e2 : p.code[2]? = some b2 := by rfl
+  have e3 : p.code[3]? = some b3 := by rfl
+  have e4 : p.code[4]? = some b4 := by rfl
   have e5 : p.code[5]? = some b5 := by rfl
   let H := Umgebung.referenz platform.katalog 1 Laufkonstruktion.leer
   let hw := Umgebung.referenzLauf platform.katalog 1 Laufkonstruktion.leer
@@ -195,10 +194,14 @@ private theorem kk_lauf :
   let z₂ := b5.nach eintritt z₁
   let z₃ := b1.nach eintritt z₂
   let z₄ := b2.nach eintritt z₃
+  let z₅ := b3.nach eintritt z₄
+  let z₆ := b4.nach eintritt z₅
   have kopf0 : E.system.kopf z₀ eintritt = some b0 := by rfl
   have kopf1 : E.system.kopf z₁ eintritt = some b5 := by rfl
   have kopf2 : E.system.kopf z₂ eintritt = some b1 := by rfl
   have kopf3 : E.system.kopf z₃ eintritt = some b2 := by rfl
+  have kopf4 : E.system.kopf z₄ eintritt = some b3 := by rfl
+  have kopf5 : E.system.kopf z₅ eintritt = some b4 := by rfl
   have priv (b : Befehl) (mem : b ∈ p.code) : b.Privat := kk_rein b (by simpa only [p] using mem)
   let spur : SchrittSpur Zelle Int := ⟨[], []⟩
   have s0 : Lauffolge E hw 0 (some z₀) (.kontext eintritt (), spur) (some z₁) :=
@@ -209,9 +212,17 @@ private theorem kk_lauf :
     kk_schritt platform kkUnit hw 2 z₂ b1 rfl ⟨0, rfl, rfl, rfl⟩ kopf2 (priv b1 (List.mem_of_getElem? e1))
   have s3 : Lauffolge E hw 3 (some z₃) (.kontext eintritt (), spur) (some z₄) :=
     kk_schritt platform kkUnit hw 3 z₃ b2 rfl ⟨0, rfl, rfl, rfl⟩ kopf3 (priv b2 (List.mem_of_getElem? e2))
-  obtain ⟨rest, ende⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw (t + 4)) (some z₄)
-  let ab3 := voran (schritt := fun t => Lauffolge E hw (t + 3)) rest (some z₃)
-    (.kontext eintritt (), spur) (ende.symm ▸ s3)
+  have s4 : Lauffolge E hw 4 (some z₄) (.kontext eintritt (), spur) (some z₅) :=
+    kk_schritt platform kkUnit hw 4 z₄ b3 rfl ⟨0, rfl, rfl, rfl⟩ kopf4 (priv b3 (List.mem_of_getElem? e3))
+  have s5 : Lauffolge E hw 5 (some z₅) (.kontext eintritt (), spur) (some z₆) :=
+    kk_schritt platform kkUnit hw 5 z₅ b4 rfl ⟨0, rfl, rfl, rfl⟩ kopf5 (priv b4 (List.mem_of_getElem? e4))
+  obtain ⟨rest, ende⟩ := Zeitlauf.existiert (fun t => Lauffolge E hw (t + 6)) (some z₆)
+  let ab5 := voran (schritt := fun t => Lauffolge E hw (t + 5)) rest (some z₅)
+    (.kontext eintritt (), spur) (ende.symm ▸ s5)
+  let ab4 := voran (schritt := fun t => Lauffolge E hw (t + 4)) ab5 (some z₄)
+    (.kontext eintritt (), spur) (by change Lauffolge E hw 4 (some z₄) _ (ab5.zustand 0); exact s4)
+  let ab3 := voran (schritt := fun t => Lauffolge E hw (t + 3)) ab4 (some z₃)
+    (.kontext eintritt (), spur) (by change Lauffolge E hw 3 (some z₃) _ (ab4.zustand 0); exact s3)
   let ab2 := voran (schritt := fun t => Lauffolge E hw (t + 2)) ab3 (some z₂)
     (.kontext eintritt (), spur) (by change Lauffolge E hw 2 (some z₂) _ (ab3.zustand 0); exact s2)
   let ab1 := voran (schritt := fun t => Lauffolge E hw (t + 1)) ab2 (some z₁)
@@ -226,25 +237,47 @@ private theorem kk_lauf :
   have hmass : (z₄.lokal eintritt).mass = some 6 := by
     change (((Befehl.pruefeMass 0).auswerten (z₃.lokal eintritt)).mass = some 6)
     exact kk_mass_auswertung (z₃.lokal eintritt) mainName rfl rfl rfl
-  refine ⟨H, ρ, lauf, z₄, ?_, rfl, hmass⟩
-  change rest.zustand 0 = some z₄
-  exact ende
+  refine ⟨H, ρ, lauf, ?_, z₄, rfl, rfl, hmass⟩
+  intro t ht
+  obtain rfl | rfl | rfl | rfl | rfl | rfl :
+      t = 0 ∨ t = 1 ∨ t = 2 ∨ t = 3 ∨ t = 4 ∨ t = 5 := by omega
+  all_goals rfl
 
-/-- **The pinned step correspondence is false**: the constant-measure unit above is accepted,
-    its estimator is defined, and an admitted run installs a mass of six although the declared
-    span is zero. No statement is weakened. -/
-theorem kostenKorrespondenzAussage_falsch : ¬ KostenSchrittKorrespondenzAussage := by
-  intro all
-  obtain ⟨h, ρ, lauf, s, hcut, hfunk, hmass⟩ := kk_lauf
-  have k := all Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile 5 kk_akk kk_schaetze lauf
+/-- The corrected measure statement has jointly satisfiable premises at a positive mass. -/
+theorem kostenKorrespondenzMass_nichtTrivial :
+    EndlichAkzeptiertAussage Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile ∧
+    schaetzeEinheit Wirkungsklasse.kostenZeile [] kkBaum = some 5 ∧
+    ∃ (h : Umgebung) (ρ : Lauf (einheitMitSchranken Plattform.x86_64 kkUnit)) s kern,
+      Laeufe (einheitMitSchranken Plattform.x86_64 kkUnit) h ρ ∧
+      ρ.zeit.zustand 4 = some s ∧ (s.lokal eintritt).funktion = some mainName ∧
+      (s.lokal eintritt).mass = some 6 ∧ findeKern kkBaum.2 mainName = some kern ∧
+      kern.massIntervall = some (6, 6) ∧ 6 ≤ (6 : Int) ∧ (6 : Int) ≤ 6 := by
+  obtain ⟨h, ρ, lauf, _, s, hcut, hfunk, hmass⟩ := kk_lauf
   cases hfinde : findeKern kkBaum.2 mainName with
-  | none => contradiction
+  | none => have hs := kk_intervall; rw [hfinde] at hs; cases hs
   | some kern =>
-    have hspan : kern.spanne = some 0 := by
-      have hs := kk_spanne
-      rw [hfinde] at hs
-      exact Option.some.inj hs
-    have hle := k.2.2.2 4 s eintritt mainName 6 0 kern hcut hfunk hmass hfinde hspan
-    omega
+    have hs := kk_intervall
+    rw [hfinde] at hs
+    exact ⟨kk_akk, kk_schaetze, h, ρ, s, kern, lauf, hcut, hfunk, hmass, rfl,
+      Option.some.inj hs, le_rfl, le_rfl⟩
+
+/-- The measure prologue makes the admitted entry prefix cost more than the estimate. -/
+theorem kostenSchaetzerKorrektAussage_falsch : ¬ KostenSchaetzerKorrektAussage := by
+  intro all
+  obtain ⟨h, ρ, lauf, ticks, _⟩ := kk_lauf
+  have seg : EintrittSegmentAussage Plattform.x86_64 kkUnit ρ 0 6 := by
+    refine ⟨by omega, ?_, Or.inl rfl⟩
+    intro t _ ht spur contrad
+    rw [ticks t ht] at contrad
+    cases contrad
+  have cost (n : Nat) (hn : n ≤ 6) : Kontextkosten ρ eintritt 0 n = n := by
+    induction n with
+    | zero => rfl
+    | succ n ih =>
+      rw [kontextkosten_schritt_gleich (Nat.zero_add n) (ticks n (by omega)), ih (by omega)]
+  have hle := (all Plattform.x86_64 kkUnit [] Wirkungsklasse.kostenZeile 5
+    kk_akk kk_schaetze lauf).2 0 6 seg
+  rw [Nat.sub_zero, cost 6 (by omega)] at hle
+  omega
 
 end Gabbro.Core.Beobachtung

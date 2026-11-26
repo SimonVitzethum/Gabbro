@@ -176,22 +176,22 @@ def aufrufeArme : VariantArms result scope allowWildcard labels payloads →
 end
 
 /-- One function of a unit, with exactly what the estimator needs: the
-    `decreases` span (when declared) and the body with its own scope. -/
+    `decreases` interval (when declared) and the body with its own scope. -/
 structure FunktionsKern where
-  spanne : Option Nat
+  massIntervall : Option (Int × Int)
   koerper : Σ scope : Scope, Σ result : Option (Ty .value), BracedBlock result scope
 
 /-- The `decreases` span of a measure: values stay inside the interval, so a
-    strictly decreasing chain of re-entries is at most this long. -/
-def massSpanne {scope : Scope} (m : Measure scope) : Nat :=
-  (m.hi - m.lo).toNat
+    strictly decreasing chain can make at most this many decreases. -/
+def massSpanne (intervall : Int × Int) : Nat :=
+  (intervall.2 - intervall.1).toNat
 
 /-- Function lookup by name over the unit body. -/
 def findeKern : UnitBody before after → Identifier → Option FunktionsKern
   | .done, _ => none
   | .step (.function name _ _ _ _ decreases body _ _ _) next, want =>
     if name.val == want.val then
-      some ⟨decreases.map massSpanne, ⟨_, _, body⟩⟩
+      some ⟨decreases.map (fun m => (m.lo, m.hi)), ⟨_, _, body⟩⟩
     else findeKern next want
   | .step _ next, want => findeKern next want
 
@@ -254,7 +254,7 @@ def aufrufKosten (z : Wirkungsklasse → KlassenKostenzeile) (tab : KostenTabell
       | none => none
       | some kern =>
         if selbstRekursiv u name then
-          match kern.spanne with
+          match kern.massIntervall.map massSpanne with
           | none => none
           | some span =>
             let zyk := zyklusMenge u name
