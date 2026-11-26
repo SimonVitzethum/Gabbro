@@ -313,7 +313,7 @@ theorem stummer_schritt_koppelt
                         (f.auswerten (w₂.lokal c) (Ast.Semantik.Zustand.regionLive w₂))
                     rw [lokEqFun, regionEq]
                   -- kerne: same per-core update on equal pre-state kernes
-                  have kerneGleich : nachEq₁ = nachEq₁ := by
+                  have kerneGleich : nach₁.kerne = nach₂.kerne := by
                     have haktEq : (f.plan (vor.lokal c) 0).aktion = (f.plan (w₂.lokal c) 0).aktion := by
                       rw [lokEqFun]
                     obtain ⟨_, _, _, v₁, aktion₁, _, stateEq₁⟩ := aus₁
@@ -325,9 +325,9 @@ theorem stummer_schritt_koppelt
                     · rw [hL] at aktion₁
                       have hR : (f.plan (w₂.lokal c) 0).aktion = .intern := haktEq.symm.trans hL
                       rw [hR] at aktion₂
+                      rw [stateEq₁, stateEq₂]
                       cases aktion₁
                       cases aktion₂
-                      rw [stateEq₁, stateEq₂]
                       rfl
                     · rw [hL] at aktion₁
                       have hR : (f.plan (w₂.lokal c) 0).aktion = .maskiere v1 a1 := haktEq.symm.trans hL
@@ -356,16 +356,16 @@ theorem stummer_schritt_koppelt
                     · rw [hL] at aktion₁
                       have hR : (f.plan (w₂.lokal c) 0).aktion = .sende v2 k2 := haktEq.symm.trans hL
                       rw [hR] at aktion₂
+                      rw [stateEq₁, stateEq₂]
                       cases aktion₁
                       cases aktion₂
-                      rw [stateEq₁, stateEq₂]
                       rfl
                     · rw [hL] at aktion₁
                       have hR : (f.plan (w₂.lokal c) 0).aktion = .leite l3 k3 p3 := haktEq.symm.trans hL
                       rw [hR] at aktion₂
+                      rw [stateEq₁, stateEq₂]
                       cases aktion₁
                       cases aktion₂
-                      rw [stateEq₁, stateEq₂]
                       rfl
                   refine ⟨?_, ?_, ?_⟩
                   · -- prefix: both sides append nothing
