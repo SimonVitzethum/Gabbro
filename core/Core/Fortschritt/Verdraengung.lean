@@ -340,7 +340,7 @@ theorem zV_live_A : ∀ t, (ZV t).status A = .laeuft := by
 def hvAusfuehr (tick : Nat) (x : Zustand Unit Unit Unit Unit Bool Unit) :
     FuehrtSchrittAus E_v.einrichtung tick Hv x (toggleUpdate Hv x) togglePlan ⟨[], []⟩
       (toggleUpdate Hv x) :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨(by constructor <;> rfl),
     fun _ h => (List.not_mem_nil h).elim, [], toggleUpdate Hv x, .intern, .nil _, rfl⟩
 
 theorem wBildV_format : wBild.format = .elf := rfl

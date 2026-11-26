@@ -163,7 +163,7 @@ theorem ausfuehr_geben : FuehrtSchrittAus E_2.einrichtung 0 A s2_0 s2_0 wGebenPl
   have hM : Speicherfolge s2_0.initial (SpeicherAkteur.kontext A) s2_0.graph
       [⟨.schreiben, (E_2.einrichtung.sperrOrt ()), .ra, (), ()⟩] g2_es g2_g :=
     g2_mem
-  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  exact ⟨(by constructor <;> rfl),
     fun _ h => (List.not_mem_nil h).elim, _,
     { s2_0 with sperren := Function.update s2_0.sperren () ⟨none, []⟩ },
     hF, hM, rfl⟩

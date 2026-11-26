@@ -230,7 +230,7 @@ theorem vf_kerne_succ (k : Nat) : (vfZustand.kerne (Nat.succ k)).laeuft = none :
 def vwAusfuehr (t : Nat) (x : Zustand Unit Unit Unit Unit Bool Unit) :
     FuehrtSchrittAus vwEinheit.einrichtung t vfC x (toggleUpdate vfC x) togglePlan ⟨[], []⟩
       (toggleUpdate vfC x) :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨(by constructor <;> rfl),
     fun _ h => (List.not_mem_nil h).elim, [], toggleUpdate vfC x, .intern, .nil _, rfl⟩
 
 theorem vw_regel (t : Nat) :

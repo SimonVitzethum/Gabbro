@@ -151,7 +151,7 @@ theorem pause_klassenrein (existiert : ZugriffSchrittExistiertAussage)
             · rw [statusEq]
               exact stat₂
           have rahmen₁ : Zustandsrahmen v₁ (f₂.nach c₂ v₁) :=
-            ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+            by constructor <;> rfl
           have auth₁ : ∀ l ∈ Ast.Semantik.plan.lesen, l.art.liest := by
             intro l hl
             cases hl
