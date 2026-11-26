@@ -365,6 +365,7 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
 public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
 public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.FormBelegBasis
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar
