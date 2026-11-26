@@ -30,6 +30,6 @@ def precRumpfRueckAussage (cgBlk : List Befehl) (cg : Nat.Partrec.Code)
     ∃ v, Nat.Partrec.Code.eval cg (Nat.pair a (Nat.pair y i)) = Part.some v ∧
       rEnd.temp aus = some (natVal v) ∧
       (∀ s, s < frei + 10 → s ≠ aus → s ≠ frei + 4 → s ≠ frei + 5 → rEnd.temp s = r.temp s) ∧
-      rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp  : Prop := True
+      rEnd.lokale = r.lokale ∧ rEnd.rueckgabe = r.rueckgabe ∧ rEnd.stopp = r.stopp := True
 
 end Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer
