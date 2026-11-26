@@ -116,15 +116,26 @@ theorem e4_I_schritt_inv {hw : HwLauf} {t : Nat}
       simp only [ticketPlan, nehmenPlan, wGebenPlan, stutterPlan] at hF
       generalize hev : spur.aussen = evs at hF
       cases hF
-      case sperre hnext _ =>
-        have hh : s'.kerne = s.kerne := by rw [hziel] <;> rfl
+      first
+      | apply e4_inv_frame hi <;> rw [hziel] <;> rfl
+      | have hh : s'.kerne = s.kerne := by rw [hziel] <;> rfl
         have hs : s'.status = s.status := by rw [hziel] <;> rfl
-        refine e4_inv_lock hi ⟨k, hrun⟩ ?_ ?_ hh hs
-        · rw [hziel]
-          simpa only [Function.update_self] using hnext
-        · first | exact Or.inl hc | exact Or.inr rfl
-      case intern =>
-        apply e4_inv_frame hi <;> rw [hziel] <;> rfl
+        have hhlock (a : SperrAktion) (ha : statisch4 c ∨ a = .geben)
+            (hstep : SperrSchritt a c (s.sperren ()) (s'.sperren ())) : inv4 s' :=
+          e4_inv_lock hi ⟨k, hrun⟩ hstep ha hh hs
+        first
+        | apply hhlock .ticket (Or.inl hc)
+          rw [hziel]
+          simp only [Function.update_self]
+          assumption
+        | apply hhlock .nehmen (Or.inl hc)
+          rw [hziel]
+          simp only [Function.update_self]
+          assumption
+        | apply hhlock .geben (Or.inr rfl)
+          rw [hziel]
+          simp only [Function.update_self]
+          assumption
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
     apply e4_inv_frame hi <;> rw [heq] <;> rfl
