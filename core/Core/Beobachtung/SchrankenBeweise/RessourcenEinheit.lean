@@ -37,12 +37,16 @@ theorem ressourcenStart_unterLade
 
 /-- The protocol duty under its narrow premise: the recovery entry's start data meets the stack
     bound and admits no live cell on the durable booking. Answers and interrupts leave rights,
-    booking and locals untouched, so the two generic preservation facts discharge them. -/
+    booking and locals untouched, so the two generic preservation facts discharge them. The
+    stack premise is stated over the cleared entry data, which is what the post-crash local
+    state carries. -/
 theorem ressourcenProtokoll_unterWiederanlauf
     (daten : ∀ (t : Nat) (s : Zustand L Ort Wert Raum Lok Grund)
         (p : PersistZustand) (c : Kontext),
       UnterGrenze E.schranken.stapel
-        (E.schranken.stapelTiefe ((E.einrichtung.wiederanlauf.daten p.dauerhaft).lokal c)) ∧
+        (E.schranken.stapelTiefe
+          (E.einrichtung.wiederanlauf.verwerfen
+            ((E.einrichtung.wiederanlauf.daten p.dauerhaft).lokal c))) ∧
       ∀ z, z ∈ LebendeZellen { s.wiederanlauf E.einrichtung.wiederanlauf t p with
         rechte := (E.einrichtung.wiederanlauf.daten p.dauerhaft).rechte } → False) :
     ressourcenProtokollAussage E := by
@@ -250,6 +254,7 @@ theorem ressourcenProtokollAussage_falsch :
   have lokalPost : (zustand2Gegen s).lokal kontext = some griff2 := by
     dsimp only [zustand2Gegen, Zustand.wiederanlauf, Zustand.start, gegenEinheit,
       einrichtungGegen, einrichtung, daten]
+    rfl
   rw [if_pos lokalPost] at post
   omega
 

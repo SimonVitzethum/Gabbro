@@ -156,11 +156,13 @@ def GeraeteInterruptInvariantAussage : Prop :=
 
 /-- The single-run invariant survives a crash: the post-state takes the
     post-crash branch (booking `.leer` from `Zustand.start`, no pending frame
-    from the recovery entry data, every recorded question predating the new
-    epoch by the cut bound). -/
+    from the unit's declared clearing, every recorded question predating the new
+    epoch by the cut bound). The clearing premise is discharged by the unit's
+    restart data, never by a globally resolved instance. -/
 def GeraeteAbsturzInvariantAussage : Prop :=
   ∀ (binding : Binding k) (s : State) (w : Wiederanlauf Nat UInt8 PUnit Frame PUnit)
     (t : Nat) (p : PersistZustand),
+    (∀ l : Frame, (w.verwerfen l).pending = none) →
     GeraeteInvariantAussage binding s →
     (∀ q ∈ s.fragen, q.cut < t) →
     GeraeteInvariantAussage binding (s.wiederanlauf w t p)

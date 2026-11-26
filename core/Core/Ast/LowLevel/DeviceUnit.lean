@@ -34,7 +34,7 @@ def boot (core : Option Nat) : Startdaten UInt8 PUnit Frame PUnit :=
 def setup (obj : Objekt := (⟨.virtio, 0⟩ : Objekt)) :
     Einrichtung PUnit Nat UInt8 PUnit Frame PUnit PUnit :=
   ⟨fun _ => 0, fun _ => 0, fun _ => 0, fun _ => 0, fun _ _ _ => False, fun _ _ => True,
-    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => bootFor obj (some 0), fun _ _ => 0⟩,
+    ⟨0, 0⟩, ⟨entryContext, 0, fun _ => bootFor obj (some 0), fun _ _ => 0, verwerfen⟩,
     fun _ => 0, fun _ _ _ => none⟩
 
 /-- The unit supplied by elaboration uses the catalogue-selected rule and the
