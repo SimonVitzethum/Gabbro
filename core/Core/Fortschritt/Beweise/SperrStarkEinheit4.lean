@@ -74,8 +74,16 @@ def e4Regel (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
   (∃ next, SperrSchritt .geben c (s.sperren ()) next ∧ es = [wGebenPlan] ∧ u = s) ∨
   (es = [stutterPlan] ∧ u = s)
 
+/-- The ideal rule has no acquisition: every ideal cut starts free and stays free. The
+    implementation rule below carries the ticket/take/hand-off steps of the witness run. -/
+def e4RegelIdeal (c : Kontext) (s : Zustand Unit Unit Unit Unit Bool Unit) (w : Unit)
+    (es : List (SchrittPlan Unit Unit Unit Unit)) (u : Zustand Unit Unit Unit Unit Bool Unit) :
+    Prop :=
+  (∃ next, SperrSchritt .geben c (s.sperren ()) next ∧ es = [wGebenPlan] ∧ u = s) ∨
+  (es = [stutterPlan] ∧ u = s)
+
 def e4System : MaschinenSystem Unit Unit Unit Unit Bool Unit Unit Unit Unit :=
-  ⟨fun _ => ⟨e4Regel, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
+  ⟨fun _ => ⟨e4RegelIdeal, e4Regel⟩, fun _ _ => some (), fun _ _ => False, fun _ _ _ => False⟩
 
 /-- The implementation loader returns a free lock with tickets for A and B: no holder is seeded,
     and the holder of the run arises only by an admitted take. All vectors are masked and an NMI
