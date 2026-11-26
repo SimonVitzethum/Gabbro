@@ -153,10 +153,11 @@ theorem forceStep (ρ : I.Lauf E_linked) (hρ : I.Laeufe E_linked ρ)
     simp only [kopf, hEqS, hEqL]
     exact hHead
   have stepT : I.Schritt E_linked.einrichtung E_linked.system E_linked.katalog ρ.hw t
-      (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩) (b.nach eintritt (ρ.zeit.zustand t)) :=
+      (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩)
+      (b.maschinennach eintritt (ρ.zeit.zustand t) (b.nach eintritt (ρ.zeit.zustand t))) :=
     .kontext hNoCrash hReadyT
-      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [Semantik.plan] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug _ _ _ _)
+      ⟨b, headT, (b.ideal_privat hPriv eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
+      (b.vollzug E_linked.einrichtung _ _ _ hPriv)
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
