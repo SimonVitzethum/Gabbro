@@ -405,7 +405,7 @@ theorem quellLaufRennen (p : Fragment) (platform : Plattform) (klassenrein : p.K
                 cases hx
               · intro d hd
                 simp only [Zustand.wiederanlauf, Zustand.start, Fragment.sicherheitsEinheit,
-                  Fragment.einheit, einrichtung, startdaten, hd, if_false]
+                  Fragment.einheit, einrichtung, startdaten, hd, if_false, id_eq]
   intro t s anfang
   exact einAktRennen (schnitte t s anfang).1 (schnitte t s anfang).2.1
 
