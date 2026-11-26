@@ -60,7 +60,6 @@ private theorem fragment_speicher_gut {p : Ast.Semantik.Fragment} {plattform : P
     and `zugriffKomponierbar`, so `KeinSchritt` is contradicted there too. -/
 theorem pause_klassenrein (existiert : ZugriffSchrittExistiertAussage)
     (p : Ast.Semantik.Fragment) (plattform : Plattform) (klassenrein : p.KlassenRein)
-    (erlaubt : p.code.all (Ast.Semantik.Befehl.platformAllowed plattform) = true)
     {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (p.einheit plattform)}
     (vergleich : Vergleich (p.einheit plattform) h₁ h₂ ρ₁ ρ₂) (predictor : Praediktor) (t : Nat)
     (idle₁ : ρ₁.zeit.spur t = none)
@@ -173,9 +172,8 @@ theorem pause_klassenrein (existiert : ZugriffSchrittExistiertAussage)
                 have kopf₁ : E.system.kopf v₁ c₂ = some (Ast.Semantik.Befehl.zugriff z) := by
                   rw [kopf₁_gleich]
                   exact kopf₂
-                have wf := zugriff_wohlgeformt_aus_erlaubt p plattform z v₁ c₂ erlaubt kopf₁
                 obtain ⟨wu, plan, u, es, g, step, folge⟩ :=
-                  existiert p plattform z v₁ c₂ kopf₁ zustandGut₁ wf
+                  existiert p plattform z v₁ c₂ kopf₁ zustandGut₁
                 obtain ⟨spur₁, s', run₁⟩ :=
                   Ast.Semantik.zugriffKomponierbar p plattform z t v₁ c₂ wu plan u es g kopf₁ step folge
                 refine ⟨plan, u, spur₁, s', ?_, run₁⟩
@@ -259,9 +257,7 @@ theorem pause_klassenrein (existiert : ZugriffSchrittExistiertAussage)
     This is `akzeptiertes_fragment_ni` with the `rein` premise replaced by `KlassenRein` and the
     `zugriff` family filled by the pinned access-family statement. -/
 theorem zugriffNIFragmentAusFamilie (zugriff : ZugriffNIAussage)
-    (existiert : ZugriffSchrittExistiertAussage)
-    (zulassung : ∀ (p : Ast.Semantik.Fragment) (platform : Plattform), p.MitZugriff →
-      p.code.all (Ast.Semantik.Befehl.platformAllowed platform) = true) : ZugriffNIFragmentAussage := by
+    (existiert : ZugriffSchrittExistiertAussage) : ZugriffNIFragmentAussage := by
   intro p plattform mitZugriff akzeptiert
   have klassenrein : p.KlassenRein := mitZugriff.1
   apply ni_akzeptierter_einheit (p.einheit plattform) akzeptiert (fragment_start_ni p plattform)
@@ -281,7 +277,6 @@ theorem zugriffNIFragmentAusFamilie (zugriff : ZugriffNIAussage)
     | interrupt _ => exact interruptNI p plattform v predictor t _ spur tick trivial kopplung
     | absturz => exact absturzNI p plattform v predictor t _ spur tick trivial kopplung
   · intro h₁ h₂ ρ₁ ρ₂ v predictor t idle kopplung
-    exact pause_klassenrein existiert p plattform klassenrein (zulassung p plattform mitZugriff)
-      v predictor t idle kopplung
+    exact pause_klassenrein existiert p plattform klassenrein v predictor t idle kopplung
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -137,15 +137,12 @@ theorem ideal_akzeptierte_einheit_rein (P : Katalog.Plattform) (t : Ast.Unit)
 /-- `I` IS DETERMINATE AND MAKES PROGRESS FOR EVERY ELABORATED UNIT. A frame-only fragment by the template of its classes
     (`ideal_akzeptierte_einheit_rein`), a fragment with an access instruction by the pinned statements of
     `ZugriffZielAussage` (the composed determinacy and the liveness of the memory model). -/
-theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) :
-    ∀ (P : Katalog.Plattform) (t : Ast.Unit), Ast.Semantik.zugelassen P Ast.Category.unit t →
-      Maschine.I.Bestimmt (einheitVon P t).einrichtung (einheitVon P t).system ∧
-      Maschine.I.Fortschritt (einheitVon P t).einrichtung (einheitVon P t).system := by
-  intro P t erlaubt
+theorem ideal_akzeptierte_einheit (zugriff : ZugriffZielAussage) : IdealAkzeptierteEinheitAussage := by
+  intro P t
   by_cases rein : (Ast.Semantik.fragment Ast.Category.unit t).Rein
   · exact ideal_akzeptierte_einheit_rein P t rein
   · have klassenrein := Ast.Semantik.fragment_klassenrein Ast.Category.unit t
     exact ⟨zugriff.2.1 _ P ⟨klassenrein, rein⟩,
-      fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein erlaubt.2⟩
+      fortschritt_klassenrein zugriff.2.2.1 _ P klassenrein⟩
 
 end Gabbro.Core.Ziel.Korrektheit

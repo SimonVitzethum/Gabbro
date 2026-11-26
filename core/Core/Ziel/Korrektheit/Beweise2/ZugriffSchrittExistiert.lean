@@ -1,14 +1,15 @@
 /-
   File:      core/Core/Ziel/Korrektheit/Beweise2/ZugriffSchrittExistiert.lean
   Subject:   THE PINNED LIVENESS STATEMENT `ZugriffSchrittExistiertAussage` (`Core/Ziel/
-             Korrektheit/Zugriff`) DOES NOT HOLD as stated, and the missing premise is identified.
-             The statement quantifies over every access form `z`. An update form at the plain mode
-             (`tausche`, `holeUndAddiere` with `na`) is one such form: when the state grants the
-             access, its only ideal step records an `rmw` event at `na`, which no RC11-consistent
-             memory extension accepts (`Wohlgeformt.rmw_nicht_na`). The checker refuses those forms
-             (`pruefeZugriffsform`), so adding `z.wohlgeformt` to the premise is the strengthening
-             that makes the statement true. No statement is changed: the negation and a sharp
-             obstruction theorem are new declarations only.
+             Korrektheit/Zugriff`) IS PROVED. Every access head has an ideal step whose labels the
+             memory model can append. A form the checker refuses (`pruefeZugriffsform`, an update at
+             the plain mode) takes the step's refusal branch and records no memory event: its `rmw`
+             event at `na` would be accepted by no consistent memory (`Wohlgeformt.rmw_nicht_na`),
+             so the machine halts the frame with a named reason instead of hanging. A granted form
+             takes the last write of the cell (a load or update), appends a write (a store), or
+             records nothing (a fence, a refused access). The satisfiability lemma gives a head in a
+             consistent complete state; the non-triviality lemma gives one whose step records a real
+             memory event. The obstruction theorem keeps the reason the plain-mode update is refused.
 -/
 module
 
@@ -133,19 +134,18 @@ end ZugriffSchritt
 
 open Gabbro.Core.Ast.Semantik
 
-/-- The liveness statement WITHOUT the `z.wohlgeformt` premise is false: a checker-refused update form
-    at the plain mode is still a possible head, and with authority its granted ideal step records an
-    event the memory model cannot append. This makes the premise of the pinned statement informative. -/
+/-- **The liveness statement is not empty**: a load at the head of an entry context in a consistent complete
+    state whose frame holds the cell has a step recording a real memory event. The pinned statement is therefore
+    not satisfied only by the refusal branch of a form the checker rejects. -/
 theorem zugriffSchrittExistiert_nichtTrivial :
-    ¬ (∀ (p : Fragment) (platform : Katalog.Plattform) (z : Zugriffsform) (s : Zustand) (c : Kontext),
-        (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) → s.SpeicherGut →
-          ∃ (w : PUnit.{1}) (plan : Plan) (u : Zustand)
-            (es : List (SpeicherAkteur Zelle × Etikett Zelle Int)) (g : SpeicherGraph Zelle Int),
-            (Befehl.zugriff z).ideal c s w [plan] u ∧
-              Speicherfolge s.initial (.kontext c) s.graph
-                (plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert) es g) := by
-  intro h
-  let z : Zugriffsform := .tausche 0 0 0 0 (Ast.Ty.int 0 0) .na
+    ∃ (p : Fragment) (platform : Katalog.Plattform) (z : Zugriffsform) (s : Zustand) (c : Kontext),
+      (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) ∧ s.SpeicherGut ∧
+      ∃ (w : PUnit.{1}) (plan : Plan) (u : Zustand)
+        (es : List (SpeicherAkteur Zelle × Etikett Zelle Int)) (g : SpeicherGraph Zelle Int),
+        (Befehl.zugriff z).ideal c s w [plan] u ∧
+          Speicherfolge s.initial (.kontext c) s.graph
+            (plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert) es g ∧ es ≠ [] := by
+  let z : Zugriffsform := .lade 0 0 0 (Ast.Ty.int 0 0) .na
   let p : Fragment := Fragment.einzel (.zugriff z)
   let platform : Katalog.Plattform := .x86_64
   let c : Kontext := eintritt
@@ -162,25 +162,31 @@ theorem zugriffSchrittExistiert_nichtTrivial :
     change Speicher.Zustand.leer.graph.Konsistent ∧ Speicher.Zustand.leer.graph.Vollstaendig
     exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
   have kopf : (p.einheit platform).system.kopf s c = some (.zugriff z) := by rfl
-  obtain ⟨_, plan, u, es, g, step, folge⟩ := h p platform z s c kopf gut
   have hg : (Befehl.zugriff z).form.klasse.befugt
       ((Befehl.zugriff z).form.operand (s.lokal c)) s c := by
-    change s.befugt c (Zelle.region 0 0) .lesen ∧ s.befugt c (Zelle.region 0 0) .schreiben
-    constructor <;>
-      refine ⟨⟨0, 0⟩, 0, ?_, rfl, ?_, ?_, ?_, ?_⟩ <;>
+    change s.befugt c (Zelle.region 0 0) .lesen
+    refine ⟨⟨0, 0⟩, 0, ?_, rfl, ?_, ?_, ?_, ?_⟩ <;>
       simp only [s, r, Zustand.griff, Function.update_self, decide_true, Rechte.Gueltig,
         Leihe.Zugriff, List.getElem?_cons_zero, Zelle.objekt, List.length_singleton,
         Nat.reduceLT, ↓reduceIte, Leerzustand, Zustand.start, true_and, or_true, or_false, reduceCtorEq]
-  have stepZ := (zugriff_ideal_zugriffsschritt z c s () [plan] u).1 step
-  rcases stepZ with ⟨hng, _, _⟩ | ⟨_, v, _, hp, _⟩
-  · exact (hng hg).elim
-  have planEq : plan = (Befehl.zugriff z).form.plan (s.lokal c) v := (List.cons.inj hp).1
-  rw [planEq] at folge
-  simp only [z, Befehl.form, Befehl.klasse, Befehl.operand, Zugriffsform.klasse,
-    Zugriffsform.operand, Rahmen.zugriffOperand, Schrittform.plan,
-    Wirkungsklasse.plan, Aenderung.art, Aenderung.schreibt, schreibEreignisse,
-    List.filter_nil, List.map_nil, List.nil_append, List.append_nil] at folge
-  exact ZugriffSchritt.rmw_na_keine_speicherfolge folge
+  let o := (Befehl.zugriff z).form.operand (s.lokal c)
+  obtain ⟨v, es, g, folge⟩ := ZugriffSchritt.speicherzug_nachWert_existiert
+    s.initial (.kontext c) gut.1 gut.2 o.ort .na (fun v => (.lesen, v))
+    (fun _ => trivial) (fun _ h => by cases h) (fun _ h => by cases h)
+  refine ⟨p, platform, z, s, c, kopf, gut, (), (Befehl.zugriff z).form.plan (s.lokal c) v,
+    (Befehl.zugriff z).form.zugriffNach c s v, es, g, ?_, ?_, ?_⟩
+  · apply (zugriff_ideal_zugriffsschritt z c s () [(Befehl.zugriff z).form.plan (s.lokal c) v]
+      ((Befehl.zugriff z).form.zugriffNach c s v)).2
+    refine Or.inr ⟨hg, v, ?_, rfl, rfl⟩
+    simp only [z, Befehl.form, Befehl.klasse, Zugriffsform.klasse, Schrittform.plan,
+      Wirkungsklasse.plan]
+    exact Or.inl rfl
+  · simp only [z, o, Befehl.form, Befehl.klasse, Zugriffsform.klasse, Zugriffsform.operand,
+      Rahmen.zugriffOperand, Schrittform.plan, Wirkungsklasse.plan, schreibEreignisse,
+      List.filter_nil, List.map_nil, List.nil_append, List.append_nil]
+    exact folge
+  · cases folge with
+    | cons _ _ _ => simp only [List.append_eq_nil, and_false, reduceCtorEq, not_false_eq_true]
 
 /-- The step of a reading access head, once the function from the value read to the event kind and the value written
     is supplied. The memory extension is built first and gives the value; the plan is then instantiated at that value. -/
@@ -213,12 +219,13 @@ private theorem existenz_lesend (z : Zugriffsform) (c : Kontext) (s : Zustand)
     simp only [schreibEreignisse, List.filter_nil, List.map_nil, List.nil_append, List.append_nil]
     exact folge
 
-/-- **The strengthened liveness statement is proved.** An access head whose form passes the checker either lacks
-    authority, in which case the refusal step records no memory event, or has authority: a load or update takes the
-    last write of the cell, a store appends a write, and a fence records nothing. The write value of an update is a
-    function of the value read, so the read value is chosen from the graph first and only then fed into the label. -/
+/-- **The liveness statement is proved.** An access head either lacks authority, in which case the refusal step
+    records no memory event, or has authority: a load or update takes the last write of the cell, a store appends a
+    write, and a fence records nothing. An update at the plain mode never has authority (its step refuses), so the
+    memory extension is only built for an atomic update. The write value of an update is a function of the value read,
+    so the read value is chosen from the graph first and only then fed into the label. -/
 theorem zugriffSchrittExistiert : ZugriffSchrittExistiertAussage := by
-  intro p platform z s c head gut wf
+  intro p platform z s c head gut
   by_cases hg : (Befehl.zugriff z).form.klasse.befugt
       ((Befehl.zugriff z).form.operand (s.lokal c)) s c
   · cases z with
@@ -272,11 +279,9 @@ theorem zugriffSchrittExistiert : ZugriffSchrittExistiertAussage := by
           exact Speicherfolge.nil _
     | tausche ziel region index quelle typ m =>
         let zf : Zugriffsform := .tausche ziel region index quelle typ m
-        have modusNichtNa : m ≠ .na := by
-          intro hm
-          subst m
-          simp only [zf, Zugriffsform.wohlgeformt, pruefeZugriffsform] at wf
-          cases wf
+        have hg' := hg
+        simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Wirkungsklasse.befugt] at hg'
+        have modusNichtNa : m ≠ .na := hg'.2.2
         let o := (Befehl.zugriff zf).form.operand (s.lokal c)
         exact existenz_lesend zf c s hg gut m
           (fun v => (o.aenderung.art v, o.aenderung.schreibt v o.wert))
@@ -287,11 +292,9 @@ theorem zugriffSchrittExistiert : ZugriffSchrittExistiertAussage := by
           (fun _ _ => modusNichtNa) (Or.inr rfl) (fun _ => rfl)
     | vergleicheTausche ziel region index erwartet neu typ m =>
         let zf : Zugriffsform := .vergleicheTausche ziel region index erwartet neu typ m
-        have modusNichtNa : m ≠ .na := by
-          intro hm
-          subst m
-          simp only [zf, Zugriffsform.wohlgeformt, pruefeZugriffsform] at wf
-          cases wf
+        have hg' := hg
+        simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Wirkungsklasse.befugt] at hg'
+        have modusNichtNa : m ≠ .na := hg'.2.2
         let o := (Befehl.zugriff zf).form.operand (s.lokal c)
         exact existenz_lesend zf c s hg gut m
           (fun v => (o.aenderung.art v, o.aenderung.schreibt v o.wert))
@@ -302,11 +305,9 @@ theorem zugriffSchrittExistiert : ZugriffSchrittExistiertAussage := by
           (fun _ _ => modusNichtNa) (Or.inr rfl) (fun _ => rfl)
     | holeUndAddiere ziel region index betrag typ m =>
         let zf : Zugriffsform := .holeUndAddiere ziel region index betrag typ m
-        have modusNichtNa : m ≠ .na := by
-          intro hm
-          subst m
-          simp only [zf, Zugriffsform.wohlgeformt, pruefeZugriffsform] at wf
-          cases wf
+        have hg' := hg
+        simp only [Befehl.form, Befehl.klasse, Zugriffsform.klasse, Wirkungsklasse.befugt] at hg'
+        have modusNichtNa : m ≠ .na := hg'.2.2
         let o := (Befehl.zugriff zf).form.operand (s.lokal c)
         exact existenz_lesend zf c s hg gut m
           (fun v => (o.aenderung.art v, o.aenderung.schreibt v o.wert))
@@ -322,20 +323,19 @@ theorem zugriffSchrittExistiert : ZugriffSchrittExistiertAussage := by
     · simp only [Ast.Semantik.plan, List.nil_append, schreibEreignisse, List.filter_nil, List.map_nil]
       exact Speicherfolge.nil _
 
-/-- The premises of the liveness statement hold jointly: a well-formed load at the head of the entry context in a
-    consistent complete empty state. -/
+/-- The premises of the liveness statement hold jointly: a load at the head of the entry context in a consistent
+    complete empty state. -/
 theorem zugriffSchrittExistiert_erfuellbar :
     ∃ (p : Fragment) (platform : Katalog.Plattform) (z : Zugriffsform) (s : Zustand) (c : Kontext),
-      (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) ∧ s.SpeicherGut ∧ z.wohlgeformt := by
+      (p.einheit platform).system.kopf s c = some (Befehl.zugriff z) ∧ s.SpeicherGut := by
   let z : Zugriffsform := .lade 0 0 0 (Ast.Ty.int 0 0) Gabbro.Core.Speicher.Modus.na
   let p : Fragment := Fragment.einzel (.zugriff z)
   let platform : Katalog.Plattform := .x86_64
   let c : Kontext := eintritt
   let s : Zustand := Leerzustand
-  refine ⟨p, platform, z, s, c, ?_, ?_, ?_⟩
+  refine ⟨p, platform, z, s, c, ?_, ?_⟩
   · rfl
   · change Speicher.Zustand.leer.graph.Konsistent ∧ Speicher.Zustand.leer.graph.Vollstaendig
     exact ⟨Speicher.Zustand.leer_konsistent, Speicher.Zustand.leer_vollstaendig⟩
-  · simp only [z, Zugriffsform.wohlgeformt, pruefeZugriffsform]
 
 end Gabbro.Core.Ziel.Korrektheit

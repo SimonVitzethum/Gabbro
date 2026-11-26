@@ -59,7 +59,7 @@ def SchedulerFortschrittVoraussetzung : Prop :=
     head the step the memory model offers, `ZugriffSchrittExistiertAussage`), and a ready context is neither finished
     nor blocked. -/
 theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) (P : Katalog.Plattform)
-    (t : Ast.Unit) (erlaubt : Ast.Semantik.zugelassen P Ast.Category.unit t) :
+    (t : Ast.Unit) :
     (∀ s c, (einheitVon P t).system.kopf s c = none → (einheitVon P t).system.fertig s c) ∧
     (∀ f : Ast.Semantik.Befehl, RegelFortschritt (einheitVon P t).system f) ∧
     (∀ i t' s c, (einheitVon P t).system.kopf s c = some i → s.SpeicherGut →
@@ -72,7 +72,7 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
   · intro f
     exact Ast.Semantik.Befehl.regelFortschritt (Ast.Semantik.fragment Ast.Category.unit t) P f
   · exact komponierbar_koepfe existiert (Ast.Semantik.fragment Ast.Category.unit t) P
-      (Ast.Semantik.fragment_klassenrein Ast.Category.unit t) erlaubt.2
+      (Ast.Semantik.fragment_klassenrein Ast.Category.unit t)
   · intro s c bereit
     rcases bereit with ⟨w, plans, u, step⟩
     exact Ast.Semantik.Fragment.bereit_eindeutig (Ast.Semantik.fragment Ast.Category.unit t) P step
@@ -81,8 +81,7 @@ theorem einheit_fortschrittsfelder (existiert : ZugriffSchrittExistiertAussage) 
     the composed per-cut alternatives exist. This is all of the pinned statement except the per-context
     no-hang leg; the scheduler duty `SchedulerFortschrittVoraussetzung` is what remains. -/
 theorem fortschritt_akzeptiert_ohne_haengen (existiert : ZugriffSchrittExistiertAussage) :
-    ∀ (P : Katalog.Plattform) (t : Ast.Unit), Ast.Semantik.zugelassen P Ast.Category.unit t →
-      Annahme.Akzeptiert (einheitVon P t) →
+    ∀ (P : Katalog.Plattform) (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
       ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
         Maschine.Laeufe (einheitVon P t) H ρ →
         ∃ η : Maschine.I.Lauf (einheitVon P t),
@@ -90,13 +89,13 @@ theorem fortschritt_akzeptiert_ohne_haengen (existiert : ZugriffSchrittExistiert
           Maschine.I.Sim (einheitVon P t) ρ η ∧
           Maschine.I.FortschrittDerKlasse
             (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl) η := by
-  intro P t erlaubt _ H ρ lauf
+  intro P t _ H ρ lauf
   have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
     (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
       (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
   obtain ⟨η, valid, sim⟩ := Maschine.I.sim_im_lauf pflicht lauf
   refine ⟨η, valid, sim, ?_⟩
-  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder existiert P t erlaubt
+  obtain ⟨fertig, regeln, komponierbar, _⟩ := einheit_fortschrittsfelder existiert P t
   refine ⟨?_, trivial⟩
   intro zeit kontext live dispatch
   exact Maschine.I.fortschritt_im_lauf_koepfen valid fertig regeln komponierbar zeit kontext live dispatch
