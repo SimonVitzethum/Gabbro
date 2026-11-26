@@ -137,35 +137,52 @@ theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
     (hpre : (s.sperren ()).besitzer = none)
     (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
     (s'.sperren ()).besitzer = none := by
+/-- A context step preserves the free lock: tickets keep the owner, the stutter keeps
+    the state. -/
+theorem e1_kontext_erhaelt {hw : HwLauf} {t : Nat} {s : Zustand Unit Unit Unit Unit Bool Unit}
+    {u : Zustand Unit Unit Unit Unit Bool Unit} {s' : Zustand Unit Unit Unit Unit Bool Unit}
+    {plan : SchrittPlan Unit Unit Unit Unit} {spur : SchrittSpur Unit Unit}
+    {c : Kontext} {w : Unit}
+    (hpre : (s.sperren ()).besitzer = none)
+    (hreg : e1Regel c s w [plan] u)
+    (haus : FuehrtSchrittAus E_1.einrichtung t c s u plan spur s') :
+    (s'.sperren ()).besitzer = none := by
+  rcases hreg with ⟨next, _hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
+  · subst hueq
+    have hplan : plan = ticketPlan := (List.cons.inj hpeq).1
+    subst hplan
+    obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
+    have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
+    rw [hakt] at hF
+    generalize hau : spur.aussen = au
+    cases hF with
+    | sperre hF' _ =>
+      cases hF' with
+      | ticket _ _ =>
+        rw [heq]
+        simpa only [Function.update_self] using hpre
+  · subst hueq
+    have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
+    subst hplan
+    obtain ⟨_, _, _, v, hF, _, heq⟩ := haus
+    have hakt : stutterPlan.aktion = .intern := rfl
+    rw [hakt] at hF
+    generalize hau : spur.aussen = au
+    cases hF with
+    | intern =>
+      rw [heq]
+      exact hpre
+
+/-- One ideal step preserves the free lock: takes are impossible, answers and interrupts
+    preserve the lock state, crashes wipe it. -/
+theorem e1_I_schritt_erhaelt_frei {hw : HwLauf} {t : Nat}
+    {s : Zustand Unit Unit Unit Unit Bool Unit}
+    {ev : SchrittWahl Unit × SchrittSpur Unit Unit} {s' : Zustand Unit Unit Unit Unit Bool Unit}
+    (hpre : (s.sperren ()).besitzer = none)
+    (step : I.Schritt E_1.einrichtung E_1.system E_1.katalog hw t s ev s') :
+    (s'.sperren ()).besitzer = none := by
   cases step with
-  | @kontext s s' u plan spur c w _ _ regel aus =>
-    obtain ⟨f, _, hreg⟩ := regel
-    cases f with
-    | unit =>
-      obtain ⟨_, _, _, _, hF, _, heq⟩ := aus
-      rcases hreg with ⟨next, _hss, hpeq, hueq⟩ | ⟨hpeq, hueq⟩
-      · subst hueq
-        have hplan : plan = ticketPlan := (List.cons.inj hpeq).1
-        subst hplan
-        have hakt : ticketPlan.aktion = .sperre () .ticket := rfl
-        rw [hakt] at hF
-        generalize hau : spur.aussen = au
-        cases hF with
-        | sperre hF' _ =>
-          cases hF' with
-          | ticket _ _ =>
-            rw [heq]
-            simpa only [Function.update_self] using hpre
-      · subst hueq
-        have hplan : plan = stutterPlan := (List.cons.inj hpeq).1
-        subst hplan
-        have hakt : stutterPlan.aktion = .intern := rfl
-        rw [hakt] at hF
-        generalize hau : spur.aussen = au
-        cases hF with
-        | intern =>
-          rw [heq]
-          exact hpre
+  | kontext _ _ hreg haus => exact e1_kontext_erhaelt hpre hreg haus
   | antwort _ h =>
     obtain ⟨_, _, _, heq⟩ := h
     rw [heq]
