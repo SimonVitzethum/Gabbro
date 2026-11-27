@@ -425,8 +425,8 @@ theorem memFlushVerengung_erfuellbar :
     exact List.mem_singleton.mpr rfl
   · rw [narrowF5verengt]
     exact List.not_mem_nil
-  · have key : narrowOp.abschluss narrowS4 entryContext = some narrowToken := by rfl
+  · have key : (MemInstruction.flushSpace narrowName).abschluss narrowS4 entryContext = some narrowToken := by rfl
     have steps := memFlushAbschluss (hw := hw) (t := 8) rfl ⟨0, rfl, rfl, narrowS4status⟩ narrowHead4 narrowF5eq
-    simpa only [MemInstruction.schrittSpur, ← narrowOp, key, Option.map, Option.toList] using steps
+    simpa only [MemInstruction.schrittSpur, key, Option.map, Option.toList] using steps
 
 end Gabbro.Core.Ast.LowLevel

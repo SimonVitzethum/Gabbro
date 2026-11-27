@@ -385,11 +385,11 @@ theorem memFlushFreigabe_erfuellbar :
       I.Schritt E.einrichtung E.system k hw t s label (next.advance entryContext s) := by
   let hw := Umgebung.referenzLauf Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
   let token : Zuruecknahme := ⟨0, 0, 1, 1, 1, false⟩
-  have key : flushOp.abschluss flushS4 entryContext = some token := by rfl
+  have key : (MemInstruction.flushSpace flushName).abschluss flushS4 entryContext = some token := by rfl
   refine ⟨_, flushCode, flushEnv, flushStart, hw, 8, flushS4, flushF5, flushName, token,
     Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide),
     flushZul, memProgramAkzeptiert _, flushReach, flushHead4, key, rfl, ?_⟩
   have steps := memFlushAbschluss (hw := hw) (t := 8) rfl ⟨0, rfl, rfl, flushS4status⟩ flushHead4 flushF5eq
-  simpa only [MemInstruction.schrittSpur, ← flushOp, key, Option.map, Option.toList] using steps
+  simpa only [MemInstruction.schrittSpur, key, Option.map, Option.toList] using steps
 
 end Gabbro.Core.Ast.LowLevel
