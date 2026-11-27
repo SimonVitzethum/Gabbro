@@ -184,4 +184,109 @@ theorem zweiZiehungsSchnitte_mass (Q : Zufallsquelle) (a0 a1 : Fin Q.anz) :
   simpa only [Z, ZylinderGewicht, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil,
     mul_one] using mass
 
+/-- **Two distinct draw cuts on one shared policy.** On the x86-64 platform one base
+    environment and one multi-cut plan yield two admitted `Teilbuendel` draw steps at
+    cuts `0` and `1`, using draw indices `0` and `1`. The two installed bodies are
+    distinct; both arrivals are admitted by the same row-governed shared policy. -/
+theorem zweiZiehungsSchnitte_erfuellbar
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (hkatalog : E.katalog = Plattform.x86_64.katalog)
+    (basisZ : Zustand L Ort Wert Raum Lok Grund) :
+    let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
+    let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
+    let k : Katalog := Plattform.x86_64.katalog
+    let obj : Objekt := ⟨.cProcess, 1⟩
+    ∃ (s0 s1 : Zustand L Ort Wert Raum Lok Grund) (q0 q1 : FrageEreignis) (band : Band)
+      (plan : SchnittPlan) (h : Umgebung) (run : HwLauf) (body0 body1 : List UInt8)
+      (a0 : AntwortEreignis) (spur0 : SchrittSpur Ort Wert) (s0' : Zustand L Ort Wert Raum Lok Grund)
+      (a1 : AntwortEreignis) (spur1 : SchrittSpur Ort Wert) (s1' : Zustand L Ort Wert Raum Lok Grund),
+        q0 ∈ s0.fragen ∧ q1 ∈ s1.fragen ∧
+        body0 = code (Ziehung B.quelle band 0) ∧ body1 = code (Ziehung B.quelle band 1) ∧
+        body0 ≠ body1 ∧ plan 0 = some (obj, body0) ∧ plan 1 = some (obj, body1) ∧
+        Hardware k (mehrSchnittUmgebung k h plan) ∧
+        run.konform k (mehrSchnittUmgebung k h plan) ∧
+        IstZufallsAnkunftSchritt B code band E 0 0 (some s0)
+          (some (SchrittWahl.antwort (Wahl := Wahl) a0, spur0), some s0') ∧
+        IstZufallsAnkunftSchritt B code band E 1 1 (some s1)
+          (some (SchrittWahl.antwort (Wahl := Wahl) a1, spur1), some s1') := by
+  dsimp only
+  let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
+  let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
+  let k : Katalog := Plattform.x86_64.katalog
+  let obj : Objekt := ⟨.cProcess, 1⟩
+  let handle : Handle := ⟨0, ⟨obj, 0⟩, [.invoke]⟩
+  let q0 : FrageEreignis := ⟨0, 0, 0, ⟨.cProcess, handle, [], .exchange []⟩⟩
+  let q1 : FrageEreignis := ⟨1, 0, 0, ⟨.cProcess, handle, [], .exchange []⟩⟩
+  let s0 := (Zustand.start (L := L) basisZ.lokal basisZ.status basisZ.kerne basisZ.rechte
+    basisZ.initial basisZ.persistenz).frage q0
+  let s1 := (Zustand.start (L := L) basisZ.lokal basisZ.status basisZ.kerne basisZ.rechte
+    basisZ.initial basisZ.persistenz).frage q1
+  let snapshot : AussenSicht := { AussenSicht.leer with
+    objects := Function.update AussenSicht.leer.objects obj ⟨0, true, true, [], fun _ => 0⟩
+    channels := fun ep i => if ep = .cProcess ∧ i = 0 then some handle else none }
+  let h := Umgebung.referenz k 1 (fun _ _ => snapshot)
+  let runBase := Umgebung.referenzLauf k 1 (fun _ _ => snapshot)
+  let fair : FairLaeufe k h runBase :=
+    Umgebung.referenz_fair k 1 _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
+  let band : Band := fun _idx idx => if idx = 0 then 0 else 1
+  let body0 := code (Ziehung B.quelle band 0)
+  let body1 := code (Ziehung B.quelle band 1)
+  let plan : SchnittPlan := fun u =>
+    if u = 0 then some (obj, body0) else if u = 1 then some (obj, body1) else none
+  let run : HwLauf := { runBase with politik := (mehrSchnittUmgebung k h plan).politik }
+  have hw' : Hardware k (mehrSchnittUmgebung k h plan) := mehrSchnittUmgebung_hardware fair.hardware plan
+  have konform' : run.konform k (mehrSchnittUmgebung k h plan) := by
+    refine ⟨rfl, ?_⟩
+    intro i
+    simpa only [run, mehrSchnittUmgebung] using fair.gueltig i
+  have delivery0 : (run.angebot 0).delivery q0.question.endpoint = true := by
+    change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
+    decide
+  have delivery1 : (run.angebot 1).delivery q1.question.endpoint = true := by
+    change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
+    decide
+  have selected0 : k.enthaelt (.endpoint q0.question.endpoint) :=
+    (fair.gueltig 0).2.2.2.1 _ delivery0
+  have selected1 : k.enthaelt (.endpoint q1.question.endpoint) :=
+    (fair.gueltig 1).2.2.2.1 _ delivery1
+  have valid0 : q0.question.zugriffe.all
+      ((h.politik.sicht 0 s0.verlauf).gueltig q0.question.endpoint) = true := by
+    simp only [q0, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
+      AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
+      ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
+  have valid1 : q1.question.zugriffe.all
+      ((h.politik.sicht 1 s1.verlauf).gueltig q1.question.endpoint) = true := by
+    simp only [q1, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
+      AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
+      ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
+  have ready0 : ((h.politik.sicht 0 s0.verlauf).objects obj).ready = true := by
+    simp only [snapshot, Function.update_self]
+  have ready1 : ((h.politik.sicht 1 s1.verlauf).objects obj).ready = true := by
+    simp only [snapshot, Function.update_self]
+  have hz0 : Ziehung B.quelle band 0 = (⟨0, by decide⟩ : Fin B.quelle.anz) := by
+    apply Fin.ext
+    simp only [Ziehung, band, B, Nat.zero_mod]
+  have hz1 : Ziehung B.quelle band 1 = (⟨1, by decide⟩ : Fin B.quelle.anz) := by
+    apply Fin.ext
+    simp only [Ziehung, band, B, Nat.mod_eq_of_lt]
+  have hbodies : body0 ≠ body1 := by
+    dsimp only [body0, body1]
+    rw [hz0, hz1]
+    simp only [code, ↓reduceIte]
+  have step0 := mehrSchnitt_checkedStep (B := B) code obj k h plan band 0 E hkatalog.symm 0
+    s0 q0 run fair.hardware konform' List.mem_cons_self (Nat.zero_le _) (Nat.le_refl _)
+    (fun _ mem => (List.not_mem_nil mem).elim) delivery0 selected0
+    Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
+    (by rfl : Zufallsfrage B q0.question) body0 rfl rfl (by rfl) (by rfl) valid0 ready0 (by rfl)
+  have step1 := mehrSchnitt_checkedStep (B := B) code obj k h plan band 1 E hkatalog.symm 1
+    s1 q1 run fair.hardware konform' List.mem_cons_self (Nat.zero_le _) (Nat.le_refl _)
+    (fun _ mem => (List.not_mem_nil mem).elim) delivery1 selected1
+    Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig
+    (by rfl : Zufallsfrage B q1.question) body1 rfl rfl (by rfl) (by rfl) valid1 ready1 (by rfl)
+  obtain ⟨a0, spur0, s0', step0', _⟩ := step0
+  obtain ⟨a1, spur1, s1', step1', _⟩ := step1
+  refine ⟨s0, s1, q0, q1, band, plan, h, run, body0, body1, a0, spur0, s0', a1, spur1, s1', ?_⟩
+  exact ⟨List.mem_cons_self, List.mem_cons_self, rfl, rfl, hbodies, rfl, rfl,
+    hw', konform', step0', step1'⟩
+
 end Gabbro.Core.Beobachtung
