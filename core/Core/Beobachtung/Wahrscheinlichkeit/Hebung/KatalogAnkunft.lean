@@ -163,6 +163,16 @@ def austauschUmgebung (k : Katalog) (h : Umgebung) (t : Nat) (objekt : Objekt)
     if u = t then atomar k.plattform (sicht u verlauf) q else h.politik.antwort u verlauf q
   { h with politik := ⟨sicht, antwort, h.politik.dma⟩ }
 
+/-- The draw policy uses the adjusted commit snapshot only at the draw cut. -/
+theorem austauschUmgebung_antwort (k : Katalog) (h : Umgebung) (t u : Nat) (objekt : Objekt)
+    (body : List UInt8) (history : AussenVerlauf) (q : Frage) :
+    (austauschUmgebung k h t objekt body).politik.antwort u history q =
+      if u = t then atomar k.plattform (austauschSicht (h.politik.sicht u history) objekt body) q
+      else h.politik.antwort u history q := by
+  by_cases cut : u = t
+  · simp only [austauschUmgebung, if_pos cut]
+  · simp only [austauschUmgebung, if_neg cut]
+
 theorem austauschUmgebung_hardware (hardware : Hardware k h) (t : Nat) (objekt : Objekt)
     (body : List UInt8) : Hardware k (austauschUmgebung k h t objekt body) := by
   refine { hardware with antwort := ?_ }

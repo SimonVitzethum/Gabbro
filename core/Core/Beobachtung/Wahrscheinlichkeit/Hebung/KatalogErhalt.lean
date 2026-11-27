@@ -206,10 +206,10 @@ theorem austauschUmgebung_antwort_unveraendert {k : Katalog} {h : Umgebung}
       h.politik.antwort u history q := by
   by_cases cut : u = t
   · subst u
-    simp only [austauschUmgebung, if_pos rfl]
+    simp only [austauschUmgebung_antwort, if_pos rfl]
     rw [hardware.antwort t history q selected]
     exact keineWirkung.elim atomar_austauschSicht_verschieden atomar_austauschSicht_unempfindlich
-  · simp only [austauschUmgebung, if_neg cut]
+  · simp only [austauschUmgebung_antwort, if_neg cut]
 
 /-- Rewrite the body payload of a successful result, leaving errors untouched. -/
 def wertBody (op : AussenOperation) (body : List UInt8) (v : AussenWert) : AussenWert :=
