@@ -29,9 +29,8 @@ def LinkAkzeptanzAussage : Prop :=
 theorem linkAkzeptanz : LinkAkzeptanzAussage :=
   fun _ => Iff.rfl
 
-/-- The defining module: defines the function `main` with an empty body and ends.
-    The trailing `ende` seals the module: without it the definition would fall
-    through into the next module. -/
+/-- The defining module: defines the function `main` with an empty body.
+    The linker binds its library terminator to the following nonempty module. -/
 def modulDef : Modul :=
   { name := "a"
     inhalt := .bibliothek ⟨[], .step
@@ -86,7 +85,7 @@ theorem beispielZwei : beispielPlan.module.length = 2 :=
 
 /-- The example code is the elaborated instructions. -/
 theorem beispielCode : beispielFragment.code =
-    [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.ende,
+    [Befehl.definiere mainName [] none 0 3 false [] none, Befehl.blockEnde 0, Befehl.rueckVoid, Befehl.springe 1,
       Befehl.rufe mainName [] none] := by
   rfl
 
@@ -141,7 +140,7 @@ theorem linke_klassenrein {plan : Bauplan} {frag : Fragment} (h : linke plan = s
     simp only [bauplanOk, Bool.and_eq_true] at hok
     tauto
   exact verknuepfte_klassenrein plan fun m hm =>
-    m.klassenrein_aus_quelle (List.all_eq_true.mp hquellen m hm)
+    List.all_eq_true.mp hquellen m hm
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
@@ -171,17 +170,16 @@ theorem leer_of_klauselnLeer {frag : Fragment} (h : klauselnLeer frag = true) :
 theorem verknuepfte_klauseln_leer_aux (ms : List Modul)
     (h : ∀ m ∈ ms, klauselnLeer m.fragment = true) (acc : Fragment)
     (ha : acc.klauseln = .leer) :
-    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).klauseln = .leer := by
+    ((bindefragmente ms).foldl Fragment.anhaengen acc).klauseln = .leer := by
   induction ms generalizing acc with
-  | nil => simpa using ha
+  | nil => exact ha
   | cons m rest ih =>
     have hm : klauselnLeer m.fragment = true := h m List.mem_cons_self
     have hrest : ∀ x ∈ rest, klauselnLeer x.fragment = true :=
       fun x hx => h x (List.mem_cons_of_mem _ hx)
-    have step : (acc.anhaengen m.fragment).klauseln = .leer := by
-      have e := leer_of_klauselnLeer hm
-      show acc.klauseln.anhaengen _ = _
-      rw [ha, e]
+    have step : (acc.anhaengen (m.bindefragment (hatFortsetzung rest))).klauseln = .leer := by
+      show acc.klauseln.anhaengen (m.bindefragment (hatFortsetzung rest)).klauseln = _
+      rw [ha, Modul.bindefragment_klauseln, leer_of_klauselnLeer hm]
       rfl
     exact ih hrest _ step
 
@@ -195,24 +193,24 @@ theorem verknuepfte_klauseln_leer {plan : Bauplan} (h : annahmenKompatibel plan 
   exact verknuepfte_klauseln_leer_aux _ hall _ rfl
 
 /-- The linked code is the concatenation of the modules' code. -/
-theorem verknuepfte_code_aux (ms : List Modul) (acc : Fragment) :
-    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).code =
-      acc.code ++ ms.flatMap (fun m => m.fragment.code) := by
+theorem verknuepfte_code_aux (ms : List Fragment) (acc : Fragment) :
+    (ms.foldl Fragment.anhaengen acc).code =
+      acc.code ++ ms.flatMap Fragment.code := by
   induction ms generalizing acc with
   | nil => simp only [List.foldl_nil, List.flatMap_nil, List.append_nil]
   | cons m rest ih =>
     simp only [List.foldl_cons, List.flatMap_cons]
     rw [ih]
-    show (acc.anhaengen m.fragment).code ++ _ = _
-    show acc.code ++ m.fragment.code ++ _ = _
+    show (acc.anhaengen m).code ++ _ = _
+    show acc.code ++ m.code ++ _ = _
     rw [List.append_assoc]
 
 /-- The linked code is the concatenation of the modules' code. -/
 theorem verknuepfte_code (plan : Bauplan) :
     (verknuepfteFragmente plan).code =
-      plan.module.flatMap (fun m => m.fragment.code) := by
+      (bindefragmente plan.module).flatMap Fragment.code := by
   unfold verknuepfteFragmente
-  have h := verknuepfte_code_aux plan.module Fragment.leer
+  have h := verknuepfte_code_aux (bindefragmente plan.module) Fragment.leer
   have e : Fragment.leer.code = [] := rfl
   rw [e] at h
   simpa using h

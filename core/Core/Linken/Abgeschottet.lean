@@ -56,6 +56,81 @@ theorem seal_aus_link {plan : Bauplan} {frag : Fragment} (h : linke plan = some 
   rw [Bool.and_eq_true] at hok
   exact hok.2
 
+/-- Binding keeps the layout used by the static seal and the relocation of context entries. -/
+theorem bindefragment_laenge (m : Modul) (weiter : Bool) :
+    (m.bindefragment weiter).code.length = m.fragment.code.length := by
+  cases m with
+  | mk name inhalt exporte importe =>
+    cases inhalt <;> cases weiter <;> (
+      first | rfl | simp only [Modul.bindefragment, Modul.fragment, Fragment.anhaengen,
+        Fragment.einzel, List.length_append, List.length_cons, List.length_nil])
+
+/-- The bound layout preserves each instruction except for the generated library transfer. -/
+theorem bindefragment_befehl (m : Modul) (rest : List Modul) (pos : Nat) (b : Befehl)
+    (atPos : (m.bindefragment (hatFortsetzung rest)).code[pos]? = some b) :
+    m.fragment.code[pos]? = some b ∨
+      (b = .springe 1 ∧ pos + 1 = m.fragment.code.length ∧
+        ∃ tree next tail, m.inhalt = .bibliothek tree ∧ rest = next :: tail ∧
+          next.fragment.code.isEmpty = false) := by
+  cases hnext : hatFortsetzung rest with
+  | false =>
+    rw [hnext] at atPos
+    exact Or.inl atPos
+  | true =>
+    cases hm : m.inhalt with
+    | roh p | quelle _ _ | mitInvarianten _ =>
+      apply Or.inl
+      simpa only [Modul.fragment, Modul.bindefragment, hm] using atPos
+    | bibliothek tree =>
+      let code := (unitBody tree.2).code
+      have original : m.fragment.code = code ++ [.ende] := by
+        simp only [Modul.fragment, Modul.bindefragment, hm]
+        rfl
+      have emitted : (m.bindefragment (hatFortsetzung rest)).code = code ++ [.springe 1] := by
+        simp only [Modul.bindefragment, hm, hnext, if_true]
+        rfl
+      rw [emitted] at atPos
+      by_cases inside : pos < code.length
+      · apply Or.inl
+        rw [original, List.getElem?_append_left inside]
+        exact (List.getElem?_append_left inside).symm.trans atPos
+      · have bound := (List.getElem?_eq_some_iff.mp atPos).1
+        simp only [List.length_append, List.length_cons, List.length_nil] at bound
+        have posEq : pos = code.length := by omega
+        subst pos
+        rw [List.getElem?_append_right (Nat.le_refl _), Nat.sub_self] at atPos
+        have bEq : b = .springe 1 := (Option.some.inj atPos).symm
+        refine Or.inr ⟨bEq, ?_, ?_⟩
+        · simp only [original, List.length_append, List.length_cons, List.length_nil]
+        · cases rest with
+          | nil => cases hnext
+          | cons next tail =>
+            refine ⟨tree, next, tail, rfl, rfl, ?_⟩
+            change !next.fragment.code.isEmpty = true at hnext
+            cases hempty : next.fragment.code.isEmpty with
+            | false => rfl
+            | true => rw [hempty] at hnext
+                      cases hnext
+
+/-- Every emitted static target stays in its module, except for the library terminator
+    synthesized at the last slot. That instruction can only enter an immediate successor
+    with a first instruction. The input seal still applies to all input targets. -/
+theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool)
+    (sealed : modulAbgeschottet m letzter = true) (pos : Nat) (b : Befehl)
+    (atPos : (m.bindefragment (hatFortsetzung rest)).code[pos]? = some b) :
+    sprungZielInnen pos m.fragment.code.length b = true ∨
+      (b = .springe 1 ∧ pos + 1 = m.fragment.code.length ∧
+        ∃ tree next tail, m.inhalt = .bibliothek tree ∧ rest = next :: tail ∧
+          next.fragment.code.isEmpty = false) := by
+  rcases bindefragment_befehl m rest pos b atPos with input | bridge
+  · apply Or.inl
+    unfold modulAbgeschottet at sealed
+    rw [Bool.and_eq_true] at sealed
+    have ht := (List.all_eq_true.mp sealed.1) pos
+      (List.mem_range.mpr (List.getElem?_eq_some_iff.mp input).1)
+    simpa only [input] using ht
+  · exact Or.inr bridge
+
 /-- Composition from sealed parts up to the guard transfer: with accepted parts, a
     frame-only linked program and every guard use of the linked whole satisfied, the
     linked whole is accepted. The seal is not needed for any conjunct proved here; it
