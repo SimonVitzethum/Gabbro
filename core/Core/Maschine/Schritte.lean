@@ -65,9 +65,12 @@ inductive Aktion (L Bedingung : Type) where
     event to the RC11 graph. All catalogue events retain their existing order. -/
 def Aktion.graphEreignisse {L Bedingung : Type} (action : Aktion L Bedingung)
     (events : List Ereignis) : List Ereignis :=
-  match action with
-  | .ruecknahmeAbschliessen _ => []
-  | _ => events
+  match events with
+  | [] => []
+  | _ :: _ =>
+    match action with
+    | .ruecknahmeAbschliessen _ => []
+    | _ => events
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where
