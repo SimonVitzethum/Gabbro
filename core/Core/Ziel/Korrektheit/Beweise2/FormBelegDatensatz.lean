@@ -176,8 +176,9 @@ private theorem variantZeugnis_zugelassen (P : Plattform) :
   refine ⟨variantZeugnis_environmentAllowed P, ?_⟩
   rw [variantZeugnisEinheit_code]
   simp only [Befehl.platformAllowed, variantZeugnisPayloads, variantPayloads,
-    variantZeugnisMember, List.all_cons, List.all_nil, Bool.true_and, List.flatMap_cons,
-    List.flatMap_nil, Option.map_none, Option.toList_none, List.nil_append]
+    variantZeugnisMember, List.all_cons, List.all_nil, Bool.true_and, List.map_cons,
+    List.map_nil, List.flatMap_cons, List.flatMap_nil, Option.map_none, Option.toList_none,
+    List.nil_append]
 
 theorem datensatzUnit_zugelassen (f : DatensatzForm) (P : Plattform) :
     Ast.Semantik.zugelassen P Ast.Category.unit (datensatzUnit f) := by
