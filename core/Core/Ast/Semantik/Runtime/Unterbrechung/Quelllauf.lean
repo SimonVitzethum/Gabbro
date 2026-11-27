@@ -2,7 +2,6 @@ module
 
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Quellhandler
 public import Core.Fortschritt.Verdraengung
-public import Core.Maschine.Unterbrechung.Rueckkehr
 import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 import Core.Beobachtung.Fluss.Fragment
 

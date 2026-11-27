@@ -55,6 +55,7 @@ public import Core.Fortschritt.Beweise.SperrStarkEinheit4
 public import Core.Fortschritt.Beweise.SperrStarkHalter4
 public import Core.Fortschritt.Beweise.SperrStarkLauf4
 public import Core.Fortschritt.Beweise.AntwortBeiGelegenheit
+public import Core.Fortschritt.Beweise.InterruptRueckkehr
 public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Fremdkanal
 public import Core.Katalog.Review.Befunde
