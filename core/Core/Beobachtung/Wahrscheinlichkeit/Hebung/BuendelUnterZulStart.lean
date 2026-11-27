@@ -11,6 +11,7 @@
 module
 
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.KatalogAnkunft
 public import Core.Beobachtung.Wahrscheinlichkeit.Aussagen
 public import Core.Maschine.Start
 
