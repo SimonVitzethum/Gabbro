@@ -140,8 +140,8 @@ theorem handoffByteCell_uerberdeckt (extent : Strecke) (a : Nat) :
     region slot and byte offset when the granted regions are disjoint. -/
 theorem handoffBooking_byte_eindeutig {regions : List Strecke}
     (disjoint : regions.Pairwise Strecke.getrennt) (booking : Sicherheit.Buchung Zelle) (a : Nat)
-    (inside : ∃ i extent, regions[i]? = some extent ∧ extent.drin a) :
-    ∃! cell : Nat × Nat, ∃ extent, regions[cell.1]? = some extent ∧
+    (inside : ∃ (i : Nat) (extent : Strecke), regions[i]? = some extent ∧ extent.drin a) :
+    ∃! cell : Nat × Nat, ∃ extent : Strecke, regions[cell.1]? = some extent ∧
       (handoffByteCell extent cell.2).drin a ∧
       ((handoffBooking 1 regions booking).umfang cell.1)[cell.2]? = some (.region cell.1 cell.2) := by
   obtain ⟨i, extent, grant, inGrant⟩ := inside
