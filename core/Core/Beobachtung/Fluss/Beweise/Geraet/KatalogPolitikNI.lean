@@ -40,38 +40,40 @@ def niAntwort (body : List UInt8) : Antwort :=
 private theorem frage_hoch : oeffentlich (niEtiketten.frage niFrage) = false :=
   (Etiketten.frage_hoch_iff niEtiketten niFrage).2
     ⟨7, Or.inr ⟨⟨niHandle, .invoke⟩, by
-        simp? [niFrage, FremdKanal.frage, Frage.zugriffe, AussenOperation.required],
-      by simp? [niEtiketten, niHandle, niObjekt]⟩⟩
+        simp only [Frage.zugriffe, niFrage, FremdKanal.frage, AussenOperation.required, List.mem_cons,
+          List.not_mem_nil, or_false],
+      by simp only [niEtiketten, niObjekt, niHandle, ↓reduceIte, Finset.mem_singleton]⟩⟩
 
 private theorem exchange_angebot : Plattform.x86_64.operationAngeboten niFrage = true :=
   fremdkanal_angebot _ _ _ _
 
 private theorem atomar_exchange (body : List UInt8) :
     atomar Plattform.x86_64 (niSicht body) niFrage = .antwort (niAntwort body) := by
-  simp? [atomar, niFrage, niKanal, niHandle, niObjekt, niSicht, niAntwort,
-    FremdKanal.frage, Frage.zugriffe, AussenOperation.required,
-    Plattform.operationAngeboten, AussenSicht.gueltig, AussenSicht.herkunft,
-    AussenSicht.wartet, AussenSicht.erfolg, AussenSicht.leer]
+  simp only [atomar, Plattform.operationAngeboten, niFrage, FremdKanal.frage, niHandle, niObjekt,
+    List.isEmpty_nil, Bool.not_true, Bool.false_eq_true, ↓reduceIte, Frage.zugriffe, AussenOperation.required, niSicht,
+    AussenSicht.leer, List.all_cons, AussenSicht.gueltig, BEq.rfl, and_self, Bool.and_self, AussenSicht.herkunft,
+    List.mem_cons, List.not_mem_nil, or_false, decide_true, List.all_nil, AussenSicht.wartet, List.map_cons,
+    List.map_nil, AussenSicht.erfolg, niAntwort]
 
 private theorem keine_niObjekt (q : Frage) (niedrig : oeffentlich (niEtiketten.frage q) = true) :
     ∀ a ∈ q.zugriffe, a.handle.origin.object ≠ niObjekt := by
   intro a mem gleich
   have hoch : oeffentlich (niEtiketten.frage q) = false :=
     (Etiketten.frage_hoch_iff niEtiketten q).2
-      ⟨7, Or.inr ⟨a, mem, by rw [gleich]; simp? [niEtiketten]⟩⟩
+      ⟨7, Or.inr ⟨a, mem, by rw [gleich]; simp only [niEtiketten, ↓reduceIte, Finset.mem_singleton]⟩⟩
   rw [niedrig] at hoch
   cases hoch
 
 private theorem herkunft_gleich (b₁ b₂ : List UInt8) {o : Objekt} (h : o ≠ niObjekt) :
     (niSicht b₁).herkunft o = (niSicht b₂).herkunft o := by
-  simp? [AussenSicht.herkunft, niSicht, h]
+  simp only [AussenSicht.herkunft, niSicht, h, ↓reduceIte]
 
 private theorem gueltig_gleich (b₁ b₂ : List UInt8) (q : Frage)
     (keine : ∀ a ∈ q.zugriffe, a.handle.origin.object ≠ niObjekt) :
     ∀ a ∈ q.zugriffe, (niSicht b₁).gueltig q.endpoint a = (niSicht b₂).gueltig q.endpoint a := by
   intro a mem
   have hne := keine a mem
-  simp? [AussenSicht.gueltig, AussenSicht.herkunft, niSicht, hne]
+  simp only [AussenSicht.gueltig, niSicht, hne, ↓reduceIte, AussenSicht.herkunft]
 
 private theorem all_gleich {α : Type} (l : List α) {f g : α → Bool}
     (h : ∀ a ∈ l, f a = g a) : l.all f = l.all g := by
@@ -95,17 +97,18 @@ private theorem map_herkunft_gleich (b₁ b₂ : List UInt8) (l : List Zugriff)
 private theorem wartet_gleich (b₁ b₂ : List UInt8) (q : Frage)
     (hne : q.handle.origin.object ≠ niObjekt) :
     (niSicht b₁).wartet Plattform.x86_64 q = (niSicht b₂).wartet Plattform.x86_64 q := by
-  simp? [AussenSicht.wartet, niSicht, hne, Plattform.registerWert, Plattform.geraet]
+  simp only [AussenSicht.wartet, niSicht, hne, ↓reduceIte, Plattform.registerWert, Plattform.geraet,
+    Bool.not_and]
 
 private theorem erfolg_gleich (b₁ b₂ : List UInt8) (q : Frage)
     (hne : q.handle.origin.object ≠ niObjekt) :
     (niSicht b₁).erfolg Plattform.x86_64 q = (niSicht b₂).erfolg Plattform.x86_64 q := by
-  simp? [AussenSicht.erfolg, AussenSicht.herkunft, AussenSicht.leer, niSicht, hne,
-    Plattform.registerWert, Plattform.geraet]
+  simp only [AussenSicht.erfolg, niSicht, AussenSicht.leer, hne, ↓reduceIte, Plattform.registerWert,
+    Plattform.geraet, Nat.zero_mod]
 
 private theorem bereit_gleich (b₁ b₂ : List UInt8) {o : Objekt} (h : o ≠ niObjekt) :
     ((niSicht b₁).objects o).ready = ((niSicht b₂).objects o).ready := by
-  simp? [niSicht, h]
+  simp only [niSicht, h, ↓reduceIte]
 
 /-- A public question never reaches the one classified object, so its atomic answer is the
     same under both snapshots although their high bodies differ. -/
@@ -129,8 +132,9 @@ private theorem sicht_gleich (b₁ b₂ : List UInt8) :
   · funext o
     by_cases h : o = niObjekt
     · subst o
-      simp? [niEtiketten, niSicht, oeffentlich, sichtbar]
-    · simp? [niEtiketten, niSicht, oeffentlich, sichtbar, h]
+      simp only [sichtbar, oeffentlich, niEtiketten, ↓reduceIte, Finset.singleton_union, Finset.insert_ne_empty,
+        decide_false, Bool.false_eq_true]
+    · simp only [sichtbar, oeffentlich, niEtiketten, h, ↓reduceIte, Finset.empty_union, decide_eq_true_eq, niSicht]
   · apply Prod.ext
     · funext e i
       rfl
@@ -155,7 +159,7 @@ private theorem projektion_gleich (b₁ b₂ : List UInt8) :
       change sichtbar (niEtiketten.frage q) (atomar Plattform.x86_64 (niSicht b₁) q) =
         sichtbar (niEtiketten.frage q) (atomar Plattform.x86_64 (niSicht b₂) q)
       by_cases hoch : oeffentlich (niEtiketten.frage q) = false
-      · simp? [sichtbar, hoch]
+      · simp only [sichtbar, hoch, Bool.false_eq_true, ↓reduceIte]
       · have niedrig : oeffentlich (niEtiketten.frage q) = true := by
           cases h : oeffentlich (niEtiketten.frage q) <;> simp_all
         simp only [sichtbar, niedrig, Bool.false_eq_true, ↓reduceIte]
@@ -203,9 +207,9 @@ theorem katalogPolitikNI_erfuellbar :
     ?_, ?_, ?_, ?_, projektion_gleich [] [1], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
   · exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
-  · simp? [niEtiketten, niObjekt]
+  · simp only [niEtiketten, niObjekt, ↓reduceIte, ne_eq, Finset.singleton_ne_empty, not_false_eq_true]
   · intro o h
-    simp? [niEtiketten, h]
+    simp only [niEtiketten, h, ↓reduceIte]
   · intro e
     rfl
   · rfl
@@ -219,7 +223,7 @@ theorem katalogPolitikNI_erfuellbar :
   · intro h
     cases h
   · intro o h
-    simp? [niSicht, h]
+    simp only [niSicht, h, ↓reduceIte]
   · rfl
   · rfl
   · rfl
