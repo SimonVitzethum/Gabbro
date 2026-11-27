@@ -175,8 +175,9 @@ private theorem variantZeugnis_zugelassen (P : Plattform) :
     (fragment Ast.Category.unit variantZeugnisEinheit).code.all (Befehl.platformAllowed P) = true
   refine ⟨variantZeugnis_environmentAllowed P, ?_⟩
   rw [variantZeugnisEinheit_code]
-  simp only [Befehl.platformAllowed, variantZeugnisPayloads, List.all_cons, List.all_nil,
-    Bool.true_and, List.flatMap_cons, List.flatMap_nil, Option.toList_none, List.nil_append]
+  simp only [Befehl.platformAllowed, variantZeugnisPayloads, variantPayloads,
+    variantZeugnisMember, List.all_cons, List.all_nil, Bool.true_and, List.flatMap_cons,
+    List.flatMap_nil, Option.map_none, Option.toList_none, List.nil_append]
 
 theorem datensatzUnit_zugelassen (f : DatensatzForm) (P : Plattform) :
     Ast.Semantik.zugelassen P Ast.Category.unit (datensatzUnit f) := by
@@ -192,7 +193,7 @@ private theorem recordZeugnisEinheit_rein :
   intro b present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals exact Or.inl rfl
+  all_goals first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 private theorem variantZeugnisEinheit_rein :
     ∀ b ∈ (fragment Ast.Category.unit variantZeugnisEinheit).code, b.Privat := by
@@ -200,7 +201,7 @@ private theorem variantZeugnisEinheit_rein :
   intro b present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals exact Or.inl rfl
+  all_goals first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
 
 theorem datensatzUnit_rein (f : DatensatzForm) :
     ∀ b ∈ (fragment Ast.Category.unit (datensatzUnit f)).code, b.Privat := by
