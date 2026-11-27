@@ -77,12 +77,16 @@ theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool
           next.fragment.code.isEmpty = false) := by
   have checked (input : m.fragment.code[pos]? = some b) :
       sprungZielInnen pos m.fragment.code.length b = true := by
-    have all := (Bool.and_eq_true.mp sealed).1
+    unfold modulAbgeschottet at sealed
+    rw [Bool.and_eq_true] at sealed
+    have all := sealed.1
     have ht := (List.all_eq_true.mp all) pos
       (List.mem_range.mpr (List.getElem?_eq_some_iff.mp input).1)
     simpa only [input] using ht
   cases hnext : hatFortsetzung rest with
-  | false => exact Or.inl (checked (hnext ▸ atPos))
+  | false =>
+    rw [hnext] at atPos
+    exact Or.inl (checked atPos)
   | true =>
     cases hm : m.inhalt with
     | roh p | quelle _ _ | mitInvarianten _ =>
@@ -114,7 +118,12 @@ theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool
         · cases rest with
           | nil => cases hnext
           | cons next tail =>
-            exact ⟨tree, next, tail, hm, rfl, Bool.not_eq_true.mp (show !next.fragment.code.isEmpty = true from hnext)⟩
+            refine ⟨tree, next, tail, rfl, rfl, ?_⟩
+            change !next.fragment.code.isEmpty = true at hnext
+            cases hempty : next.fragment.code.isEmpty with
+            | false => rfl
+            | true => rw [hempty] at hnext
+                      cases hnext
 
 /-- Composition from sealed parts up to the guard transfer: with accepted parts, a
     frame-only linked program and every guard use of the linked whole satisfied, the

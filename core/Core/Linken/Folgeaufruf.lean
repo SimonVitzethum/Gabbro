@@ -1,7 +1,6 @@
 module
 
 public import Core.Linken.Aussage
-public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 
 @[expose] public section
 
@@ -129,8 +128,10 @@ theorem folgeaufruf_erfuellbar :
         folgeEinheit.system.kopf (ρ.zeit.zustand 2) eintritt = some (.rufe mainName [] none) ∧
         ((ρ.zeit.zustand 2).lokal eintritt).pc = modulDef.fragment.code.length ∧
         ((ρ.zeit.zustand 3).lokal eintritt).pc = 1 ∧
+        ((ρ.zeit.zustand 3).lokal eintritt).fortsetzungen.length = 1 ∧
         folgeEinheit.system.kopf (ρ.zeit.zustand 4) eintritt = some .rueckVoid ∧
         ((ρ.zeit.zustand 5).lokal eintritt).pc = modulDef.fragment.code.length + 1 ∧
+        ((ρ.zeit.zustand 5).lokal eintritt).fortsetzungen = [] ∧
         folgeEinheit.system.kopf (ρ.zeit.zustand 5) eintritt = none := by
   refine ⟨⟨beispielFragment, beispielLinke, beispielAkzeptiert⟩, ?_⟩
   obtain ⟨h, _, hardware, _⟩ :=
@@ -146,7 +147,7 @@ theorem folgeaufruf_erfuellbar :
   let ρ : I.Lauf folgeEinheit := ⟨s, h, folgeHw h k, zeit.erlaubePausen pause, fun _ => none⟩
   refine ⟨ρ, ⟨hardware, folgeHw_konform h s zul k assigned, zul, rfl,
     zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro t ht
     exact if_pos ht
   · intro t ht
