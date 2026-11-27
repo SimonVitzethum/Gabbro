@@ -17,7 +17,6 @@ private theorem zufallsfrage_exchange {B : Zufallsbindung} {q : Frage} (frage : 
   cases operation : q.operation
   all_goals first
     | exact ⟨_, rfl⟩
-    | exact ⟨_, operation⟩
     | simp only [Zufallsfrage, istZufallsfrage, operation, Bool.false_eq_true] at frage
 
 /-- A marked exchange cannot commit the register result used by the original replay encoding. -/
@@ -69,6 +68,8 @@ theorem antwortSchritt_gleichePolitik {run₂ : HwLauf} {a₂ : AntwortEreignis}
   rw [schritt.1.1, konform.1, geschichte, frage] at erste
   rw [schritt₂.1.1, konform₂.1] at zweite
   exact Entscheidung.antwort.inj (erste.symm.trans zweite)
+
+section Replay
 
 variable {Wahl Form : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
@@ -142,7 +143,9 @@ theorem Hebebuendel.praefixAntworten_leer {B : Zufallsbindung} {S : Scheduler}
       have zul := hb.replayZulaessig band
       exact antwortSchritt_keineZiehungsAntwort zul.1 zul.2.1 ankunft zufall _ draw
     · change ¬ istZufallsfrage B antwort.question = true at zufall
-      simp only [if_neg zufall, reduceCtorEq] at test
+      simp only [ite_eq_right zufall, reduceCtorEq] at test
+
+end Replay
 
 private def austauschSicht (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) : AussenSicht :=
   let neu : ObjektSicht := { (basis.objects objekt) with body := body }
@@ -165,8 +168,8 @@ theorem austauschUmgebung_hardware (hardware : Hardware k h) (t : Nat) (objekt :
   intro u verlauf q selected
   unfold austauschUmgebung
   by_cases cut : u = t
-  · simp only [if_pos cut]
-  · simpa only [if_neg cut] using hardware.antwort u verlauf q selected
+  · simp only [ite_eq_left cut]
+  · simpa only [ite_eq_right cut] using hardware.antwort u verlauf q selected
 
 /-- A draw becomes an ordinary machine arrival at a pending exchange. Only the targeted object's
     body changes in the commit snapshot. The catalogue computes origin and the entire revalidation
@@ -205,7 +208,7 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     exact frage.2
   have selected : k.enthaelt (.endpoint q.question.endpoint) := (konform.2 t).2.2.2.1 _ delivery
   have sichtbar : sicht = austauschSicht basis q.question.objekt body := by
-    simp only [sicht, h', austauschUmgebung, if_pos rfl, if_true, basis]
+    simp only [sicht, h', austauschUmgebung, ite_true, basis]
   have objekt (o : Objekt) : (sicht.objects o).generation = (basis.objects o).generation ∧
       (sicht.objects o).alive = (basis.objects o).alive := by
     rw [sichtbar, austauschSicht]
@@ -315,7 +318,7 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
       cases bit <;> rfl
     change code (Ziehung B.quelle band (0 : Fin 2).val) = _ at body
     rw [reply, body]
-    simp only [austauschUmgebung, austauschSicht, if_true, h, Umgebung.referenz, snapshot, q,
+    simp only [austauschUmgebung, austauschSicht, ite_true, h, Umgebung.referenz, snapshot, q,
       Frage.objekt, handle, obj,
       Frage.zugriffe, List.map_cons, List.map_nil, AussenSicht.herkunft, Function.update_self, B]
 
