@@ -2,6 +2,7 @@ module
 
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Quellhandler
 public import Core.Fortschritt.Verdraengung
+import Core.Ast.Semantik.Runtime.Faden.Beweise.Komponierbar
 import Core.Beobachtung.Fluss.Fragment
 
 public section
@@ -22,7 +23,10 @@ private def prepend {S Ev : Type} {step : Nat → S → Ev → S → Prop} {s : 
     | t + 1 => tail.spur t
   takt
     | 0 => .schritt rfl first
-    | t + 1 => tail.takt t
+    | t + 1 => by
+      cases tail.takt t with
+      | schritt label move => exact .schritt label move
+      | wartet label eq pause => exact .wartet label eq pause
 
 /-- A source entry bound to vector zero is delivered, evaluates its result, terminates
     and restores the displaced context. That context takes its own source step at the
@@ -30,8 +34,8 @@ private def prepend {S Ev : Type} {step : Nat → S → Ev → S → Prop} {s : 
 theorem quellhandler_rueckkehr_erfuellbar :
     let entry := ExecTree.entryDecl mainName .interrupt .perCore (some 0)
     let scope : ExecScope := ⟨[], [], [], [], [mainName]⟩
-    let vectorFor := fun name : Identifier => if name = mainName then some 0 else none
-    ∃ p, interruptHandler .x86_64 scope vectorFor entry (.lit 7) (expr 0 (.lit 1)) = some p ∧
+    let vectorFor := fun name : Identifier => if name.val = mainName.val then some 0 else none
+    ∃ p, interruptHandler .x86_64 scope vectorFor entry (.lit 7) (.lit 1) = some p ∧
       let E := p.einheit .x86_64
       ∃ ρ : Lauf E, Laeufe E HV ρ ∧ FairLaeufe E.katalog HV ρ.hw ∧
         (ρ.zeit.spur 0).map Prod.fst = some (.interrupt (0, 0)) ∧
@@ -134,7 +138,7 @@ theorem quellhandler_rueckkehr_erfuellbar :
   have frame : Zustandsrahmen ready u :=
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   have execute : FuehrtSchrittAus E.einrichtung 2 Hv ready u endPlan ⟨[], []⟩ returned :=
-    ⟨frame, fun _ h => (List.not_mem_nil h).elim, [], returned, FuehrtAus.beende ended, .nil _, rfl⟩
+    beendeVollzug E.einrichtung rule rfl ⟨_, ended⟩
   have terminate : Lauffolge E hwV 2 (some ready) (.kontext Hv (), ⟨[], []⟩) (some returned) :=
     .schritt (.kontext rfl ⟨0, rfl, enteredDispatch, enteredLive⟩ ⟨finish, finishHead, rule⟩ execute)
   have active : KehrtZurueck ready Hv 0 := .handler enteredDispatch (by

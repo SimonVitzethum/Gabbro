@@ -16,7 +16,8 @@ open Maschine Katalog LowLevel
     supplied by the hardware offer at delivery. -/
 def interruptHandler (platform : Plattform) (scope : ExecScope)
     (vectorFor : Identifier → Option Nat) (entry : ExecTree .entryDecl)
-    {lo hi : Int} (result : Expr [] (.int lo hi)) (main : Fragment) : Option Fragment := do
+    {lo hi : Int} (result : Expr [] (.int lo hi)) {type : Ty .value}
+    (main : Expr [] type) : Option Fragment := do
   match ← elaborateExec scope entry with
   | .declareEntry name .interrupt .perCore (some priority) =>
     let vector ← vectorFor name
@@ -25,7 +26,7 @@ def interruptHandler (platform : Plattform) (scope : ExecScope)
       let handler := body.rumpf fun c => match c with
         | .handler _ line _ => decide (line = vector)
         | _ => false
-      pure ((main.anhaengen (.einzel .ende)).anhaengen handler)
+      pure (((expr 0 main).anhaengen (.einzel .ende)).anhaengen handler)
     else none
   | _ => none
 
