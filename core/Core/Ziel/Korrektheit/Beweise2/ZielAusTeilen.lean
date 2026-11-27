@@ -101,8 +101,8 @@ theorem zielAusTeilen
       exact bezeichnet_funktional P Ast.Category.unit a E E' hE hE'
     · intro f
       obtain ⟨a, E, enthaelt, bezeichnet, akzeptiert, realisiert⟩ := formG f
-      obtain ⟨t, _, elaboriert, _⟩ := bezeichnet
       have h : Annahme.Quelle.Akzeptiert E := by
+        obtain ⟨t, _, elaboriert, _⟩ := bezeichnet
         rw [Ast.Semantik.elab_vollstaendig elaboriert] at akzeptiert ⊢
         exact (Annahme.Quelle.akzeptiert_elaboriert_iff P t).mpr akzeptiert
       exact ⟨a, E, enthaelt, bezeichnet, h, realisiert⟩
