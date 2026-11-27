@@ -384,6 +384,7 @@ public import Core.Ziel.Korrektheit.SicherheitAusTeilen
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Modell
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Speicher
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Invarianten
+public import Core.Ziel.Korrektheit.SicherheitNichtLeer.InvariantenBein
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Aussen
 public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Alle
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
