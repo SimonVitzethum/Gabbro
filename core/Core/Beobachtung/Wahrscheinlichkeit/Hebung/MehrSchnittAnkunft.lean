@@ -36,8 +36,7 @@ private theorem atomar_exchange_erfolg (p : Plattform) (basis : AussenSicht) (q 
         .ok (.exchanged tag (basis.objects q.handle.origin.object).body)⟩ := by
   have erfolg : basis.erfolg p q =
       .ok (.exchanged tag (basis.objects q.handle.origin.object).body) := by
-    rw [operation]
-    simp only [AussenSicht.erfolg]
+    simp only [AussenSicht.erfolg, operation]
   simp only [atomar, supported, valid, wartet, ready, erfolg, Bool.not_true,
     Bool.false_eq_true, ↓reduceIte]
 
@@ -58,7 +57,7 @@ private theorem mehrSchnittPlan_erfolg {B : Zufallsbindung}
         q.zugriffe.map (fun z => (h.politik.sicht u verlauf).herkunft z.handle.origin.object),
         .ok (.exchanged tag body)⟩ := by
   rw [mehrSchnittUmgebung_atomarTotal]
-  rw [hplan]
+  simp only [hplan]
   rw [if_pos hobj]
   have basis : atomar p (h.politik.sicht u verlauf) q =
       .antwort ⟨(h.politik.sicht u verlauf).herkunft objekt,
@@ -93,13 +92,15 @@ private theorem mehrSchnittPlan_commit {B : Zufallsbindung}
         q.zugriffe.map (fun z => (h.politik.sicht u verlauf).herkunft z.handle.origin.object),
         .ok (.exchanged tag body)⟩ := by
   rw [(mehrSchnittUmgebung_hardware hardware plan).antwort u verlauf q selected]
-  change atomar k.plattform (mehrSchnittSicht h.politik.sicht plan u verlauf) q = _
-  exact mehrSchnittPlan_erfolg code objekt plan body hplan operation supported valid ready hobj
+  simpa only [mehrSchnittUmgebung] using
+    (mehrSchnittPlan_erfolg code objekt plan body hplan operation supported valid ready hobj)
 
 /-- Turn an already-installed policy's commit at a pending question into an admitted
     machine arrival. This is the arrival half of `KatalogAnkunft.zufallsAnkunft`, used
     there once and here at two cuts of one shared policy. -/
-private theorem zufallsAnkunftBeiPolitik {k h run u q s e}
+private theorem zufallsAnkunftBeiPolitik {k : Katalog} {h : Umgebung} {run : HwLauf}
+    {u : Nat} {q : FrageEreignis} {s : Zustand L Ort Wert Raum Lok Grund}
+    {e : Einrichtung L Ort Wert Raum Lok Grund Bedingung}
     (konform : run.konform k h)
     (pending : q ∈ s.fragen) (epoche : s.epoche ≤ q.cut) (gestellt : q.cut ≤ u)
     (einmal : ∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance)
@@ -159,10 +160,9 @@ private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     einmal delivery selected konsistent vollstaendig reply commit
   refine ⟨a, spur, s', ?_, ?_⟩
   · dsimp only [IstZufallsAnkunftSchritt]
-    refine ⟨a, spur, s, s', rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨a, spur, s, s', rfl, rfl, ?_, reply.origin, reply.checkedObjects, body, ?_, hbody, ?_⟩
     · simpa only [a] using marker
-    · refine ⟨reply.origin, reply.checkedObjects, body, ?_, hbody, ?_⟩
-      rw [areply]
+    · rw [areply]
       rfl
     · exact ⟨run, schritt⟩
   · simp
