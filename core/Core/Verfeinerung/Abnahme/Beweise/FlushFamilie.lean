@@ -158,6 +158,34 @@ private theorem memZustandGleich {k : Katalog.Katalog} {code : List MemInstructi
   cases s
   exact shared
 
+private theorem memKontextAmSchnitt {k : Katalog.Katalog} {code : List MemInstruction}
+    {ρ : Maschine.Lauf (memProgram k code)} {η : Lauf (memProgram k code)}
+    (matched : Laufabgleich ρ η) {t : Nat} {c : Kontext} {w : PUnit}
+    {trace : SchrittSpur Nat UInt8} {op : MemInstruction}
+    (cut : ρ.zeit.spur t = some (.kontext c w, trace))
+    (head : (memProgram k code).system.kopf (η.zeit.zustand t) c = some op) :
+    let s := η.zeit.zustand t
+    let next := η.zeit.zustand (t + 1)
+    ρ.zeit.zustand t = some s ∧ ρ.zeit.zustand (t + 1) = some next ∧
+    ∃ frame, op.evaluate k.plattform.ziel s c = some frame ∧
+      trace = ⟨[], []⟩ ∧ next = frame.advance c s := by
+  obtain ⟨s, atBefore, relatedBefore⟩ := matched.zustand t
+  obtain ⟨next, atAfter, relatedAfter⟩ := matched.zustand (t + 1)
+  have before := atBefore.trans (congrArg some (memZustandGleich relatedBefore))
+  have after := atAfter.trans (congrArg some (memZustandGleich relatedAfter))
+  refine ⟨before, after, ?_⟩
+  have tick := ρ.zeit.takt t
+  rw [before, after, cut] at tick
+  cases tick with
+  | wartet absent _ _ => cases absent
+  | schritt recorded runStep =>
+    cases recorded
+    cases runStep with
+    | schritt step =>
+      obtain ⟨actual, frame, chosen, eval, label, advance⟩ := memKontextSchrittGenau step
+      cases Option.some.inj (chosen.symm.trans head)
+      exact ⟨frame, eval, label, advance⟩
+
 /-- A concrete completion recovers the same full revocation identity on both sides of the cut
     match: the epoch is in the common pre-state and the token is in its named binding. The common
     successor contains the completion result and has consumed all bindings of that token. The
@@ -179,28 +207,48 @@ theorem memFlushKennungImLauf {k : Katalog.Katalog} {code : List MemInstruction}
       (∀ bound ∈ (next.lokal c).marken, bound.2 ≠ token) ∧
       ρ.zeit.spur t = some (.kontext c w, ⟨[], []⟩) ∧
       ∀ sicht : FlushSicht Nat UInt8 PUnit (Nat × Zuruecknahme), sicht.lesen (ρ.zeit.spur t) = none := by
-  obtain ⟨s, atBefore, relatedBefore⟩ := matched.zustand t
-  obtain ⟨next, atAfter, relatedAfter⟩ := matched.zustand (t + 1)
-  have before := atBefore.trans (congrArg some (memZustandGleich relatedBefore))
-  have after := atAfter.trans (congrArg some (memZustandGleich relatedAfter))
-  refine ⟨before, after, ?_⟩
-  have tick := ρ.zeit.takt t
-  rw [before, after, cut] at tick
-  cases tick with
-  | wartet absent _ _ => cases absent
-  | schritt recorded runStep =>
-    cases recorded
-    cases runStep with
-    | schritt step =>
-      obtain ⟨op, frame, chosen, eval, label, advance⟩ := memKontextSchrittGenau step
-      cases Option.some.inj (chosen.symm.trans head)
-      obtain ⟨token, binding, result, removed⟩ := MemInstruction.flushToken eval
-      refine ⟨token, binding, ?_, ?_, ?_, cut.trans (by rw [label]), ?_⟩
-      · rw [advance]
-        rfl
-      · simpa only [advance, MemFrame.advance, Function.update_self] using result
-      · simpa only [advance, MemFrame.advance, Function.update_self] using removed
-      · intro sicht
-        rw [cut, label, sicht.privat, sicht.leer]
+  obtain ⟨before, after, frame, eval, label, advance⟩ := memKontextAmSchnitt matched cut head
+  obtain ⟨token, binding, result, removed⟩ := MemInstruction.flushToken eval
+  refine ⟨before, after, token, binding, ?_, ?_, ?_, cut.trans (by rw [label]), ?_⟩
+  · rw [advance]
+    rfl
+  · simpa only [advance, MemFrame.advance, Function.update_self] using result
+  · simpa only [advance, MemFrame.advance, Function.update_self] using removed
+  · intro sicht
+    rw [cut, label, sicht.privat, sicht.leer]
+
+/-- At consecutive named bind and completion cuts the key comes from the original pending result,
+    with its epoch preserved. Both actual steps record the same label, so even an unrestricted
+    function of that label cannot distinguish the two cuts. -/
+theorem memBindFlushKennungImLauf {k : Katalog.Katalog} {code : List MemInstruction}
+    {ρ : Maschine.Lauf (memProgram k code)} {η : Lauf (memProgram k code)}
+    (matched : Laufabgleich ρ η) {t : Nat} {c : Kontext} {name : Ast.Identifier}
+    {bindTrace flushTrace : SchrittSpur Nat UInt8}
+    (bindCut : ρ.zeit.spur t = some (.kontext c (), bindTrace))
+    (flushCut : ρ.zeit.spur (t + 1) = some (.kontext c (), flushTrace))
+    (bindHead : (memProgram k code).system.kopf (η.zeit.zustand t) c = some (.bindToken name))
+    (flushHead : (memProgram k code).system.kopf (η.zeit.zustand (t + 1)) c = some (.flushSpace name)) :
+    let issued := η.zeit.zustand t
+    let bound := η.zeit.zustand (t + 1)
+    let completed := η.zeit.zustand (t + 1 + 1)
+    ρ.zeit.spur t = ρ.zeit.spur (t + 1) ∧ completed.epoche = issued.epoche ∧
+    ∃ token, (issued.lokal c).result = some (.pending token) ∧
+      ((bound.lokal c).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token ∧
+      (completed.lokal c).result = some (if token.nurRechte then .«protected»
+        else .frames (token.frames k.plattform.ziel.seitengranule)) := by
+  obtain ⟨_, _, frame, eval, label, advance⟩ := memKontextAmSchnitt matched bindCut bindHead
+  obtain ⟨token, pending, lookup⟩ := MemInstruction.bindTokenLookup eval
+  obtain ⟨_, _, finished, selected, epoch, result, _, recorded, _⟩ :=
+    memFlushKennungImLauf matched flushCut flushHead
+  have bound : (((η.zeit.zustand (t + 1)).lokal c).marken.find?
+      (fun p => p.1.val == name.val)).map Prod.snd = some token := by
+    simpa only [advance, MemFrame.advance, Function.update_self] using lookup
+  have sameToken : finished = token := Option.some.inj (selected.symm.trans bound)
+  subst finished
+  have sameEpoch : (η.zeit.zustand (t + 1)).epoche = (η.zeit.zustand t).epoche := by
+    rw [advance]
+    rfl
+  exact ⟨(bindCut.trans (by rw [label])).trans recorded.symm, epoch.trans sameEpoch,
+    token, pending, bound, result⟩
 
 end Gabbro.Core.Maschine.I

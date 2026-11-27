@@ -226,6 +226,40 @@ private theorem flushMeaning : FlushMeaningAussage := by
 theorem flush_aussage : FlushAussage :=
   ⟨memObligationsKern_alle .flushSpace, flushMeaning, flushJointAussage⟩
 
+/-- A successful name binding stores precisely the token in the pending result. The lookup
+    used by completion returns that token, including its generation. -/
+theorem MemInstruction.bindTokenLookup {target : ZielDaten} {s : MemState} {c : Kontext}
+    {name : Identifier} {next : MemFrame}
+    (eval : (MemInstruction.bindToken name).evaluate target s c = some next) :
+    ∃ token, (s.lokal c).result = some (.pending token) ∧
+      (next.marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token := by
+  cases pending : (s.lokal c).result with
+  | none => simp only [MemInstruction.evaluate, pending] at eval <;> cases eval
+  | some result =>
+    cases result <;> try (simp only [MemInstruction.evaluate, pending] at eval; cases eval)
+    rename_i token
+    refine ⟨token, rfl, ?_⟩
+    simp only [MemInstruction.evaluate, pending] at eval
+    unfold MemFrame.bindMarke at eval
+    cases found : (s.lokal c).spaces[token.raum]? with
+    | none =>
+      simp only [found, Option.bind_eq_bind, Option.bind_none] at eval
+      cases eval
+    | some space =>
+      simp only [found, Option.bind_eq_bind, Option.bind_some] at eval
+      split at eval
+      · rename_i allowed
+        have unused : ((s.lokal c).marken.find? (fun p => p.1.val == name.val)) = none := by
+          apply List.find?_eq_none.mpr
+          intro bound mem equal
+          have different := List.all_eq_true.mp allowed.2 bound mem
+          simp only [decide_eq_true_eq] at different
+          exact different.1 (beq_iff_eq.mp equal)
+        cases eval
+        simp only [List.find?_append, unused, List.find?_cons, beq_self_eq_true,
+          if_true, Option.none_or, Option.map_some]
+      · cases eval
+
 /-- A successful completion selects the full token from the named pre-state binding. The result
     retains only the frames or the protection outcome, and all bindings of that token are removed. -/
 theorem MemInstruction.flushToken {target : ZielDaten} {s : MemState} {c : Kontext}
