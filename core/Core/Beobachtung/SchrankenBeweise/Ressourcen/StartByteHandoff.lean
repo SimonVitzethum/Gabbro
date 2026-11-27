@@ -8,7 +8,8 @@ import Mathlib.Algebra.BigOperators.Fin
 namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
-open Ast.Semantik (Zelle)
+open Ast.Semantik (Rahmen Zelle)
+open Ziel.Korrektheit (einheitVon)
 
 /-- PHYSICALLY CANONICAL START ACCOUNTING. The byte footprint of all granted
     extents, independent of every typed view width: width one books one cell per
@@ -75,6 +76,20 @@ theorem handoffBooking_byte_encard {L Wert Raum Lok Grund : Type}
     simp only [Fintype.card_fin]
     simpa [foot, handoffByteFootprint] using (Fin.sum_univ_fun_getElem regions (fun r : Strecke => r.bis - r.von))
   rw [cells, code_injective.encard_range, ENat.card_eq_coe_fintype_card, card]
+
+/-- Canonical accounting at the actual loader cut of an admitted source run,
+    for the entire list of handoff grants. -/
+theorem quelllauf_start_byte_encard (P : Plattform) (u : UnitMitSchranken)
+    (H : Umgebung) (ρ : Lauf (einheitVon P u.baum))
+    (lauf : Laeufe (einheitVon P u.baum) H ρ)
+    {s : Zustand Nat Zelle Int Nat Rahmen PUnit} (schnitt : ρ.zeit.zustand 0 = some s) :
+    (LebendeZellen { s with buchung := handoffBooking 1 ρ.start.regions s.buchung }).encard =
+      handoffByteFootprint ρ.start.regions := by
+  have geladen : (einheitVon P u.baum).laden ρ.start (H.lade (einheitVon P u.baum).bild) = some s :=
+    lauf.2.2.2.symm.trans schnitt
+  apply handoffBooking_byte_encard
+  intro slot valid
+  exact (geladeneRegion_lebt_leer P u ρ.start _ geladen slot valid).1
 
 /-- The single byte of physical storage addressed by a canonical cell. -/
 def handoffByteCell (extent : Strecke) (offset : Nat) : Strecke :=
