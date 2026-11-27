@@ -86,7 +86,7 @@ theorem wettbewerb_kernschritt (s : AussenStart) (g : SpeicherGraph Unit Unit) :
       have hant : (fragendLebendig s g).antworten = [] := by rfl
       unfold wettbewerbKopf
       rw [hant]
-      simp
+      simp only [List.length_nil, if_pos rfl]
     · change wettbewerbRegel kontext (fragendLebendig s g) () [bindePlan] (fragendLebendig s g)
       exact ⟨rfl, Or.inr (Or.inr ⟨rfl, rfl⟩)⟩
   · have rahmen : Zustandsrahmen (fragendLebendig s g) (fragendLebendig s g) :=
@@ -231,7 +231,7 @@ theorem antwort_bei_bereitem_kern
       unfold wettbewerbKopf
       have h : (startZustand s).antworten.length = 0 := by rfl
       rw [h]
-      simp
+      simp only [List.length_nil, if_pos rfl]
     · change wettbewerbRegel kontext (startZustand s) () [bindePlan] (binde (startZustand s))
       refine ⟨rfl, Or.inl ?_⟩
       refine ⟨rfl, ?_, rfl⟩
@@ -245,7 +245,7 @@ theorem antwort_bei_bereitem_kern
       unfold wettbewerbKopf
       have h : (binde (startZustand s)).antworten.length = 0 := by rfl
       rw [h]
-      simp
+      simp only [List.length_nil, if_pos rfl]
     · change wettbewerbRegel kontext (binde (startZustand s)) () [fragePlan] (binde (startZustand s))
       exact ⟨rfl, Or.inr (Or.inl ⟨rfl, eigene_frage (startZustand s), rfl⟩)⟩
   have frageAus' : FuehrtSchrittAus wettbewerbEinheit.einrichtung 1 kontext
