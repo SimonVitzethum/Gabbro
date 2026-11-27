@@ -211,18 +211,21 @@ theorem quellanschluss_view_handoff (P : Plattform) (u : UnitMitSchranken)
     (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel slot extent
         (.view written valid) = some value) :
     ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
-      0 < shape.bytes ∧
+      0 < shape.bytes ∧ s.rechte.lebt slot = true ∧
       ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? = some (.region slot 0) ∧
       extent.enthaelt ⟨extent.von, extent.von + shape.bytes⟩ := by
   obtain ⟨shape, hlayout, fits, positive⟩ :=
     view_value_layout P.ziel slot extent written valid value yields
   have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le' fits.2
+  have within : slot < a.regions.length := (List.getElem?_eq_some_iff.mp grant).1
+  have live : s.rechte.lebt slot = true :=
+    (geladeneRegion_lebt_leer P u a p geladen slot within).1
   have booked : ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? =
       some (.region slot 0) := (handoffBooking_zero_booked_iff positive grant).mpr len
   have inside : extent.enthaelt
       ⟨extent.von + 0 * shape.bytes, extent.von + (0 + 1) * shape.bytes⟩ :=
     handoffBooking_inside (booking := s.buchung) positive grant booked
-  exact ⟨shape, hlayout, positive, booked, by simpa using inside⟩
+  exact ⟨shape, hlayout, positive, live, booked, by simpa using inside⟩
 
 /-- The same connection at the boot slot, with the exact finite B21 count. The
     count is positive because the checked width fits at least one cell. -/
