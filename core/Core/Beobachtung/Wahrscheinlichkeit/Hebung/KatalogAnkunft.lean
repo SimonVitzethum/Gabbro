@@ -73,6 +73,11 @@ theorem antwortSchritt_gleichePolitik {run₂ : HwLauf} {a₂ : AntwortEreignis}
 variable {Wahl Form : Type} [DecidableEq L]
 variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
 
+private theorem fuehrtAus_keineAntwort {c u aktion sperren aussen v}
+    (protokoll : FuehrtAus e t c s u aktion sperren aussen v) : Ereignis.antwort a ∉ aussen := by
+  intro mem
+  cases protokoll <;> simp only [List.not_mem_nil, List.mem_singleton, reduceCtorEq] at mem
+
 private theorem takt_antwortAnkunft
     {vorher nachher : Option (Zustand L Ort Wert Raum Lok Grund)}
     {label : SchrittWahl Wahl × SchrittSpur Ort Wert}
@@ -88,13 +93,14 @@ private theorem takt_antwortAnkunft
       cases impl with
       | kontext _ _ _ aus =>
         obtain ⟨_, _, _, _, protokoll, _, _⟩ := aus
-        cases protokoll <;> simp only [List.not_mem_nil, List.mem_singleton, reduceCtorEq] at mem
+        exact (fuehrtAus_keineAntwort protokoll mem).elim
       | antwort _ ankunft =>
         rw [ankunft.2.1, List.mem_singleton] at mem
         cases Ereignis.antwort.inj mem
         exact ⟨_, _, ankunft⟩
       | interrupt _ ankunft =>
-        rw [ankunft.2.2.2.2.2.2.2.2.1, List.mem_singleton] at mem
+        obtain ⟨_, _, _, _, _, _, _, _, trace, _, _⟩ := ankunft
+        rw [trace, List.mem_singleton] at mem
         cases mem
       | absturz crash =>
         rw [crash.2.1] at mem
@@ -105,7 +111,7 @@ private theorem takt_antwortAnkunft
 theorem Hebebuendel.praefixAntworten_leer {B : Zufallsbindung} {S : Scheduler}
     (hb : Hebebuendel B S E h) (band : Band) (t : Nat) :
     praefixAntworten B (hb.replay band) t = [] := by
-  suffice kein : ∀ a, a ∉ praefixAntworten B (hb.replay band) t by
+  suffices kein : ∀ a, a ∉ praefixAntworten B (hb.replay band) t by
     cases eq : praefixAntworten B (hb.replay band) t with
     | nil => rfl
     | cons a as =>
