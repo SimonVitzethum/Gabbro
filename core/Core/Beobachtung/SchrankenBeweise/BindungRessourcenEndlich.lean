@@ -440,7 +440,7 @@ theorem handoffBooking_single_encard {L Wert Raum Lok Grund : Type}
     ext ⟨slot, offset⟩
     cases slot with
     | zero =>
-      change (s.rechte.lebt 0 = true ∧ offset < ((List.range count).map (.region 0)).length) ↔ _
+      change (s.rechte.lebt 0 = true ∧ offset < ((List.range count).map (Zelle.region 0)).length) ↔ _
       simp only [live, true_and, List.length_map, List.length_range]
       exact ⟨fun h => ⟨⟨offset, h⟩, rfl⟩, by
         rintro ⟨i, hi⟩
