@@ -80,7 +80,8 @@ theorem ideal_akzeptiert_quellbindung {E : Ast.Semantik.Einheit}
     | verlinkt _ _ h => exact Linken.linke_klassenrein h
   obtain ⟨einrichtung, kopf, fertig, blockiert, regeln⟩ := bindung
   rw [einrichtung]
-  have transport := Maschine.I.bestimmt_fortschritt_iff _ E.system (Ast.Semantik.system p.code)
+  have transport := Maschine.I.bestimmt_fortschritt_iff
+    (Ast.Semantik.einrichtung p.eingang p.eintritte p.speicher) E.system (Ast.Semantik.system p.code)
     kopf fertig blockiert regeln
   have ideal := ideal_fragment_einheit zugriffZiel p E.katalog.plattform klassen
   exact ⟨transport.1.mpr ideal.1, transport.2.mpr ideal.2⟩
