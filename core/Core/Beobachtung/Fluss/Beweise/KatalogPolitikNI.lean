@@ -196,7 +196,7 @@ theorem katalogPolitikNI_erfuellbar :
     Umgebung.referenz Plattform.x86_64.katalog 1 (fun _ _ => niSicht [1]),
     niFrage, niSicht [], niSicht [1], niAntwort [], niAntwort [1], 0, [], ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, frage_hoch, exchange_angebot, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, projektion_gleich [] [1], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, projektion_gleich [] [1], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (by decide)
   · exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (by decide)
   · simp [niEtiketten, niObjekt]
