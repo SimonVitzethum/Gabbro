@@ -263,9 +263,9 @@ private theorem niOeffentlicherHandle_oeffentlich :
   · exfalso
     obtain ⟨teil, klasse | ⟨zugriff, mem, klasse⟩⟩ :=
       (Etiketten.frage_hoch_iff niEtiketten niOeffentlicheFrage).1 h
-    · simp only [niEtiketten, Etiketten.leer] at klasse
+    · simpa only [niEtiketten, Etiketten.leer, Finset.not_mem_empty] using klasse
     · have zug : zugriff = ⟨niOeffentlicherHandle, .read⟩ := by
-        simpa only [niOeffentlicheFrage, Frage.zugriffe] using mem
+        simpa only [niOeffentlicheFrage, Frage.zugriffe, List.mem_singleton] using mem
       subst zugriff
       simp [niEtiketten, niObjekt, niOeffentlicherHandle, niOeffentlichesObjekt] at klasse
   · rfl
@@ -285,12 +285,7 @@ private def niSichtRevokation : AussenSicht := niSichtOeffenMit [1]
 private theorem atomar_niOeffen (body : List UInt8) :
     atomar Plattform.x86_64 (niSichtOeffenMit body) niOeffentlicheFrage =
       .antwort ⟨⟨niOeffentlichesObjekt, 0⟩, [⟨niOeffentlichesObjekt, 0⟩], .ok (.data body)⟩ := by
-  simp only [atomar, Plattform.operationAngeboten, niOeffentlicheFrage, niOeffentlicherHandle,
-    niOeffentlichesObjekt, Frage.zugriffe, AussenOperation.required, List.isEmpty_nil,
-    Bool.not_true, Bool.false_eq_true, ↓reduceIte, AussenSicht.gueltig, AussenSicht.herkunft,
-    niSichtOeffenMit, niSicht, AussenSicht.leer, AussenSicht.wartet, AussenSicht.erfolg,
-    List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false, decide_true,
-    beq_iff_eq, and_self, Bool.and_self]
+  rfl
 
 /-- A high answer to the classified question in the TOTAL history: the filter drops it. -/
 private def hatHoheAntwort (history : AussenVerlauf) : Bool :=
@@ -338,11 +333,11 @@ private theorem niUmgebungen_projektionGleich :
   apply Prod.ext
   · funext t history
     have h := hatHoheAntwort_niedrig history
-    simp only [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h, ↓reduceIte]
+    simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
   · apply Prod.ext
     · funext t history q
       have h := hatHoheAntwort_niedrig history
-      simp only [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h, ↓reduceIte]
+      simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
     · funext t history e phase
       rfl
 
@@ -363,7 +358,6 @@ theorem projektionGleich_ohne_antwortKopplung :
   refine ⟨niUmgebungAuf, niUmgebungZu, 0, history, niOeffentlicheFrage,
     niUmgebungAuf_hardware, niUmgebungZu_hardware, niUmgebungen_projektionGleich,
     niOeffentlicherHandle_oeffentlich, ?_⟩
-  simp only [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, hhoch, ↓reduceIte, atomar_niOeffen]
-  simp
+  simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, hhoch, niSichtRevokation, atomar_niOeffen]
 
 end Gabbro.Core.Beobachtung
