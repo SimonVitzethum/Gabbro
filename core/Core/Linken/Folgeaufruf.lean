@@ -49,7 +49,7 @@ def folgeSpur : Nat → Option (SchrittWahl PUnit × SchrittSpur Zelle Int)
   | t => if t < 5 then some (.kontext eintritt (), ⟨[], []⟩) else none
 
 theorem folge_tat (h : Umgebung) (s : AussenStart) (k : Nat)
-    (assigned : s.assignment 0 = some k) (t : Nat) (b : Befehl)
+    (t : Nat) (b : Befehl)
     (klass : b.Privat)
     (head : folgeEinheit.system.kopf (folgeZustand s t) eintritt = some b)
     (live : (folgeZustand s t).status eintritt = .laeuft)
@@ -102,11 +102,11 @@ def folgeZeit (h : Umgebung) (s : AussenStart) (k : Nat) (assigned : s.assignmen
   takt t := by
     have dispatch := folge_dispatch s k assigned
     match t with
-    | 0 => exact .schritt rfl (folge_tat h s k assigned 0 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
-    | 1 => exact .schritt rfl (folge_tat h s k assigned 1 _ (Or.inl rfl) rfl rfl dispatch)
-    | 2 => exact .schritt rfl (folge_tat h s k assigned 2 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
-    | 3 => exact .schritt rfl (folge_tat h s k assigned 3 _ (Or.inl rfl) rfl rfl dispatch)
-    | 4 => exact .schritt rfl (folge_tat h s k assigned 4 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
+    | 0 => exact .schritt rfl (folge_tat h s k 0 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
+    | 1 => exact .schritt rfl (folge_tat h s k 1 _ (Or.inl rfl) rfl rfl dispatch)
+    | 2 => exact .schritt rfl (folge_tat h s k 2 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
+    | 3 => exact .schritt rfl (folge_tat h s k 3 _ (Or.inl rfl) rfl rfl dispatch)
+    | 4 => exact .schritt rfl (folge_tat h s k 4 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
     | n + 5 =>
       exact .wartet (if_neg (by omega)) rfl (folge_fertig h s k (n + 5))
 

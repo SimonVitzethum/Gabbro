@@ -172,7 +172,7 @@ theorem verknuepfte_klauseln_leer_aux (ms : List Modul)
     (ha : acc.klauseln = .leer) :
     ((bindefragmente ms).foldl Fragment.anhaengen acc).klauseln = .leer := by
   induction ms generalizing acc with
-  | nil => simpa using ha
+  | nil => exact ha
   | cons m rest ih =>
     have hm : klauselnLeer m.fragment = true := h m List.mem_cons_self
     have hrest : ∀ x ∈ rest, klauselnLeer x.fragment = true :=
