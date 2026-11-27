@@ -25,6 +25,18 @@ theorem lueckenEinheit_ohne_herkunft : ¬ EinheitHerkunft lueckenEinheit := by
   intro h
   exact herkunft_fertig_ohne_kopf h (Maschine.I.start lueckenEinheit lueckenStart).2 (.faden 0) rfl
 
+/-- The local binding rejects the injected table while the unit remains in the run domain. -/
+theorem lueckenEinheit_quelle_verweigert : ¬ Annahme.Quelle.Akzeptiert lueckenEinheit := by
+  rintro ⟨⟨_, p, _, bindung⟩, _⟩
+  let s := (Maschine.I.start lueckenEinheit lueckenStart).2
+  let c := Maschine.Kontext.faden 0
+  have hkopf : (Ast.Semantik.system p.code).kopf s c = none :=
+    (congrFun (congrFun bindung.2.1 s) c).symm.trans rfl
+  have hfertig : lueckenEinheit.system.fertig s c := by
+    rw [bindung.2.2.1]
+    exact hkopf
+  exact hfertig
+
 /-- On the construction image the existing frame relations reduce to the same acceptance, run membership
     and simulation at every run with those tags. -/
 theorem spracheinheit_lauftransport (P : Katalog.Plattform) (B : FormBeleg) (E : Spracheinheit)
@@ -55,6 +67,23 @@ def IdealVerlinkteEinheitAussage : Prop :=
 
 theorem zugriffZiel : ZugriffZielAussage :=
   ⟨Ast.Semantik.zugriffSicherBeweis, zugriffIdealBestimmt, zugriffSchrittExistiert, zugriffNIFragment⟩
+
+/-- The concrete local check supplies the ideal proof for every accepted machine unit. -/
+theorem ideal_akzeptiert_quellbindung {E : Ast.Semantik.Einheit}
+    (akzeptiert : Annahme.Quelle.Akzeptiert E) :
+    Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system := by
+  obtain ⟨p, herkunft, bindung⟩ := akzeptiert.1.2
+  have klassen : p.KlassenRein := by
+    cases herkunft with
+    | quelle t => exact Ast.Semantik.fragment_klassenrein Ast.Category.unit t
+    | mitInvarianten u => exact Ast.Semantik.programm_klassenrein u.baum
+    | verlinkt _ _ h => exact Linken.linke_klassenrein h
+  obtain ⟨einrichtung, kopf, fertig, blockiert, regeln⟩ := bindung
+  rw [einrichtung]
+  have transport := Maschine.I.bestimmt_fortschritt_iff _ E.system (Ast.Semantik.system p.code)
+    kopf fertig blockiert regeln
+  have ideal := ideal_fragment_einheit zugriffZiel p E.katalog.plattform klassen
+  exact ⟨transport.1.mpr ideal.1, transport.2.mpr ideal.2⟩
 
 /-- The linker enforces source origin and concatenation preserves the classes proved for that origin. -/
 theorem ideal_verlinkte_einheit : IdealVerlinkteEinheitAussage :=

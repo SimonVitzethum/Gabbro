@@ -15,6 +15,7 @@ public import Core.Ziel.Korrektheit.PrueferWaechterBeweise
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 public import Core.Annahme.Annahme
+public import Core.Annahme.Quellbindung
 public import Core.Beobachtung.Unentscheidbar.Modell
 
 @[expose] public section
@@ -93,6 +94,10 @@ theorem prueferKombiniert_korrekt : PrueferKorrektAussage prueferKombiniert := b
 
 theorem PrueferKorrektAussage.erfuellbar : ∃ C : Pruefer, PrueferKorrektAussage C :=
   ⟨prueferKombiniert, prueferKombiniert_korrekt⟩
+
+theorem prueferKombiniert_quelle_korrekt (P : Katalog.Plattform) (t : Ast.Unit)
+    (h : prueferKombiniert.pruefe P t = true) : Annahme.Quelle.Akzeptiert (einheitVon P t) :=
+  (Annahme.Quelle.akzeptiert_elaboriert_iff P t).mpr (prueferKombiniert_korrekt P t h)
 
 theorem PrueferKorrektAussage.nichtTrivial :
     ∃ E : Maschine.Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit,

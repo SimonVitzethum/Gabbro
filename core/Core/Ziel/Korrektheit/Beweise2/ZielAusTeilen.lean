@@ -12,6 +12,7 @@ public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise2.ZielNI
+public import Core.Ziel.Korrektheit.Beweise2.EinheitHerkunft
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
 public import Core.Ziel.Korrektheit.Zugriff
@@ -86,9 +87,7 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
       · exact ⟨rfl, schranken t hacc.regeln H ρ' run⟩
 
 /-- The goal over `R₀` follows from the listed proof obligations. -/
-theorem zielAusTeilenMitLuecken
-    (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Quelle.Akzeptiert E →
-      Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
+theorem zielAusTeilen
     (niSpuren : VergleichSpurenAussage) (existiert : ZugriffSchrittExistiertAussage)
     (B : FormBeleg) (bildG : BildGueltigAussage P) (formG : FormenGedecktAussage P B)
     (schranken : SchrankenAkzeptiertAussage P) : Ziel.GabbroZielForm (R₀ P B) := by
@@ -117,7 +116,7 @@ theorem zielAusTeilenMitLuecken
       obtain ⟨ρ, run, st, hwEq⟩ := fairer_lauf E zul fair
       exact ⟨⟨E, ρ⟩, ⟨rfl, run⟩, st, hwEq⟩
     · intro E hacc
-      exact idealLuecke E hacc
+      exact ideal_akzeptiert_quellbindung hacc
   · constructor
     · exact zielAusTeilenVerfeinerung scheduler B existiert schranken
     · exact (zielNI_iff_vergleich P B).2 niSpuren

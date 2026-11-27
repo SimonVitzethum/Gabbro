@@ -46,7 +46,7 @@ theorem akzeptiert_fragment_iff (P : Katalog.Plattform) {p : Fragment} (h : Frag
   akzeptiert_iff_of_bindung ⟨p, h, rfl, rfl, rfl, rfl, fun _ => rfl⟩
 
 theorem akzeptiert_elaboriert_iff (P : Katalog.Plattform) (t : Ast.Unit) :
-    Akzeptiert (elaborieren P t) ↔ Annahme.Akzeptiert (elaborieren P t) :=
+    Akzeptiert (elaborieren P (category := Ast.Category.unit) t) ↔ Annahme.Akzeptiert (elaborieren P (category := Ast.Category.unit) t) :=
   akzeptiert_fragment_iff P (.quelle t)
 
 theorem akzeptiert_mitInvarianten_iff (P : Katalog.Plattform) (u : UnitMitInvarianten) :
