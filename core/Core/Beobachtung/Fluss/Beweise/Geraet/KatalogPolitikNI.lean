@@ -263,9 +263,10 @@ private theorem niOeffentlicherHandle_oeffentlich :
   · exfalso
     obtain ⟨teil, klasse | ⟨zugriff, mem, klasse⟩⟩ :=
       (Etiketten.frage_hoch_iff niEtiketten niOeffentlicheFrage).1 h
-    · simpa only [niEtiketten, Etiketten.leer, Finset.not_mem_empty] using klasse
+    · simpa [niEtiketten, Etiketten.leer] using klasse
     · have zug : zugriff = ⟨niOeffentlicherHandle, .read⟩ := by
-        simpa only [niOeffentlicheFrage, Frage.zugriffe, List.mem_singleton] using mem
+        simpa only [niOeffentlicheFrage, Frage.zugriffe, AussenOperation.required,
+          List.mem_singleton] using mem
       subst zugriff
       simp [niEtiketten, niObjekt, niOeffentlicherHandle, niOeffentlichesObjekt] at klasse
   · rfl
