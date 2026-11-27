@@ -58,15 +58,20 @@ theorem Schrittform.frage_vollzug (hk : F.klasse = .frage)
     (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
     {t : Nat} {c : Kontext} {s u : Zustand} {w : PUnit.{1}} {p : Plan}
     (gut : s.SpeicherGut) (step : F.ideal c s w [p] u) :
-    ∃ spur s', FuehrtSchrittAus e t c s u p spur s' := by
+    ∃ spur s', FuehrtSchrittAus e t c s u p spur s' ∧
+      ∀ q, p.aktion = .frage q →
+        spur.aussen = [.frage (s.stelleFrage t c q)] ∧
+          s'.fragen = s.fragen ++ [s.stelleFrage t c q] := by
   have access : F.zugriffsschritt c s [p] u := by
     simpa only [Schrittform.ideal, hk] using step
   have frame := zugriffsschritt_rahmen F c s u access
   have reads := zugriffsschritt_liest F c s u access
   rcases (F.frage_ideal hk).1 step with ⟨_, same, _⟩ | ⟨owned, same, _⟩
   · cases (List.cons.inj same).1
-    exact ⟨⟨[], []⟩, { u with graph := s.graph }, frame, reads, [], u,
-      FuehrtAus.intern, Speicherfolge.nil _, rfl⟩
+    refine ⟨⟨[], []⟩, { u with graph := s.graph },
+      ⟨frame, reads, [], u, FuehrtAus.intern, Speicherfolge.nil _, rfl⟩, ?_⟩
+    intro q action
+    cases action
   · rw [hk, Wirkungsklasse.befugt] at owned
     obtain ⟨q, operand, _⟩ := owned
     have planEq : p = planMit (.frage q) := by
@@ -78,9 +83,13 @@ theorem Schrittform.frage_vollzug (hk : F.klasse = .frage)
     have noRead : ¬ label.art.liest := by
       simp only [label, aussenEtikett, Speicher.Art.liest, not_false_eq_true]
     obtain ⟨g, next⟩ := Speicher.Zustand.schritt_ohne_lesen gut.1 gut.2 (.kontext c) label noRead
-    exact ⟨⟨[(.kontext c, label)], [.frage event]⟩, { u.frage event with graph := g },
-      frame, reads, [], u.frage event, FuehrtAus.frage q,
-      Speicherfolge.cons (Initialisierung.ohne (Or.inl rfl)) next (Speicherfolge.nil g), rfl⟩
+    refine ⟨⟨[(.kontext c, label)], [.frage event]⟩, { u.frage event with graph := g },
+      ⟨frame, reads, [], u.frage event, FuehrtAus.frage q,
+        Speicherfolge.cons (Initialisierung.ohne (Or.inl rfl)) next (Speicherfolge.nil g), rfl⟩, ?_⟩
+    intro q' action
+    have sameQuestion : q = q' := Aktion.frage.inj action
+    subst q'
+    exact ⟨rfl, congrArg (fun pending => pending ++ [event]) frame.fragen⟩
 
 /-- The question case for composed ideal determinacy uses the existing graph-choice relation. -/
 theorem Schrittform.frage_vollzug_bestimmt (hk : F.klasse = .frage)
