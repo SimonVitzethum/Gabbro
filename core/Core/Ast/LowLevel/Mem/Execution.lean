@@ -148,6 +148,20 @@ def memProgram (k : Katalog) (code : List MemInstruction) : MemUnit :=
     stotterLaenge := fun _ => 0
     quelltabellen := ⟨.leer, fun _ _ _ => False⟩ }
 
+theorem memKontextSchrittGenau {k : Katalog} {code : List MemInstruction} {hw : HwLauf}
+    {t : Nat} {s next : MemState} {c : Kontext} {w : PUnit} {trace : SchrittSpur Nat UInt8}
+    (step : ImplSchritt memSetup (memProgram k code).system k hw t s (.kontext c w, trace) next) :
+    ∃ op frame, (memProgram k code).system.kopf s c = some op ∧
+      op.evaluate k.plattform.ziel s c = some frame ∧
+      trace = op.schrittSpur s c ∧ next = frame.advance c s := by
+  cases step with
+  | kontext _ _ rule execute =>
+    obtain ⟨op, head, impl⟩ := rule
+    obtain ⟨traceEq, successor⟩ := MemInstruction.vollzugGenau
+      (target := k.plattform.ziel) (op := op) (w := w) impl execute
+    obtain ⟨frame, eval, _, advance⟩ := impl
+    exact ⟨op, frame, head, eval, traceEq, successor.trans advance⟩
+
 def memUnit (k : Katalog) (op : MemInstruction) : MemUnit := memProgram k [op]
 
 def memSafetyUnit (k : Katalog) (op : MemInstruction) :
