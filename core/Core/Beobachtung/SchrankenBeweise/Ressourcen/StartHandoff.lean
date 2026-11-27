@@ -8,6 +8,7 @@ namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
 open Gabbro.Core.Ast.Semantik
+open Gabbro.Core.Ziel.Korrektheit (einheitVon)
 
 /-- Complete logical cells in a physical handoff, for an explicitly supplied
     storage width in bytes. A trailing partial cell is unusable. -/
