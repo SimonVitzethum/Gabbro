@@ -6,7 +6,7 @@ module
 
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.KatalogAnkunft
 
-public section
+@[expose] public section
 
 namespace Gabbro.Core.Beobachtung
 

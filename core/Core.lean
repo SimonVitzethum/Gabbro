@@ -191,6 +191,8 @@ public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.KatalogErhalt
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.BuendelUnterZulStart
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.MehrSchnitt
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.MehrSchnittAnkunft
 public import Core.Beobachtung.SchrankenB9B21
 public import Core.Beobachtung.SchrankenB9B21Erfuellbar
 public import Core.Beobachtung.SchrankenB9B21Pflichten
