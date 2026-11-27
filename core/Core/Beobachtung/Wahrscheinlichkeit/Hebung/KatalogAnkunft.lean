@@ -289,7 +289,6 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
     apply List.mem_append_right
     apply List.mem_cons_of_mem
     apply List.mem_append_right
-    apply List.mem_append_right
     exact List.mem_cons_self
   have marker : Zufallsfrage B q.question := rfl
   have pending : q ∈ s.fragen := List.mem_cons_self
@@ -298,6 +297,7 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
     apply decide_eq_true
     apply List.mem_append_right
     apply List.mem_cons_of_mem
+    apply List.mem_append_left
     apply List.mem_append_left
     apply List.mem_map_of_mem
     exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
