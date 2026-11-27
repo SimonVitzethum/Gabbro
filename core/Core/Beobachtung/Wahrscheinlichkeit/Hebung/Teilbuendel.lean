@@ -77,7 +77,7 @@ abbrev SchrittAusgabe (Wahl Ort Wert : Type) (S : Type) :=
     reply is the `exchanged` result manufactured by `zufallsAnkunft`, never a `register`. -/
 def IstZufallsAnkunftSchritt (B : Zufallsbindung)
     (code : Fin B.quelle.anz → List UInt8) (band : Band)
-    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (run : HwLauf)
     (t k : Nat) (s : Option (Zustand L Ort Wert Raum Lok Grund))
     (aus : SchrittAusgabe Wahl Ort Wert (Option (Zustand L Ort Wert Raum Lok Grund))) : Prop :=
   ∃ a : AntwortEreignis, ∃ spur : SchrittSpur Ort Wert,
@@ -88,8 +88,7 @@ def IstZufallsAnkunftSchritt (B : Zufallsbindung)
       ∃ (origin : Herkunft) (footprint : List Herkunft) (body : List UInt8),
         a.reply = ⟨origin, footprint, .ok (.exchanged B.kennung body)⟩ ∧
         body = code (Ziehung B.quelle band k) ∧
-        ∃ run : HwLauf,
-          AntwortSchritt E.einrichtung E.katalog run t a s₀ spur s₀'
+        AntwortSchritt E.einrichtung E.katalog run t a s₀ spur s₀'
 
 /-- Equal raw draws give equal typed drawings. -/
 theorem ziehungWertGleich (B : Zufallsbindung) (b₁ b₂ : Band) (k : Nat)
@@ -136,12 +135,12 @@ theorem ziehungenBis_draw (B : Zufallsbindung)
     (F : Option (Zustand L Ort Wert Raum Lok Grund) → Nat →
       SchrittAusgabe Wahl Ort Wert (Option (Zustand L Ort Wert Raum Lok Grund)))
     (ρ : Maschine.Lauf E) (t k : Nat)
-    (h : IstZufallsAnkunftSchritt B code band E t k (ρ.zeit.zustand t)
+    (h : IstZufallsAnkunftSchritt B code band E ρ.hw t k (ρ.zeit.zustand t)
       (F (ρ.zeit.zustand t) (Ziehung B.quelle band k).val))
     (hF : (ρ.zeit.spur t, ρ.zeit.zustand (t + 1)) =
       F (ρ.zeit.zustand t) (Ziehung B.quelle band k).val) :
     ziehungenBis B ρ (t + 1) = ziehungenBis B ρ t + 1 := by
-  rcases h with ⟨a, spur, s₀, s₀', hs, haus, hfrag, origin, footprint, body, reply, hbody, run, schritt⟩
+  rcases h with ⟨a, spur, s₀, s₀', hs, haus, hfrag, origin, footprint, body, reply, hbody, schritt⟩
   have heq := hF.trans haus
   have hspur : ρ.zeit.spur t = some (.antwort a, spur) := congrArg Prod.fst heq
   have haussen : spur.aussen = [.antwort a] := schritt.2.1
@@ -166,16 +165,12 @@ theorem ziehungenBis_keineAntwort (B : Zufallsbindung)
     the one recursion `F` give agreement one cut further. -/
 theorem zufallsPraefixSchritt
     (E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
-    (B : Zufallsbindung) (code : Fin B.quelle.anz → List UInt8) (n k : Nat)
+    (B : Zufallsbindung) (n k : Nat)
     (F : Option (Zustand L Ort Wert Raum Lok Grund) → Nat →
       SchrittAusgabe Wahl Ort Wert (Option (Zustand L Ort Wert Raum Lok Grund)))
     (ρ₁ ρ₂ : Maschine.Lauf E) (b₁ b₂ : Band)
     (hprev : StimmenBis E ρ₁ ρ₂ n)
     (hband : b₁ B.quelle.id k = b₂ B.quelle.id k)
-    (h₁ : IstZufallsAnkunftSchritt B code b₁ E n k (ρ₁.zeit.zustand n)
-      (F (ρ₁.zeit.zustand n) (Ziehung B.quelle b₁ k).val))
-    (h₂ : IstZufallsAnkunftSchritt B code b₂ E n k (ρ₂.zeit.zustand n)
-      (F (ρ₂.zeit.zustand n) (Ziehung B.quelle b₂ k).val))
     (hF₁ : (ρ₁.zeit.spur n, ρ₁.zeit.zustand (n + 1)) =
       F (ρ₁.zeit.zustand n) (Ziehung B.quelle b₁ k).val)
     (hF₂ : (ρ₂.zeit.spur n, ρ₂.zeit.zustand (n + 1)) =
@@ -261,7 +256,7 @@ theorem kausalReplay_ausPraefixSchritt
     (hinit : ∀ b₁ b₂ : Band, (replay b₁).zeit.zustand 0 = (replay b₂).zeit.zustand 0)
     (hfolgt : ∀ (b : Band) (t : Nat),
       (ZiehungsCut t ((replay b).zeit.zustand t) →
-        IstZufallsAnkunftSchritt B code b E t (k t) ((replay b).zeit.zustand t)
+        IstZufallsAnkunftSchritt B code b E (replay b).hw t (k t) ((replay b).zeit.zustand t)
           (F ((replay b).zeit.zustand t) (Ziehung B.quelle b (k t)).val) ∧
         ((replay b).zeit.spur t, (replay b).zeit.zustand (t + 1)) =
           F ((replay b).zeit.zustand t) (Ziehung B.quelle b (k t)).val) ∧
@@ -288,8 +283,8 @@ theorem kausalReplay_ausPraefixSchritt
             rwa [← hzustand]
           have hd₁ := (hfolgt b₁ n).1 hcut
           have hd₂ := (hfolgt b₂ n).1 hcut₂
-          exact zufallsPraefixSchritt E B code n (k n) F (replay b₁) (replay b₂) b₁ b₂
-            prev hbband hd₁.1 hd₂.1 hd₁.2 hd₂.2
+          exact zufallsPraefixSchritt E B n (k n) F (replay b₁) (replay b₂) b₁ b₂
+            prev hbband hd₁.2 hd₂.2
         · have hcut₂ : ¬ ZiehungsCut n ((replay b₂).zeit.zustand n) := by
             intro hc
             exact hcut (by rwa [hzustand])
@@ -313,77 +308,22 @@ theorem zufallsAnkunftSchritt_erfuellbar
       q ∈ s.fragen ∧
       let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
       let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
-      IstZufallsAnkunftSchritt B code band E 1 0 (some s)
+      IstZufallsAnkunftSchritt B code band E run 1 0 (some s)
         (some (SchrittWahl.antwort (Wahl := Wahl) a, spur), some s') ∧
       (some (SchrittWahl.antwort (Wahl := Wahl) a, spur) :
         Option (SchrittWahl Wahl × SchrittSpur Ort Wert)) ≠ none ∧
       ImplSchritt E.einrichtung E.system E.katalog run 1 s
         (SchrittWahl.antwort (Wahl := Wahl) a, spur) s' := by
-  let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
-  let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
-  let obj : Objekt := ⟨.cProcess, 1⟩
-  let handle : Handle := ⟨0, ⟨obj, 0⟩, [.invoke]⟩
-  let q : FrageEreignis := ⟨0, 0, 0, ⟨.cProcess, handle, [], .exchange []⟩⟩
-  let s := (Zustand.start (L := L) basis.lokal basis.status basis.kerne basis.rechte
-    basis.initial basis.persistenz).frage q
-  let snapshot : AussenSicht := { AussenSicht.leer with
-    objects := Function.update AussenSicht.leer.objects obj ⟨0, true, true, [], fun _ => 0⟩
-    channels := fun ep i => if ep = .cProcess ∧ i = 0 then some handle else none }
-  let k := Plattform.x86_64.katalog
-  let h := Umgebung.referenz k 1 (fun _ _ => snapshot)
-  let run := Umgebung.referenzLauf k 1 (fun _ _ => snapshot)
-  let fair : FairLaeufe k h run :=
-    Umgebung.referenz_fair k 1 _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
-  have zeile : ZufallszeileZugelassen k B := by
-    change Zeile.zufall 0 ∈ Plattform.x86_64.zeilen
-    decide
-  have marker : Zufallsfrage B q.question := rfl
-  have pending : q ∈ s.fragen := List.mem_cons_self
-  have delivery : (run.angebot 1).delivery q.question.endpoint = true := by
-    change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
-    decide
-  have valid : q.question.zugriffe.all (snapshot.gueltig .cProcess) = true := by
-    simp only [q, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
-      AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
-      ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
-  have ready : (snapshot.objects obj).ready = true := by
-    simp only [snapshot, Function.update_self]
+  obtain ⟨s, q, pending, marker, coin⟩ := zufallsAnkunft_erfuellbar E.einrichtung basis
   let band : Band := fun _ _ => 0
-  let body := code (Ziehung B.quelle band (0 : Fin 2))
-  let h' := austauschUmgebung k h 1 q.question.objekt body
-  let run' : HwLauf := { run with politik := h'.politik }
-  obtain ⟨a, spur, s', _, _, _, zu, schritt, reply⟩ :=
-    zufallsAnkunft fair.hardware fair.konform ⟨zeile, zufallGesetz_nationaleMuenze _⟩
-      q marker pending (Nat.le_refl _) (Nat.zero_le _)
-      (fun _ mem => (List.not_mem_nil mem).elim) delivery rfl valid ready
-      Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig code band (0 : Fin 2)
-  have schritt' : AntwortSchritt E.einrichtung E.katalog run' 1 a s spur s' := by
-    simpa [hkatalog, run', h', body, k] using schritt
-  have crashFrei : (run'.angebot 1).crash = false := by
-    simp only [run', run, Umgebung.referenzLauf]
-  refine ⟨s, q, band, a, spur, s', run', pending, ?_, ?_, ?_⟩
-  · dsimp only
-    use a, spur, s, s'
-    constructor
-    · rfl
-    constructor
-    · rfl
-    constructor
-    · rw [← zu.2.2.2]
-      exact marker
-    · have hresult : a.reply.result =
-          .ok (.exchanged B.kennung (code (Ziehung B.quelle band 0))) := by
-        rw [reply]
-        rfl
-      cases hrep : a.reply with
-      | mk origin footprint result =>
-        rw [hrep] at hresult
-        change result = .ok (.exchanged B.kennung (code (Ziehung B.quelle band 0))) at hresult
-        refine ⟨origin, footprint, code (Ziehung B.quelle band 0), ?_, ?_, ?_⟩
-        · rw [hresult]
-        · rfl
-        · exact ⟨run', schritt'⟩
-  · simp
-  · exact ImplSchritt.antwort crashFrei schritt'
+  obtain ⟨_, run, a, spur, s', _, _, crashFrei, zu, schritt, reply⟩ := (coin false).2 band rfl
+  have antwort : AntwortSchritt E.einrichtung E.katalog run 1 a s spur s' :=
+    hkatalog.symm ▸ schritt
+  refine ⟨s, q, band, a, spur, s', run, pending, ?_, ?_, ImplSchritt.antwort crashFrei antwort⟩
+  · refine ⟨a, spur, s, s', rfl, rfl, ?_, _, _, [], reply, rfl, antwort⟩
+    rw [← zu.2.2.2]
+    exact marker
+  · intro h
+    cases h
 
 end Gabbro.Core.Beobachtung

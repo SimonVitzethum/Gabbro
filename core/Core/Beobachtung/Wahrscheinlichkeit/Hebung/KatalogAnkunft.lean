@@ -261,6 +261,7 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
 theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
     (basis : Zustand L Ort Wert Raum Lok Grund) :
     ∃ (s : Zustand L Ort Wert Raum Lok Grund) (q : FrageEreignis), q ∈ s.fragen ∧
+      Zufallsfrage ⟨muenzQuelle, .cProcess, []⟩ q.question ∧
       ∀ bit : Bool,
         let wert : Fin muenzQuelle.anz := ⟨if bit then 1 else 0, by cases bit <;> decide⟩
         let body : List UInt8 := if bit then [1] else []
@@ -307,7 +308,7 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
       ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
   have ready : (snapshot.objects obj).ready = true := by
     simp only [snapshot, Function.update_self]
-  refine ⟨s, q, pending, ?_⟩
+  refine ⟨s, q, pending, marker, ?_⟩
   intro bit
   dsimp only
   refine ⟨?_, ?_⟩
