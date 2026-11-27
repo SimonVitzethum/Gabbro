@@ -320,16 +320,14 @@ theorem frischeZellen_encard (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (
     rcases z with ⟨i, j⟩
     constructor
     · rintro ⟨hzo, hmj, hj⟩
-      simp only [Prod.fst, Prod.snd] at hzo hmj hj
       subst i
       have hlt : j - (s.buchung.umfang o).length < neu.length := by omega
       have heq : (s.buchung.umfang o).length + (j - (s.buchung.umfang o).length) = j := by omega
       refine ⟨⟨j - (s.buchung.umfang o).length, hlt⟩, ?_⟩
-      simp only [Fin.val_mk]
       exact Prod.ext rfl heq
     · rintro ⟨k, hk⟩
       rw [← hk]
-      simp only [frischeZellen, Set.mem_setOf_eq, Prod.fst, Prod.snd]
+      simp only [frischeZellen, Set.mem_setOf_eq]
       refine ⟨trivial, ?_, ?_⟩ <;> omega
   rw [hrange]
   have hinj : Function.Injective
