@@ -18,7 +18,7 @@ module
 
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
-public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasis
+public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasisRegistry
 public import Core.Ast.Inventory.Entries.Arrays
 public import Core.Ast.Inventory.Entries.ArrayIndex
 public import Core.Ast.Inventory.Entries.Tuples
@@ -329,7 +329,8 @@ theorem aggregatForm_registry_covered (f : AggregatForm) :
 theorem basisForm_nicht_aggregat (f : BasisForm) :
     basisFormConstructor f ≠ ``Expr.arrayValue ∧ basisFormConstructor f ≠ ``Expr.arrayIndex ∧
       basisFormConstructor f ≠ ``Expr.tupleValue ∧ basisFormConstructor f ≠ ``Expr.tupleField := by
-  cases f <;> simp [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq]
+  exact ⟨basisForm_nicht_arrayValue f, basisForm_nicht_arrayIndex f,
+    basisForm_nicht_tupleValue f, basisForm_nicht_tupleField f⟩
 
 theorem aggregatForm_nicht_basis (f : AggregatForm) :
     aggregatFormConstructor f ≠ ``Expr.lit ∧ aggregatFormConstructor f ≠ ``Expr.binary ∧
@@ -338,7 +339,8 @@ theorem aggregatForm_nicht_basis (f : AggregatForm) :
           aggregatFormConstructor f ≠ ``Expr.neg ∧ aggregatFormConstructor f ≠ ``Expr.not ∧
             aggregatFormConstructor f ≠ ``Expr.div ∧ aggregatFormConstructor f ≠ ``Expr.compare ∧
               aggregatFormConstructor f ≠ ``Expr.logic := by
-  cases f <;> simp [aggregatFormConstructor, Lean.Name.str.injEq, String.reduceEq]
+  cases f <;> simp only [aggregatFormConstructor, Lean.Name.str.injEq, String.reduceEq,
+    and_false, not_false_eq_true, and_self]
 
 /-- Composability: two form certificates union to one whose coverage is the union of the two coverage
     legs. This joins the aggregate package to `basisBeleg` without touching the frame or the root. -/
