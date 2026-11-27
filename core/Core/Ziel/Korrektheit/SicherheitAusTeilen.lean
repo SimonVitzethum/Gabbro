@@ -13,6 +13,8 @@ module
 
 public import Core.Ziel.Korrektheit.Zusammensetzung
 public import Core.Ziel.Korrektheit.Beweise.SicherheitAkzeptiert
+public import Core.Ziel.Korrektheit.SicherheitNichtLeer.Alle
+import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenLauf
 
 @[expose] public section
 
@@ -37,5 +39,11 @@ theorem sicherheitAusTeilen (P : Katalog.Plattform) (B : FormBeleg) : Sicherheit
   subst E'
   subst E
   exact hAkzeptiert t hE_akzeptiert.regeln H ρ' hLauf
+
+/-- Safety and non-degeneracy hold for every platform and form certificate of the current frame. -/
+theorem sicherheit_rahmen (P : Katalog.Plattform) (B : FormBeleg) :
+    Ziel.GabbroSicherheitForm (R₀ P B) (S₀ P B) :=
+  sicherheitAusTeilen P B (sicherheitAkzeptiert P Ast.Semantik.zugriffSicherBeweis)
+    (sicherheitNichtLeerInstanz P B)
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -21,6 +21,8 @@ public import Core.Katalog.Erfuellbar
 public import Core.Katalog.Start
 public import Core.Maschine.Start
 public import Core.Fortschritt.Saetze
+import Core.Ziel.Korrektheit.Beweise.BildGueltig
+import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
 
 @[expose] public section
 
@@ -87,10 +89,8 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
       · exact ⟨rfl, schranken t hacc.regeln H ρ' run⟩
 
 /-- The goal over `R₀` follows from the listed proof obligations. -/
-theorem zielAusTeilen
-    (niSpuren : VergleichSpurenAussage) (existiert : ZugriffSchrittExistiertAussage)
-    (B : FormBeleg) (bildG : BildGueltigAussage P) (formG : FormenGedecktAussage P B)
-    (schranken : SchrankenAkzeptiertAussage P) : Ziel.GabbroZielForm (R₀ P B) := by
+theorem zielAusTeilen (niSpuren : VergleichSpurenAussage) (B : FormBeleg)
+    (formG : FormenGedecktAussage P B) : Ziel.GabbroZielForm (R₀ P B) := by
   unfold Ziel.GabbroZielForm
   constructor
   · unfold Ziel.NichtLeer
@@ -114,7 +114,7 @@ theorem zielAusTeilen
       obtain ⟨t, _, hElab, hZul⟩ := hbez
       change E = einheitVon P t at hElab
       have img : (einheitVon P t).bild.gueltig (einheitVon P t).katalog.plattform.ziel :=
-        bildG t hZul
+        bildGueltig P t hZul
       subst E
       exact Katalog.zulStart_erfuellbar hwH img
     · intro a E hbez hacc H s hwLauf hw zul fair
@@ -123,7 +123,7 @@ theorem zielAusTeilen
     · intro E hacc
       exact ideal_akzeptiert_quellbindung hacc
   · constructor
-    · exact zielAusTeilenVerfeinerung scheduler B existiert schranken
+    · exact zielAusTeilenVerfeinerung scheduler B zugriffSchrittExistiert (schrankenAkzeptiert P)
     · exact (zielNI_iff_vergleich P B).2 niSpuren
 
 end Gabbro.Core.Ziel.Korrektheit
