@@ -43,11 +43,11 @@ theorem Schrittform.frage_fortschritt (hk : F.klasse = .frage) (c : Kontext) (s 
 /-- The authority check makes the rule deterministic even before the memory choice is fixed. -/
 theorem Schrittform.frage_bestimmt (hk : F.klasse = .frage) : Ideal.RegelBestimmt F.regel := by
   intro c s w plans plans' u u' left right
-  rcases (F.frage_ideal hk).1 left with ⟨denied, rfl, rfl⟩ | ⟨owned, rfl, rfl⟩
-  · rcases (F.frage_ideal hk).1 right with ⟨_, rfl, rfl⟩ | ⟨owned, _, _⟩
+  rcases (F.frage_ideal hk (w := w)).1 left with ⟨denied, rfl, rfl⟩ | ⟨owned, rfl, rfl⟩
+  · rcases (F.frage_ideal hk (w := w)).1 right with ⟨_, rfl, rfl⟩ | ⟨owned, _, _⟩
     · exact ⟨rfl, rfl⟩
     · exact (denied owned).elim
-  · rcases (F.frage_ideal hk).1 right with ⟨denied, _, _⟩ | ⟨_, rfl, rfl⟩
+  · rcases (F.frage_ideal hk (w := w)).1 right with ⟨denied, _, _⟩ | ⟨_, rfl, rfl⟩
     · exact (denied owned).elim
     · exact ⟨rfl, rfl⟩
 
@@ -70,7 +70,7 @@ theorem Schrittform.frage_vollzug (hk : F.klasse = .frage)
   · rw [hk, Wirkungsklasse.befugt] at owned
     obtain ⟨q, operand, _⟩ := owned
     have planEq : p = planMit (.frage q) := by
-      simpa only [Schrittform.plan, hk, Wirkungsklasse.plan, Operand.fragePlan, operand]
+      simpa only [Schrittform.plan, hk, Wirkungsklasse.plan, Operand.fragePlan, operand, planMit]
         using (List.cons.inj same).1
     subst p
     let event := s.stelleFrage t c q
