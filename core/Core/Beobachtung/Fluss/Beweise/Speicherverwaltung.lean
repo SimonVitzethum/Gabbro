@@ -105,7 +105,7 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     (step : ImplSchritt memSetup (memProgram k code).system k hw t s spur n)
     (leer : s.fragen = []) : n.fragen = [] := by
   cases step with
-  | kontext _ _ regel aus =>
+  | kontext noCrash ready regel aus =>
     rename_i u plan spur c w
     obtain ⟨f, _, localStep⟩ := regel
     obtain ⟨_, same⟩ := MemInstruction.vollzugGenau
