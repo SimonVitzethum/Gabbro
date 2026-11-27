@@ -158,7 +158,7 @@ theorem klassenSperrwortbein (k : Wirkungsklasse) : KlassenSperrwortbeinAussage 
         rcases spur with ⟨events, outside⟩
         change outside = [] at aussenNil
         rw [hLesen, hFuss, sperrenEq, aussenNil] at folge
-        simp only [schreibEreignisse, List.filter_nil, List.map_nil, List.nil_append,
+        simp only [schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil, List.nil_append,
           List.append_nil] at folge
         refine ⟨?_, ?_⟩
         · intro i actor l recorded nichtAussen
