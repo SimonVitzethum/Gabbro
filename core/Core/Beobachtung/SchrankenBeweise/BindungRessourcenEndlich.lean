@@ -194,4 +194,200 @@ theorem bindungSpeicher_quell_lade_leer (P : Plattform) (u : UnitMitSchranken)
     lauf.2.2.2.symm.trans schnitt
   exact bindungLadeLeer_quell P u ρ.start (H.lade (einheitVon P u.baum).bild) geladen
 
+/- BLOCKER OF THE DIRECT LOADER CONNECTION. The boundary admits regions (`AussenStart.regions`,
+   checked by `ZulStart`: pairwise disjoint, valid extents) and `startdaten` turns their number
+   into `rechte.lebt i = decide (i < regions.length)`. `Rahmen.bindeRegion` reads that live flag
+   and the extent, but only writes a value into the frame; it never touches the ledger. The
+   loader builds the state with `Zustand.start`, whose `buchung` defaults to `Buchung.leer`.
+   So a granted region slot is live as a right and absent from `buchung.umfang`. The missing
+   operation is an addition to the existing booking; `bucheZellen` below supplies it generically. -/
+
+/-- The loader leaves the ledger empty: no region is booked into `buchung.umfang`. This is the
+    exact missing operation for a direct loader connection. -/
+theorem laden_buchung_umfang_leer (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s) :
+    s.buchung.umfang = fun _ => [] := by
+  change (laden (programm u.baum).eingang (programm u.baum).eintritte
+    (programm u.baum).speicher P a p) = some s at geladen
+  unfold laden at geladen
+  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
+  · rw [if_pos ok] at geladen
+    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
+      (a.assignment 0) P a.regions
+    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
+      d.kerne d.rechte
+        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
+          (programm u.baum).speicher).initial (.leer (startmedium a))
+    have hs : s = s0 := by
+      dsimp only [s0]
+      exact (Option.some.inj geladen).symm
+    subst s
+    rfl
+  · rw [if_neg ok] at geladen
+    cases geladen
+
+/-- The checked data of an actually loaded existing region: slot `i` lives (the loader read it
+    from `regions.length`) but the ledger still books nothing for it. This is the precise point
+    at which the region's checked specification fails to reach the bounded ledger. -/
+theorem geladeneRegion_lebt_leer (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s)
+    (i : Nat) (hi : i < a.regions.length) :
+    s.rechte.lebt i = true ∧ s.buchung.umfang i = [] := by
+  change (laden (programm u.baum).eingang (programm u.baum).eintritte
+    (programm u.baum).speicher P a p) = some s at geladen
+  unfold laden at geladen
+  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
+  · rw [if_pos ok] at geladen
+    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
+      (a.assignment 0) P a.regions
+    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
+      d.kerne d.rechte
+        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
+          (programm u.baum).speicher).initial (.leer (startmedium a))
+    have hs : s = s0 := by
+      dsimp only [s0]
+      exact (Option.some.inj geladen).symm
+    subst s
+    constructor
+    · change d.rechte.lebt i = true
+      dsimp only [d, startdaten]
+      simp [hi]
+    · rfl
+  · rw [if_neg ok] at geladen
+    cases geladen
+
+/- GENERIC LEDGER CONNECTION. All statements below quantify over an arbitrary state, object and
+   list of new cells; none runs a program. A live object is exactly what a checked loaded region
+   supplies (`geladeneRegion_lebt_leer`). Adding cells to its existing booking is the operation
+   the loader omits, and these lemmas are the reusable foundation for attaching it later. -/
+
+variable {L Ort Wert Raum Lok Grund : Type}
+
+/-- The booking after adding `neu` cells to object `o`; every other object keeps its extent. -/
+def bucheZellen (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort) :
+    Zustand L Ort Wert Raum Lok Grund :=
+  { s with buchung := { s.buchung with
+      umfang := fun i => if i = o then s.buchung.umfang i ++ neu else s.buchung.umfang i } }
+
+/-- The cells newly contributed by `bucheZellen`: object `o`, offsets just past its old extent. -/
+def frischeZellen (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort) :
+    Set (Nat × Nat) :=
+  { z | z.1 = o ∧ (s.buchung.umfang o).length ≤ z.2 ∧
+        z.2 < (s.buchung.umfang o).length + neu.length }
+
+/-- Booking a live object's new cells adds exactly those cells to the live set. -/
+theorem lebendeZellen_buche (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort)
+    (hleb : s.rechte.lebt o = true) :
+    LebendeZellen (bucheZellen s o neu) = LebendeZellen s ∪ frischeZellen s o neu := by
+  ext z
+  rcases z with ⟨i, j⟩
+  simp only [LebendeZellen, bucheZellen, frischeZellen, Set.mem_union, Set.mem_setOf_eq]
+  by_cases hio : i = o
+  · subst i
+    simp only [↓reduceIte, List.length_append]
+    constructor
+    · rintro ⟨_, hj⟩
+      by_cases hjold : j < (s.buchung.umfang o).length
+      · exact Or.inl ⟨hleb, hjold⟩
+      · exact Or.inr ⟨trivial, Nat.le_of_not_gt hjold, hj⟩
+    · intro h
+      refine ⟨hleb, ?_⟩
+      rcases h with ⟨_, hjold⟩ | ⟨_, _, hjneu⟩
+      · exact Nat.lt_of_lt_of_le hjold (Nat.le_add_right _ _)
+      · exact hjneu
+  · simp only [hio, if_false, false_and, or_false]
+
+/-- The new cells are disjoint from every old live cell: old cells of the same object end before
+    the appended range, and cells of other objects have a different object number. -/
+theorem frischeZellen_disjoint (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort) :
+    Disjoint (LebendeZellen s) (frischeZellen s o neu) := by
+  rw [Set.disjoint_left]
+  intro z hzalt hzneu
+  simp only [LebendeZellen, frischeZellen, Set.mem_setOf_eq] at hzalt hzneu
+  rcases hzneu with ⟨hzo, hm, _⟩
+  have hlt : z.2 < (s.buchung.umfang o).length := by
+    simpa [hzo] using hzalt.2
+  exact (not_lt_of_ge hm) hlt
+
+/-- The appended range has exactly `neu.length` cells. -/
+theorem frischeZellen_encard (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort) :
+    (frischeZellen s o neu).encard = neu.length := by
+  have hrange : frischeZellen s o neu =
+      Set.range (fun k : Fin neu.length => (o, (s.buchung.umfang o).length + k.val)) := by
+    ext z
+    rcases z with ⟨i, j⟩
+    constructor
+    · rintro ⟨hzo, hmj, hj⟩
+      simp only [Prod.fst, Prod.snd] at hzo hmj hj
+      subst i
+      have hlt : j - (s.buchung.umfang o).length < neu.length := by omega
+      have heq : (s.buchung.umfang o).length + (j - (s.buchung.umfang o).length) = j := by omega
+      refine ⟨⟨j - (s.buchung.umfang o).length, hlt⟩, ?_⟩
+      simp only [Fin.val_mk]
+      exact Prod.ext rfl heq
+    · rintro ⟨k, hk⟩
+      rw [← hk]
+      simp only [frischeZellen, Set.mem_setOf_eq, Prod.fst, Prod.snd]
+      refine ⟨trivial, ?_, ?_⟩ <;> omega
+  rw [hrange]
+  have hinj : Function.Injective
+      (fun k : Fin neu.length => (o, (s.buchung.umfang o).length + k.val)) := by
+    intro a b h
+    apply Fin.ext
+    exact Nat.add_left_cancel (congrArg Prod.snd h)
+  rw [hinj.encard_range]
+  rw [ENat.card_eq_coe_fintype_card, Fintype.card_fin]
+
+/-- Exact growth: the ledger's live-cell count rises by exactly the number of booked cells. -/
+theorem lebendeZellen_buche_encard (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat)
+    (neu : List Ort) (hleb : s.rechte.lebt o = true) :
+    (LebendeZellen (bucheZellen s o neu)).encard = (LebendeZellen s).encard + neu.length := by
+  rw [lebendeZellen_buche s o neu hleb]
+  rw [Set.encard_union_eq (frischeZellen_disjoint s o neu)]
+  rw [frischeZellen_encard s o neu]
+
+/-- The ledger stays within the old ceiling extended by the newly booked cells. -/
+theorem lebendeZellen_buche_encard_le (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat)
+    (neu : List Ort) (hleb : s.rechte.lebt o = true) (grenze : Nat)
+    (vor : (LebendeZellen s).encard ≤ grenze) :
+    (LebendeZellen (bucheZellen s o neu)).encard ≤ grenze + neu.length := by
+  rw [lebendeZellen_buche_encard s o neu hleb]
+  simpa using (add_le_add_right vor (neu.length : ℕ∞))
+
+/-- The generic connection for a checked live object: disjoint new cells, exact live-set union,
+    exact count growth, an extended finite ceiling, and unchanged extents of other objects. -/
+theorem region_ledger_anschluss (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (neu : List Ort)
+    (hleb : s.rechte.lebt o = true) (grenze : Nat)
+    (vor : (LebendeZellen s).encard ≤ grenze) :
+    LebendeZellen (bucheZellen s o neu) = LebendeZellen s ∪ frischeZellen s o neu ∧
+    Disjoint (LebendeZellen s) (frischeZellen s o neu) ∧
+    (LebendeZellen (bucheZellen s o neu)).encard =
+      (LebendeZellen s).encard + neu.length ∧
+    (LebendeZellen (bucheZellen s o neu)).encard ≤ grenze + neu.length ∧
+    (∀ i, i ≠ o → (bucheZellen s o neu).buchung.umfang i = s.buchung.umfang i) := by
+  refine ⟨lebendeZellen_buche s o neu hleb, frischeZellen_disjoint s o neu,
+    lebendeZellen_buche_encard s o neu hleb,
+    lebendeZellen_buche_encard_le s o neu hleb grenze vor, ?_⟩
+  intro i hi
+  simp [bucheZellen, hi]
+
+/-- The connection specialized to an actually loaded region: the checked slot supplies `hleb`
+    via `geladeneRegion_lebt_leer`, so the generic bounded-ledger result applies at load. -/
+theorem geladeneRegion_ledger_anschluss (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s)
+    (i : Nat) (hi : i < a.regions.length) (neu : List Zelle) (grenze : Nat)
+    (vor : (LebendeZellen s).encard ≤ grenze) :
+    LebendeZellen (bucheZellen s i neu) = LebendeZellen s ∪ frischeZellen s i neu ∧
+    Disjoint (LebendeZellen s) (frischeZellen s i neu) ∧
+    (LebendeZellen (bucheZellen s i neu)).encard =
+      (LebendeZellen s).encard + neu.length ∧
+    (LebendeZellen (bucheZellen s i neu)).encard ≤ grenze + neu.length := by
+  rcases region_ledger_anschluss s i neu
+      (geladeneRegion_lebt_leer P u a p geladen i hi).1 grenze vor with
+    ⟨h1, h2, h3, h4, _⟩
+  exact ⟨h1, h2, h3, h4⟩
+
 end Gabbro.Core.Beobachtung
