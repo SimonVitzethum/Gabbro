@@ -283,7 +283,7 @@ theorem lebendeZellen_buche (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (n
     LebendeZellen (bucheZellen s o neu) = LebendeZellen s ∪ frischeZellen s o neu := by
   ext z
   rcases z with ⟨i, j⟩
-  simp only [LebendeZellen, bucheZellen, frischeZellen, Set.mem_setOf_eq]
+  simp only [LebendeZellen, bucheZellen, frischeZellen, Set.mem_union, Set.mem_setOf_eq]
   by_cases hio : i = o
   · subst i
     simp only [↓reduceIte, List.length_append]
@@ -321,14 +321,16 @@ theorem frischeZellen_encard (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (
     rcases z with ⟨i, j⟩
     constructor
     · rintro ⟨hzo, hmj, hj⟩
+      simp only [Prod.fst, Prod.snd] at hzo hmj hj
       subst i
       have hlt : j - (s.buchung.umfang o).length < neu.length := by omega
       have heq : (s.buchung.umfang o).length + (j - (s.buchung.umfang o).length) = j := by omega
       refine ⟨⟨j - (s.buchung.umfang o).length, hlt⟩, ?_⟩
       simp only [Fin.val_mk]
       exact Prod.ext rfl heq
-    · rintro ⟨k, rfl⟩
-      simp only [frischeZellen, Set.mem_setOf_eq]
+    · rintro ⟨k, hk⟩
+      rw [← hk]
+      simp only [frischeZellen, Set.mem_setOf_eq, Prod.fst, Prod.snd]
       refine ⟨rfl, ?_, ?_⟩ <;> omega
   rw [hrange]
   have hinj : Function.Injective
