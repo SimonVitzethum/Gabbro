@@ -389,13 +389,17 @@ theorem handoffBooking_inside {bytes : Nat} (positive : 0 < bytes) {regions : Li
       some (.region slot offset)) :
     extent.enthaelt ⟨extent.von + offset * bytes, extent.von + (offset + 1) * bytes⟩ := by
   have fits := (handoffBooking_lookup bytes regions booking grant).mp booked
-  have last := (Nat.le_div_iff_mul_le positive).mp (Nat.succ_le_of_lt fits)
+  have last : (offset + 1) * bytes ≤ extent.bis - extent.von :=
+    (Nat.le_div_iff_mul_le positive).mp (Nat.succ_le_of_lt fits)
   have growth : offset * bytes < (offset + 1) * bytes := by
     rw [Nat.add_mul, Nat.one_mul]
     omega
   have extentPositive : extent.von < extent.bis := by
     have : bytes ≤ (offset + 1) * bytes := by rw [Nat.add_mul, Nat.one_mul]; omega
     omega
+  change extent.von ≤ extent.von + offset * bytes ∧
+    extent.von + offset * bytes < extent.von + (offset + 1) * bytes ∧
+    extent.von + (offset + 1) * bytes ≤ extent.bis
   exact ⟨Nat.le_add_right _ _, Nat.add_lt_add_left growth _, by omega⟩
 
 /-- Distinct slots in the admitted handoff assign disjoint physical storage
@@ -415,11 +419,38 @@ theorem handoffBooking_disjoint {bytes : Nat} (positive : 0 < bytes)
     rw [← hleft, ← hright]
     by_cases before : i < j
     · exact disjoint.rel_getElem_of_lt hi hj before
-    · exact (disjoint.rel_getElem_of_lt hj hi (by omega)).getrennt_symm
+    · exact Strecke.getrennt_symm (disjoint.rel_getElem_of_lt hj hi (by omega))
   obtain ⟨beginL, _, endL⟩ := handoffBooking_inside positive leftGrant leftCell
   obtain ⟨beginR, _, endR⟩ := handoffBooking_inside positive rightGrant rightCell
   exact grants.elim
     (fun h => Or.inl (endL.trans (h.trans beginR)))
     (fun h => Or.inr (endR.trans (h.trans beginL)))
+
+/-- An installed single grant at the live boot slot contributes exactly its
+    complete cells to B21. A grant at least one cell wide gives a positive count. -/
+theorem handoffBooking_single_encard {L Wert Raum Lok Grund : Type}
+    (s : Zustand L Zelle Wert Raum Lok Grund) (bytes : Nat) (extent : Strecke)
+    (live : s.rechte.lebt 0 = true) :
+    (LebendeZellen { s with buchung := handoffBooking bytes [extent] s.buchung }).encard =
+      ((extent.bis - extent.von) / bytes : Nat) := by
+  let count := (extent.bis - extent.von) / bytes
+  let index : Fin count → Nat × Nat := fun i => (0, i.val)
+  have range : LebendeZellen { s with buchung := handoffBooking bytes [extent] s.buchung } =
+      Set.range index := by
+    ext ⟨slot, offset⟩
+    cases slot with
+    | zero =>
+      change (s.rechte.lebt 0 = true ∧ offset < ((List.range count).map (.region 0)).length) ↔ _
+      simp only [live, true_and, List.length_map, List.length_range]
+      exact ⟨fun h => ⟨⟨offset, h⟩, rfl⟩, by
+        rintro ⟨i, hi⟩
+        exact (congrArg Prod.snd hi) ▸ i.isLt⟩
+    | succ slot =>
+      change (s.rechte.lebt (slot + 1) = true ∧ offset < ([] : List Zelle).length) ↔ _
+      refine ⟨fun h => (Nat.not_lt_zero _ h.2).elim, ?_⟩
+      rintro ⟨i, hi⟩
+      exact (Nat.noConfusion (congrArg Prod.fst hi) : False).elim
+  have injective : Function.Injective index := fun _ _ h => Fin.ext (congrArg Prod.snd h)
+  rw [range, injective.encard_range, ENat.card_eq_coe_fintype_card, Fintype.card_fin]
 
 end Gabbro.Core.Beobachtung
