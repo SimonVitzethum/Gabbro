@@ -339,7 +339,7 @@ theorem aggregatForm_nicht_basis (f : AggregatForm) :
           aggregatFormConstructor f ≠ ``Expr.neg ∧ aggregatFormConstructor f ≠ ``Expr.not ∧
             aggregatFormConstructor f ≠ ``Expr.div ∧ aggregatFormConstructor f ≠ ``Expr.compare ∧
               aggregatFormConstructor f ≠ ``Expr.logic := by
-  cases f <;> simp only [aggregatFormConstructor, Lean.Name.str.injEq, String.reduceEq,
+  cases f <;> simp only [aggregatFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq,
     and_false, not_false_eq_true, and_self]
 
 /-- Composability: two form certificates union to one whose coverage is the union of the two coverage
