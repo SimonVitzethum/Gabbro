@@ -118,7 +118,8 @@ theorem FlushFamilienAussage.konkretFreigabekette
   exact ⟨h, a, sh, ha, ar, handler, ack, flushLabelGleich _ (matched.spur h) handler,
     flushLabelGleich _ (matched.spur a) ack⟩
 
-open Gabbro.Core.Ast.LowLevel Gabbro.Core.Katalog (Zuruecknahme)
+open Gabbro.Core.Ast.LowLevel
+open Gabbro.Core.Katalog (Zuruecknahme)
 
 /-- The existing flush effect projection reads the checked Mem completion label. -/
 def memFlushSicht : FlushSicht Nat UInt8 PUnit (Nat × Zuruecknahme) where
