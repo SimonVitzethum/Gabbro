@@ -135,7 +135,7 @@ theorem geraete_consume_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praed
     obtain ⟨rahmen, auth, sperren, v, fuehrtAus, speicherfolge, nEqState⟩ := aus
     cases fuehrtAus with
     | verbrauche ready' =>
-      simp only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
+      simp only [internal, schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil,
         List.nil_append, List.append_nil] at speicherfolge
       have hmem : ∀ l ∈ ([] : List (Speicher.Etikett Nat UInt8)), l.art = .aussen := by
         intro l hl

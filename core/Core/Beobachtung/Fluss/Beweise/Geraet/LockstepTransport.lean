@@ -176,7 +176,7 @@ theorem geraete_issue_transport {h₁ h₂ : Umgebung} {ρ₁ ρ₂ : Lauf (d.un
         exact FuehrtAus.frage (binding.question access)
       · rw [hplanF]
         dsimp only [spur₂, n₂]
-        simpa only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
+        simpa only [internal, schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil,
           List.nil_append, List.append_nil, List.map_cons] using folge₂
   obtain ⟨spurEq₁, hfragen₁, hverlauf₁, hantworten₁, hverbraucht₁, hverworfen₁, hbuchung₁,
     hepoche₁, hgeliefert₁, hkerne₁, hstatus₁, hlokal₁, hpending₁, hinitial₁, hrechte₁,

@@ -122,7 +122,7 @@ theorem geraete_issue_beob_tick {ρ : Lauf (d.unit locals)} {predictor : Praedik
     obtain ⟨rahmen, auth, sperren, v, fuehrtAus, speicherfolge, nEqState⟩ := aus
     cases fuehrtAus with
     | frage q =>
-      simp only [internal, schreibEreignisse, List.filter_nil, List.map_nil,
+      simp only [internal, schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil,
         List.nil_append, List.append_nil, List.map_cons] at speicherfolge
       have hmem : ∀ l ∈ [aussenEtikett (d.unit locals).einrichtung
           (.frage (s.stelleFrage t c (binding.question access)))], l.art = .aussen := by
