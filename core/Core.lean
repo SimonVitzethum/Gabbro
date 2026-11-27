@@ -275,7 +275,8 @@ public import Core.Beobachtung.SchrankenBeweise.KostenEndlich
 public import Core.Beobachtung.SchrankenBeweise.KostenEndlichBeweise
 public import Core.Beobachtung.SchrankenBeweise.Kosten.KostenEinrichtung
 public import Core.Beobachtung.SchrankenBeweise.Kosten.PrologKosten
-public import Core.Beobachtung.SchrankenBeweise.BindungRessourcenEndlich
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.BindungEndlich
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.StartHandoff
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
