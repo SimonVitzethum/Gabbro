@@ -121,6 +121,30 @@ theorem handoffByteCell_uerberdeckt (extent : Strecke) (a : Nat) :
     simp only [Strecke.drin]
     omega
 
+/-- Each byte of a booked view cell has exactly one entry in the canonical
+    booking for the same grant, regardless of the width of the view. -/
+theorem handoffBooking_view_byte {bytes : Nat} {regions : List Strecke}
+    {booking : Sicherheit.Buchung Zelle} {slot offset a : Nat} {extent : Strecke}
+    (positive : 0 < bytes) (grant : regions[slot]? = some extent)
+    (booked : ((handoffBooking bytes regions booking).umfang slot)[offset]? =
+      some (.region slot offset))
+    (byte : (⟨extent.von + offset * bytes, extent.von + (offset + 1) * bytes⟩ : Strecke).drin a) :
+    ∃! b, (handoffByteCell extent b).drin a ∧
+      ((handoffBooking 1 regions booking).umfang slot)[b]? = some (.region slot b) := by
+  have within := handoffBooking_inside positive grant booked
+  have inside : extent.drin a := by
+    simp only [Strecke.enthaelt] at within
+    simp only [Strecke.drin] at byte ⊢
+    omega
+  obtain ⟨b, bounded, contains⟩ := (handoffByteCell_uerberdeckt extent a).mp inside
+  have entry : ((handoffBooking 1 regions booking).umfang slot)[b]? = some (.region slot b) :=
+    (handoffBooking_lookup 1 regions booking grant).mpr (by simpa only [Nat.div_one] using bounded)
+  refine ⟨b, ⟨contains, entry⟩, ?_⟩
+  intro other h
+  have otherContains := h.1
+  simp only [handoffByteCell, Strecke.drin] at contains otherContains
+  omega
+
 /-- Every physical byte admitted by a typed view cell lies in a canonical byte
     of the same grant. This holds for every view width, so two admitted views of
     one grant share exactly the same canonical bytes. -/
