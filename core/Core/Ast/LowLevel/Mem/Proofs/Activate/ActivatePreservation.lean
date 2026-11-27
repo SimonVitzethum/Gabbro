@@ -75,6 +75,6 @@ theorem memAussenLokalActivate (form : MemForm) : MemAussenLokalAussage form := 
 theorem memKostenActivate (form : MemForm) : MemKostenAussage form := by
   intro k scope tree op _
   intro t c s w middle next p trace impl execute
-  exact ⟨(MemInstruction.vollzugGenau impl execute).1, rfl⟩
+  exact ⟨(MemInstruction.vollzugGenau (w := w) impl execute).1, rfl⟩
 
 end Gabbro.Core.Ast.LowLevel

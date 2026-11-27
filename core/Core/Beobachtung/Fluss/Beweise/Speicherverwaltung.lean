@@ -106,9 +106,10 @@ private theorem mem_schritt_fragen {hw : HwLauf} {t : Nat} {s n : MemState}
     (leer : s.fragen = []) : n.fragen = [] := by
   cases step with
   | kontext _ _ regel aus =>
+    rename_i u plan spur c w
     obtain ⟨f, _, localStep⟩ := regel
     obtain ⟨_, same⟩ := MemInstruction.vollzugGenau
-      (target := k.plattform.ziel) (op := f) localStep aus
+      (target := k.plattform.ziel) (op := f) (w := w) localStep aus
     obtain ⟨_, _, _, advance⟩ := localStep
     rw [same, advance]
     exact leer

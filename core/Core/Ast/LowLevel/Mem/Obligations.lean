@@ -84,12 +84,12 @@ theorem memRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussage fo
   intro k scope tree op _
   constructor
   · intro t c w vor zwischen nach p trace _ impl execute befugt
-    have same := (MemInstruction.vollzugGenau impl execute).2
+    have same := (MemInstruction.vollzugGenau (w := w) impl execute).2
     obtain ⟨_, _, _, advance⟩ := impl
     rw [same, advance]
     exact befugt
   · intro t c s w middle next p trace impl execute
-    obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau impl execute
+    obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau (w := w) impl execute
     refine ⟨?_, execute.1.verbraucht⟩
     intro _ mem
     obtain ⟨_, eq⟩ := MemInstruction.schrittSpur_aussen mem
