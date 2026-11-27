@@ -8,15 +8,80 @@
   context steps and answers preserve all cores, an interrupt enters a resting handler, and a
   crash is excluded by crash-freedom. Hence a displacement of a live context from its core
   (`einheitVon_keine_verdraengung`) is impossible under the return premise
-  `VerdraengungKehrtZurueck`: the demanded strictly later return would start with a
+  `VerdraengungKehrtZurueckAbsturzfrei`: the demanded strictly later return would start with a
   re-dispatch. The dispatch core therefore never changes on the suffix
   (`einheitVon_dispatch_konstant_neu`), and scheduler fairness applies to it.
 -/
 module
 
+public import Core.Fortschritt.Beweise.InterruptRueckkehr
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitDispatch
 
 @[expose] public section
+
+namespace Gabbro.Core.Maschine
+
+variable {L Ort Wert Raum Lok Grund Bedingung Wahl ι : Type} [DecidableEq L]
+variable {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl ι}
+
+/-- Return is required only when no crash is offered from the interrupt cut onwards.
+    A restart may erase the saved context on any other suffix. -/
+def VerdraengungKehrtZurueckAbsturzfrei (ρ : Lauf E) : Prop :=
+  ∀ (c : Kontext) (k : Kern) (t : Nat),
+    (∀ i, t ≤ i → ¬ AbsturzAngeboten E.katalog ρ.hw i) →
+    (∃ z, ρ.zeit.zustand t = some z ∧ (z.kerne k).laeuft = some c ∧ z.status c = .laeuft) →
+    (∃ id spur, ρ.zeit.spur t = some (.interrupt id, spur)) →
+    ∃ t', t < t' ∧ ∃ k', ∃ z', ρ.zeit.zustand t' = some z' ∧ (z'.kerne k').laeuft = some c
+
+theorem VerdraengungKehrtZurueck.absturzfrei {ρ : Lauf E}
+    (ret : VerdraengungKehrtZurueck E ρ) : VerdraengungKehrtZurueckAbsturzfrei ρ :=
+  fun c k t _ dispatch interrupt => ret c k t dispatch interrupt
+
+/-- The handler completion obligation is to reach the old stack depth at a finite
+    cut on every future-crash-free suffix where an interrupt displaces a live context.
+    The nested stack-pop theorem then supplies the actual return on that core. -/
+theorem Lauf.verdraengung_kehrt_zurueck_absturzfrei_bei_abbau {ρ : Lauf E}
+    (abbau : ∀ {t s k c id spur irq},
+      (∀ i, t ≤ i → ¬ AbsturzAngeboten E.katalog ρ.hw i) →
+      ρ.zeit.zustand t = some s → (s.kerne k).laeuft = some c → s.status c = .laeuft →
+      ρ.zeit.spur t = some (.interrupt id, spur) → spur.aussen = [.interrupt k irq .handler] →
+      ∃ b u, t + 1 ≤ b ∧ ρ.zeit.zustand b = some u ∧
+        (u.kerne k).stapel.length ≤ (s.kerne k).stapel.length) :
+    VerdraengungKehrtZurueckAbsturzfrei ρ := by
+  intro c k t crashfrei ⟨s, vor, laeuft, aktiv⟩ ⟨id, spur, label⟩
+  have takt := ρ.zeit.takt t
+  rw [vor, label] at takt
+  cases takt with
+  | wartet h _ _ => cases h
+  | schritt h schritt =>
+    cases h
+    cases next : ρ.zeit.zustand (t + 1) with
+    | none => rw [next] at schritt; cases schritt
+    | some s' =>
+      rw [next] at schritt
+      cases schritt with
+      | schritt bewegt =>
+        cases bewegt with
+        | interrupt _ zustellt =>
+          obtain ⟨r, irq, handler, nmi, _, _, _, _, ereignis, _, gleich⟩ := zustellt
+          have kern : s'.kerne k = Function.update s.kerne r ((s.kerne r).unterbrechen handler nmi) k :=
+            congrArg (fun z => z.kerne k) gleich
+          by_cases hk : k = r
+          · subst r
+            rw [Function.update_self] at kern
+            obtain ⟨b, u, ordnung, bis, kurz⟩ := abbau crashfrei vor laeuft aktiv label ereignis
+            have gespeichert : (s'.kerne k).stapel =
+                [] ++ (some c, (s.kerne k).nmiAktiv) :: (s.kerne k).stapel := by
+              simp only [kern, KernZustand.unterbrechen, laeuft, List.nil_append]
+            obtain ⟨t', v, danach, _, hv, dispatch, _, _⟩ :=
+              Lauf.gespeicherter_kontext_kehrt_zurueck (ρ := ρ) next bis ordnung
+                (fun i hi _ => crashfrei i ((Nat.le_succ t).trans hi)) ⟨[], gespeichert⟩ kurz
+            exact ⟨t', (Nat.lt_succ_self t).trans danach, k, v, hv, dispatch⟩
+          · rw [Function.update_of_ne hk] at kern
+            exact ⟨t + 1, Nat.lt_succ_self t, k, s', next,
+              (congrArg KernZustand.laeuft kern).trans laeuft⟩
+
+end Gabbro.Core.Maschine
 
 namespace Gabbro.Core.Ziel.Korrektheit
 
@@ -116,7 +181,7 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
     {a : Nat} {c : Maschine.Kontext} {f : Ast.Semantik.Befehl}
     (opened : Maschine.I.BleibtOffen η c f a)
     (crashfrei : ∀ t', a ≤ t' → (ρ.hw.angebot t').crash = false)
-    (ret : Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
+    (ret : Maschine.VerdraengungKehrtZurueckAbsturzfrei ρ)
     (d : Nat) (hd : a ≤ d) (k : Maschine.Kern)
     (s : Ast.Semantik.Zustand) (hs : ρ.zeit.zustand d = some s)
     (hdis : (s.kerne k).laeuft = some c)
@@ -172,8 +237,13 @@ theorem einheitVon_keine_verdraengung (P : Katalog.Plattform) (t : Ast.Unit)
   -- The return premise fires on the displacement; walk the return back to the
   -- vacated post-state. A return at the next tick contradicts the vacancy, and a
   -- later return steps back through a vacated tick by no re-dispatch.
+  have crashfrei_ab_d : ∀ i, d ≤ i → ¬ Maschine.AbsturzAngeboten (einheitVon P t).katalog ρ.hw i := by
+    intro i hi offer
+    have hc := crashfrei i (hd.trans hi)
+    rw [offer.2] at hc
+    cases hc
   obtain ⟨r, hr, kret, zret, hzret, hret⟩ :=
-    ret c k d ⟨s, hs, hdis, live⟩ ⟨id, spur, hspur⟩
+    ret c k d crashfrei_ab_d ⟨s, hs, hdis, live⟩ ⟨id, spur, hspur⟩
   have key : ∀ u, d < u → ∀ z, ρ.zeit.zustand u = some z →
       ∀ k'', (z.kerne k'').laeuft = some c → False := by
     intro u hu
@@ -219,7 +289,7 @@ theorem einheitVon_dispatch_konstant_neu (P : Katalog.Plattform) (t : Ast.Unit)
     {a : Nat} {c : Maschine.Kontext} {f : Ast.Semantik.Befehl}
     (opened : Maschine.I.BleibtOffen η c f a)
     (crashfrei : ∀ t', a ≤ t' → (ρ.hw.angebot t').crash = false)
-    (ret : Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ) :
+    (ret : Maschine.VerdraengungKehrtZurueckAbsturzfrei ρ) :
     ∃ k, ∀ t' (ht' : a ≤ t') (s : Ast.Semantik.Zustand),
       ρ.zeit.zustand t' = some s → (s.kerne k).laeuft = some c := by
   obtain ⟨hliveρ, hsingleρ⟩ := einheitVon_dispatch_eindeutig_rho P t lauf valid matched

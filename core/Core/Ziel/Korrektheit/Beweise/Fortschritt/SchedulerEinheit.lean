@@ -14,8 +14,9 @@
   The duties are built for every fragment, frame-only or with accesses: the head-based
   composability field of `FortschrittsPflichten` is supplied by `einheit_fortschrittsfelder`
   (`komponierbar_koepfe`), which holds for an access head because the step the memory model
-  offers composes. The return premise plus memory liveness close the pinned
-  `FortschrittAkzeptiertAussage` (`fortschritt_akzeptiert`); its statement is unchanged.
+  offers composes. Return on crash-free suffixes plus memory liveness give progress
+  on the matched ideal run. The pinned `FortschrittAkzeptiertAussage` follows by
+  restricting its return premise to those suffixes.
   The scheduler selection premise itself is proved here (`schedulerFortschrittVoraussetzung`),
   so no free scheduler parameter remains. A fair run without preemption satisfies both run
   premises (`einheitVon_fair_lauf_erfuellbar`, from `fairerZeit`).
@@ -35,7 +36,7 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-/-- The selection duties hold for every elaborated unit under the return premise: take the run's
+/-- The selection duties hold under return on future-crash-free suffixes: take the run's
     own context steps as the selection. Offering follows from the step's physical opportunity,
     choice is immediate, and an open, enabled context is served infinitely often by scheduler
     fairness on its constant dispatch core. The four form-side fields come from
@@ -45,7 +46,7 @@ theorem einheitVon_scheduler_pflichten (existiert : ZugriffSchrittExistiertAussa
     (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
     (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
-    (ret : Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
+    (ret : Maschine.VerdraengungKehrtZurueckAbsturzfrei ρ)
     {η : Maschine.I.Lauf (einheitVon P t)} (valid : Maschine.I.Laeufe (einheitVon P t) η)
     (matched : Maschine.I.Laufabgleich ρ η) (environment : η.umgebung = H) :
     ∃ nutzbar, Maschine.I.FortschrittsPflichten
@@ -142,10 +143,34 @@ def SchedulerFortschrittVoraussetzungAussage : Prop :=
 theorem schedulerFortschrittVoraussetzung (existiert : ZugriffSchrittExistiertAussage) :
     SchedulerFortschrittVoraussetzungAussage := by
   intro P t _ H ρ lauf _ _ ret η valid matched environment
-  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
+  exact einheitVon_scheduler_pflichten existiert P t lauf ret.absturzfrei valid matched environment
 
-/-- Construct one ideal run on every hardware history. On a fair history the two execution
-    duties give per-context and per-cut progress for that same ideal run. -/
+/-- M8 composition for elaborated units. Construct one matched ideal run on every hardware
+    history. On a fair history, return for interrupts on future-crash-free suffixes suffices
+    for per-context and blocking-class progress on that same run. The scheduler proof uses
+    the actual selections in the admitted run. -/
+theorem einheitVon_sim_ziel_fortschritt_absturzfrei (existiert : ZugriffSchrittExistiertAussage)
+    (P : Katalog.Plattform) (t : Ast.Unit)
+    {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
+    (lauf : Maschine.Laeufe (einheitVon P t) H ρ)
+    (rueckkehr : Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      Maschine.VerdraengungKehrtZurueckAbsturzfrei ρ) :
+    ∃ η : Maschine.I.Lauf (einheitVon P t),
+      Maschine.I.Laeufe (einheitVon P t) η ∧
+      Maschine.I.Sim (einheitVon P t) ρ η ∧
+      Maschine.I.Antwortabgleich ρ η ∧
+      (∀ k, Maschine.ZielFX (einheitVon P t) H ρ k) ∧
+      (Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+        (∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c) ∧
+        Maschine.I.FortschrittDerKlasse .blockierend η) := by
+  have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
+    (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
+      (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
+  apply Maschine.I.sim_ziel_fortschritt_im_lauf pflicht lauf
+  intro η valid matched environment fair
+  exact einheitVon_scheduler_pflichten existiert P t lauf (rueckkehr fair) valid matched environment
+
+/-- The original composition statement follows by restricting its return premise. -/
 theorem einheitVon_sim_ziel_fortschritt (existiert : ZugriffSchrittExistiertAussage)
     (P : Katalog.Plattform) (t : Ast.Unit)
     {H : Katalog.Umgebung} {ρ : Maschine.Lauf (einheitVon P t)}
@@ -160,14 +185,9 @@ theorem einheitVon_sim_ziel_fortschritt (existiert : ZugriffSchrittExistiertAuss
       (∀ k, Maschine.ZielFX (einheitVon P t) H ρ k) ∧
       (Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
         (∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c) ∧
-        Maschine.I.FortschrittDerKlasse .blockierend η) := by
-  have pflicht : Maschine.I.SimPflichten (einheitVon P t) :=
-    (Ast.Semantik.Fragment.simBasis (Ast.Semantik.fragment Ast.Category.unit t) P).mit_formen
-      (Ast.Semantik.sim_formen (Ast.Semantik.fragment Ast.Category.unit t) P)
-  apply Maschine.I.sim_ziel_fortschritt_im_lauf pflicht lauf
-  intro η valid matched environment fair
-  have ret := (scheduler fair).2
-  exact einheitVon_scheduler_pflichten existiert P t lauf ret valid matched environment
+        Maschine.I.FortschrittDerKlasse .blockierend η) :=
+  einheitVon_sim_ziel_fortschritt_absturzfrei existiert P t lauf
+    (fun fair => (scheduler fair).2.absturzfrei)
 
 /-- The pinned progress statement follows from the shared ideal run and the two run premises. -/
 theorem fortschritt_akzeptiert (existiert : ZugriffSchrittExistiertAussage) :
