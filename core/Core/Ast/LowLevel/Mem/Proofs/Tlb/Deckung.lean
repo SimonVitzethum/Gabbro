@@ -18,7 +18,7 @@ Hardware may fill a cell from a present entry and drop any cell at any time; bot
 
 /-- The pending token owns the frame of `page`: its range contains the page and the frame is the
     frame the unmapped extent had at that page. -/
-def Zuruecknahme.deckt (token : Zuruecknahme) (page frame : Nat) : Prop :=
+def _root_.Gabbro.Core.Katalog.Zuruecknahme.deckt (token : Zuruecknahme) (page frame : Nat) : Prop :=
   token.contains page ∧ frame = token.frameBasis + (page - token.seite)
 
 /-- A frame that a cache cell of `page` may point to: the frame of the active table entry, or the

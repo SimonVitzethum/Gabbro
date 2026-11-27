@@ -71,113 +71,19 @@ private theorem memHead_some_iff (target : ZielDaten) (op : MemInstruction)
 private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
     Annahme.RegelLokal (memUnit k op) op := by
   intro c s u w P hideal
-  change ∃ frame, op.evaluate k.plattform.ziel s c = some frame ∧ [P] = [plan] ∧
+  change ∃ frame, op.evaluate k.plattform.ziel s c = some frame ∧ [P] = [op.schrittPlan s c] ∧
     u = frame.advance c s at hideal
   rcases hideal with ⟨frame, heval, hP, hu⟩
-  have hP' : P = plan := by simpa using hP
+  have hP' := (List.cons.inj hP).1
   subst P
-  have hfuss : plan.fuss = [] := rfl
-  have hlesen : plan.lesen = [] := rfl
+  have hfuss : (op.schrittPlan s c).fuss = [] := rfl
+  have hlesen : (op.schrittPlan s c).lesen = [] := rfl
   rw [Annahme.Befugt, hfuss, hlesen]
   constructor
   · intro x hx
     cases hx
   · intro l hl
     cases hl
-private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : Kontext}
-    {s : MemState} {w : PUnit} {plans : List Plan} {u : MemState}
-    (h : op.step target c s w plans u) :
-    ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s := h
-private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
-    FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
-  refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · intro l hl
-    simp only [plan] at hl
-    cases hl
-  · change FuehrtAus memSetup t c s (frame.advance c s) .intern [] [] (frame.advance c s)
-    exact FuehrtAus.intern
-  · change Speicherfolge s.initial (.kontext c) s.graph [] [] (frame.advance c s).graph
-    exact Speicherfolge.nil _
-private theorem memGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
-    {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
-  cases trace with
-  | mk events outside =>
-      cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
-      have unchanged : ∀ {recorded graph},
-          Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
-            recorded = [] ∧ graph = s.graph := by
-        intro _ _ run
-        cases run
-        exact ⟨rfl, rfl⟩
-      have hmem := unchanged memory
-      rw [hmem.1]
-      rw [hmem.2, ← rahmen.graph] at nextEq
-      exact ⟨rfl, nextEq⟩
-private theorem memAbgleich (k : Katalog) (op : MemInstruction) :
-    I.RegelAbgleich (memUnit k op) op := by
-  intro hw t c w s u s' i stepPlan trace related normal ready head impl execute
-  obtain ⟨protocol, frames⟩ := related
-  change s.lokal = i.lokal at frames
-  change { s with lokal := i.lokal } = i at protocol
-  rw [← frames] at protocol
-  subst i
-  obtain ⟨frame, evaluate, planEq, hu⟩ := memImplTransfer (target := k.plattform.ziel) (op := op) (w := w) impl
-  subst u
-  exact Or.inl ⟨s', .kontext normal ready ⟨op, head, ⟨frame, evaluate, planEq, rfl⟩⟩ execute,
-    I.ProtokollBezug.refl _, rfl⟩
-private theorem memKomponierbar (k : Katalog) (op : MemInstruction) :
-    I.RegelKomponierbar (memUnit k op).einrichtung (memUnit k op).system op := by
-  intro t s c w plans u head gut ideal
-  obtain ⟨frame, evaluate, planEq, hu⟩ := memImplTransfer (target := k.plattform.ziel) (op := op) (w := w) ideal
-  subst u
-  exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, memVollzug frame t c s⟩
-private theorem memRegelSicher (k : Katalog) (op : MemInstruction) :
-    Gabbro.Core.Sicherheit.RegelSicher (memSafetyUnit k op) op := by
-  intro H ρ t c w vor zwischen nach stepPlan trace head impl execute
-  obtain ⟨frame, _, planEq, _⟩ := memImplTransfer (target := k.plattform.ziel) (op := op) (w := w) impl
-  subst zwischen
-  cases (List.cons.inj planEq).1
-  obtain ⟨traceEq, nextEq⟩ := memGenauInternal execute
-  subst trace
-  subst nach
-  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Nat UInt8) := List.not_mem_nil
-  have wirkungen : NeueWirkungen vor (frame.advance c vor) (⟨[], []⟩ : SchrittSpur Nat UInt8) [] :=
-    Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
-  refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
-  · intro i actor access recorded _
-    cases recorded
-  · refine ⟨List.nodup_nil, fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
-    intro _ obj alive lost
-    exact nomatch alive.symm.trans lost
-  · intro _
-    refine ⟨fun _ _ => trivial, ?_⟩
-    intro i d declared _
-    change [][i]? = some d at declared
-    cases declared
-  · intro _ l changeOwner
-    exact (changeOwner rfl).elim
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
-private theorem memAussenLokal (k : Katalog) (op : MemInstruction) :
-    Gabbro.Core.Annahme.AussenLokal (memUnit k op) := by
-  refine ⟨zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_aus_kontext
-  intro run t s c w spur s' step
-  cases step with
-  | kontext _ _ regel execute =>
-    obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, rfl⟩ := memGenauInternal execute
-    exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-      (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-
 /-- Every memory instruction uses the public frame and region authority and emits no output. -/
 theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
     Beobachtung.FlussLokal (memProgram k code) := by
@@ -204,7 +110,12 @@ theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
       rw [← f.evaluate_congr _ _ localEq rights loans, eval₁] at eval₂
       cases eval₂
       rw [(List.cons.inj plan₁).1, (List.cons.inj plan₂).1]
-      refine ⟨⟨?_, ends, initial, rights, loans, answers⟩, rfl, rfl⟩
+      have sameToken : f.abschluss v₁ c = f.abschluss v₂ c := by
+        cases f <;> first | rfl | simp only [MemInstruction.abschluss, localEq]
+      have samePlan : f.schrittPlan v₁ c = f.schrittPlan v₂ c := by
+        simp only [MemInstruction.schrittPlan, sameToken]
+      refine ⟨⟨?_, ends, initial, rights, loans, answers⟩,
+        congrArg (Beobachtung.PlanSicht (memProgram k code)) samePlan, rfl⟩
       intro d _ _
       simp only [MemFrame.advance, localEq]
 
@@ -302,17 +213,13 @@ private theorem memWaechter (k : Katalog) (op : MemInstruction) :
   · intro ρ runs t l h _ hne; exact (hne rfl).elim
 private theorem memAkzeptiertX86 (op : MemInstruction) :
     Annahme.Akzeptiert (memUnit Plattform.x86_64.katalog op) := by
-  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, memAussenLokal _ op, memFlussLokal _ op, ?_, ?_, ?_⟩,
+  refine ⟨⟨Plattform.katalog_wohlgeformt .x86_64, ?_, memProgramAussenLokal _ [op], memFlussLokal _ op, ?_, ?_, ?_⟩,
     memKlauseln _ op, memWaechter _ op⟩
   · intro i
     exact memRegelLokal _ i
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := memGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation _ [op] _ i⟩
 private def newSpaceName : Identifier :=
   ⟨['t'], ⟨'t', [], rfl, by
     unfold isNameStart isLetter

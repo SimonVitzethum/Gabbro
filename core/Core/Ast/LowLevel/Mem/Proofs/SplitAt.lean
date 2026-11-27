@@ -48,39 +48,7 @@ private theorem memParseOfPrint {form} (tree : MemTree form)
 private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : Kontext}
     {s : MemState} {w : PUnit} {plans : List Plan} {u : MemState}
     (h : MemInstruction.step target op c s w plans u) :
-    ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s := h
-
-private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
-    FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
-  refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · intro l hl
-    simp only [plan] at hl
-    cases hl
-  · change FuehrtAus memSetup t c s (frame.advance c s) .intern [] [] (frame.advance c s)
-    exact FuehrtAus.intern
-  · change Speicherfolge s.initial (.kontext c) s.graph [] [] (frame.advance c s).graph
-    exact Speicherfolge.nil _
-
-private theorem memGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
-    {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
-  cases trace with
-  | mk events outside =>
-      cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
-      have unchanged : ∀ {recorded graph},
-          Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
-            recorded = [] ∧ graph = s.graph := by
-        intro _ _ run
-        cases run
-        exact ⟨rfl, rfl⟩
-      have hmem := unchanged memory
-      rw [hmem.1]
-      rw [hmem.2, ← rahmen.graph] at nextEq
-      exact ⟨rfl, nextEq⟩
+    ∃ frame, op.evaluate target s c = some frame ∧ plans = [op.schrittPlan s c] ∧ u = frame.advance c s := h
 
 private theorem memHeadSingle {target : ZielDaten} {op : MemInstruction} {s : MemState}
     {c : Kontext} :
@@ -129,8 +97,8 @@ private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
   cases (List.cons.inj hP).1
   subst u
   rw [Annahme.Befugt]
-  have hfuss : plan.fuss = [] := rfl
-  have hlesen : plan.lesen = [] := rfl
+  have hfuss : (op.schrittPlan s c).fuss = [] := rfl
+  have hlesen : (op.schrittPlan s c).lesen = [] := rfl
   rw [hfuss, hlesen]
   constructor
   · intro x hx
@@ -138,30 +106,12 @@ private theorem memRegelLokal (k : Katalog) (op : MemInstruction) :
   · intro l hl
     cases hl
 
-private theorem memAussenLokalUnit (k : Katalog) (op : MemInstruction) :
-    Annahme.AussenLokal (memUnit k op) := by
-  change Annahme.AussenLokal (memUnit k op)
-  refine ⟨zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_aus_kontext
-  intro run t s c w spur s' step
-  cases step with
-  | kontext _ _ regel execute =>
-      obtain ⟨i, head, frame, heval, planEq, rfl⟩ := regel
-      cases (List.cons.inj planEq).1
-      obtain ⟨rfl, rfl⟩ := memGenauInternal execute
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-
 private theorem memAkzeptiert (k : Katalog) (valid : KatalogWohlgeformt k)
     (op : MemInstruction) : Annahme.Akzeptiert (memUnit k op) := by
-  refine ⟨⟨valid, fun i => memRegelLokal k i, memAussenLokalUnit k op, memFlussLokal k op, ?_, ?_, ?_⟩, ?_, ?_⟩
+  refine ⟨⟨valid, fun i => memRegelLokal k i, memProgramAussenLokal k [op], memFlussLokal k op, ?_, ?_, ?_⟩, ?_, ?_⟩
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := memGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation _ [op] _ i⟩
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

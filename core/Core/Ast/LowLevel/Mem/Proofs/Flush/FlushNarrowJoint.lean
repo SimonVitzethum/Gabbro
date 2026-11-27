@@ -40,26 +40,6 @@ private theorem memParseOfPrintN {form : MemForm} (tree : MemTree form)
   rw [aligned]
   exact prints
 
-private theorem memGenauInternalN {t : Nat} {c : Kontext} {s u : MemState}
-    {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
-  cases trace with
-  | mk events outside =>
-      cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
-      have unchanged : ∀ {recorded graph},
-          Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
-            recorded = [] ∧ graph = s.graph := by
-        intro _ _ run
-        cases run
-        exact ⟨rfl, rfl⟩
-      have hmem := unchanged memory
-      rw [hmem.1]
-      rw [hmem.2, ← rahmen.graph] at nextEq
-      exact ⟨rfl, nextEq⟩
-
 private theorem memProgramAkzeptiertN (code : List MemInstruction) :
     Annahme.Akzeptiert (memProgram Plattform.x86_64.katalog code) := by
   let E := memProgram Plattform.x86_64.katalog code
@@ -68,7 +48,7 @@ private theorem memProgramAkzeptiertN (code : List MemInstruction) :
   · intro i c s u w P hstep
     simp only [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hP, hu⟩
-    have hPlan : P = plan := (List.cons.inj hP).1
+    have hPlan := (List.cons.inj hP).1
     subst P
     rw [Annahme.Befugt]
     constructor
@@ -76,29 +56,10 @@ private theorem memProgramAkzeptiertN (code : List MemInstruction) :
       cases hx
     · intro l hl
       cases hl
-  · apply aussen_gueltig_aus_kontext
-    intro run t s c w spur s' step
-    cases step with
-    | kontext _ _ regel execute =>
-        obtain ⟨i, hi, frame, heval, planEq, hu⟩ := regel
-        cases (List.cons.inj planEq).1
-        obtain ⟨traceEq, nextEq⟩ := memGenauInternalN execute
-        subst spur
-        rw [nextEq, hu]
-        simp only [MemFrame.advance]
-        refine ⟨?_, ?_⟩
-        · refine ⟨fun _ mem => (List.not_mem_nil mem).elim, [], ?_,
-            fun _ mem => (List.not_mem_nil mem).elim⟩
-          rw [List.append_nil]
-        · intro h q hq hcut hans
-          exact h q hq hcut hans
+  · exact (memProgramAussenLokal _ code).2
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := memGenauInternalN haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation _ code _ i⟩
   · intro ρ lauf
     change (∀ p ∈ ([] : List (MemState → Prop)), p (I.start E ρ.start).2) ∧
       (∀ t : I.Schnitt E ρ, ∀ p ∈ ([] : List (MemState → Prop)), p (ρ.zeit.zustand t.val)) ∧
@@ -449,7 +410,8 @@ theorem memFlushVerengung_erfuellbar :
       (hw : HwLauf) (t : Nat) (s : MemState) (next : MemFrame) (name : Identifier)
       (token : Zuruecknahme),
       let E := memProgram k code
-      let label : SchrittWahl PUnit × SchrittSpur Nat UInt8 := (.kontext entryContext (), ⟨[], []⟩)
+      let label : SchrittWahl PUnit × SchrittSpur Nat UInt8 :=
+        (.kontext entryContext (), ⟨[], [.ruecknahmeAbgeschlossen s.epoche token]⟩)
       FairLaeufe k env hw ∧ E.ZulStart env start ∧ Annahme.Akzeptiert E ∧
       E.system.IErreichbar (I.start E start).2 s ∧ E.system.kopf s entryContext = some (.flushSpace name) ∧
       token ∈ (s.lokal entryContext).verengt ∧ token ∉ next.verengt ∧ next.result = some .«protected» ∧
@@ -458,11 +420,13 @@ theorem memFlushVerengung_erfuellbar :
   let hw := Umgebung.referenzLauf Plattform.x86_64.katalog 2 (fun _ _ => AussenSicht.leer)
   refine ⟨_, narrowCode, narrowEnv, narrowStart, hw, 8, narrowS4, narrowF5, narrowName, narrowToken,
     Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide),
-    narrowZul, memProgramAkzeptiertN _, narrowReach, narrowHead4, ?_, ?_, narrowF5protected,
-    memFlushAbschluss rfl ⟨0, rfl, rfl, narrowS4status⟩ narrowHead4 narrowF5eq⟩
+    narrowZul, memProgramAkzeptiertN _, narrowReach, narrowHead4, ?_, ?_, narrowF5protected, ?_⟩
   · rw [narrowS4verengt]
     exact List.mem_singleton.mpr rfl
   · rw [narrowF5verengt]
     exact List.not_mem_nil
+  · have key : (MemInstruction.flushSpace narrowName).abschluss narrowS4 entryContext = some narrowToken := by rfl
+    have steps := memFlushAbschluss (hw := hw) (t := 8) rfl ⟨0, rfl, rfl, narrowS4status⟩ narrowHead4 narrowF5eq
+    simpa only [MemInstruction.schrittSpur, key, Option.map, Option.toList] using steps
 
 end Gabbro.Core.Ast.LowLevel

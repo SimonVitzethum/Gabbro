@@ -161,6 +161,7 @@ theorem aussenBeob_keinCrash (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wa
     {event : Ereignis} (hne : event ≠ .persistenz .crash) :
     HatAbsturz (aussenBeob E event) = false := by
   cases event with
+  | ruecknahmeAbgeschlossen _ _ => rfl
   | frage q =>
     rw [aussenBeob]
     exact sichtbar_absturz_false _ _ (by rfl)

@@ -69,6 +69,7 @@ theorem aussenBeob_filter_nil
     (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (event : Ereignis) (x : Ort) :
     (aussenBeob E event).filter (SB x) = [] := by
   cases event with
+  | ruecknahmeAbgeschlossen _ _ => rfl
   | frage q =>
     rw [aussenBeob]
     exact filter_sichtbar_nil _ _ (by rfl)

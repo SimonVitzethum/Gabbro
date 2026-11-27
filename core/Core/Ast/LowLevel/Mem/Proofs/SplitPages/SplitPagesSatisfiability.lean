@@ -167,12 +167,12 @@ theorem splitPagesErfuellbar : MemErfuellbarAussage .splitPages := by
       ⟨rfl, rfl, rfl, by rw [hEval]; rfl⟩
   · exact hEval
   · change ∃ i, memHead target [op] s entryContext = some i ∧
-      ∃ frame, i.evaluate target s entryContext = some frame ∧ [plan] = [plan] ∧
+      ∃ frame, i.evaluate target s entryContext = some frame ∧ [op.schrittPlan s entryContext] = [i.schrittPlan s entryContext] ∧
         (next.advance entryContext s) = frame.advance entryContext s
     exact ⟨op, (splitPagesHeadSingleton target op s entryContext).2
       ⟨rfl, rfl, rfl, by rw [hEval]; rfl⟩, ⟨next, hEval, rfl, rfl⟩⟩
   · change ∃ i, memHead target [op] s entryContext = some i ∧
-      ∃ frame, i.evaluate target s entryContext = some frame ∧ [plan] = [plan] ∧
+      ∃ frame, i.evaluate target s entryContext = some frame ∧ [op.schrittPlan s entryContext] = [i.schrittPlan s entryContext] ∧
         (next.advance entryContext s) = frame.advance entryContext s
     exact ⟨op, (splitPagesHeadSingleton target op s entryContext).2
       ⟨rfl, rfl, rfl, by rw [hEval]; rfl⟩, ⟨next, hEval, rfl, rfl⟩⟩

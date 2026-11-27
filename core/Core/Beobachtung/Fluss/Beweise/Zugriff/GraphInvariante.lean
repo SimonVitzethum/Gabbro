@@ -175,14 +175,15 @@ theorem speicherGraphInvariant : SpeicherGraphInvariantAussage := by
                 have hv : s.graph.Viele spur.speicher n.graph := aus.viele
                 rcases aus with ⟨_rahmen, _liest, _sperren, _v, faus, _folge, _state⟩
                 have hkeinCrash : ∀ e ∈ spur.aussen, e ≠ .persistenz .crash := by
-                  have haussen : spur.aussen = [] ∨ ∃ q, spur.aussen = [.frage q] := by
+                  have haussen : spur.aussen = [] ∨ (∃ q, spur.aussen = [.frage q]) ∨
+                      ∃ epoch token, spur.aussen = [.ruecknahmeAbgeschlossen epoch token] := by
                     generalize hAktion : planL.aktion = aktion at faus
                     generalize hAus : spur.aussen = aussen at faus
                     cases faus with
                     | intern => exact Or.inl rfl
                     | warte => exact Or.inl rfl
                     | sperre => exact Or.inl rfl
-                    | frage q => exact Or.inr ⟨_, rfl⟩
+                    | frage q => exact Or.inr (Or.inl ⟨_, rfl⟩)
                     | verbrauche => exact Or.inl rfl
                     | rueckkehr => exact Or.inl rfl
                     | starte => exact Or.inl rfl
@@ -190,7 +191,8 @@ theorem speicherGraphInvariant : SpeicherGraphInvariantAussage := by
                     | beende => exact Or.inl rfl
                     | wechsle => exact Or.inl rfl
                     | maskiere | prioritaet | sende | leite => exact Or.inl rfl
-                  rcases haussen with hleer | ⟨_q, hfrag⟩
+                    | ruecknahmeAbschliessen _ => exact Or.inr (Or.inr ⟨_, _, rfl⟩)
+                  rcases haussen with hleer | ⟨_q, hfrag⟩ | ⟨_, _, hfinish⟩
                   · rw [hleer]
                     intro e he
                     cases he
@@ -198,6 +200,10 @@ theorem speicherGraphInvariant : SpeicherGraphInvariantAussage := by
                     intro e he hs
                     simp only [List.mem_singleton] at he
                     cases he
+                    cases hs
+                  · rw [hfinish]
+                    intro e he hs
+                    cases List.mem_singleton.mp he
                     cases hs
                 exact schritt_schliesst (E := E) (ρ := ρ) (predictor := predictor) (t := t)
                   hzt hnt hspur ihq0 hv hpub hkeinCrash

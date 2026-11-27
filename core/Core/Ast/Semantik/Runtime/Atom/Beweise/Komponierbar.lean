@@ -156,7 +156,7 @@ theorem zugriffKomponierbar : ZugriffKomponierbarAussage := by
   refine ⟨hrahmen, hliest, [], u, ?_, ?_, ?_⟩
   · rw [hakt]
     exact FuehrtAus.intern
-  · simpa only [List.nil_append, List.map_nil, List.append_nil] using hfolge
+  · simpa only [Aktion.graphEreignisse, List.nil_append, List.map_nil, List.append_nil] using hfolge
   · rfl
 
 end Gabbro.Core.Ast.Semantik

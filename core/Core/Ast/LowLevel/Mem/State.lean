@@ -5,29 +5,7 @@ public import Core.Maschine.Start
 
 @[expose] public section
 
-namespace Gabbro.Core.Ast.LowLevel
-
-open Katalog Maschine
-
-/-- Partitioning a live grant changes its local extent, while preserving the
-    authorities that back every byte. Slots are appended and never reused. -/
-structure MemRegion where
-  extent : Strecke
-  backing : List Griff
-  deriving DecidableEq
-
-/-- The token of a pending shootdown of one page range of one space. `nurRechte = false`: the mapping was
-    removed (`unmap`) and the token owns the frames until the release step. `nurRechte = true`: only the
-    rights of a still mapped range were narrowed (`protect`); the token owns no frame and ends when no
-    core caches a translation wider than the table (`flush`, the completion step). -/
-structure Zuruecknahme where
-  raum : Nat
-  seite : Nat
-  seiten : Nat
-  generation : Nat
-  frameBasis : Nat
-  nurRechte : Bool
-  deriving DecidableEq, Repr
+namespace Gabbro.Core.Katalog
 
 /-- The token of a narrowing of rights: nothing is unmapped, so it owns no frames. -/
 def Zuruecknahme.verengung (raum seite seiten generation : Nat) : Zuruecknahme :=
@@ -41,6 +19,19 @@ instance (token : Zuruecknahme) (page : Nat) : Decidable (token.contains page) :
 
 def Zuruecknahme.frames (token : Zuruecknahme) (granule : Nat) : Strecke :=
   ⟨token.frameBasis * granule, (token.frameBasis + token.seiten) * granule⟩
+
+end Gabbro.Core.Katalog
+
+namespace Gabbro.Core.Ast.LowLevel
+
+open Katalog Maschine
+
+/-- Partitioning a live grant changes its local extent, while preserving the
+    authorities that back every byte. Slots are appended and never reused. -/
+structure MemRegion where
+  extent : Strecke
+  backing : List Griff
+  deriving DecidableEq
 
 structure Adressraum where
   tabellen : Strecke

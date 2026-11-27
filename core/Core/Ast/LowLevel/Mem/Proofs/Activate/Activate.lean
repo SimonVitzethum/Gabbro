@@ -138,7 +138,7 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
     -- every instruction has an empty footprint at its ideal step
     intro c s u w p hideal
     rcases hideal with ⟨frame, heval, hp, hu⟩
-    have hp' : p = plan := by simpa using hp
+    have hp' := (List.cons.inj hp).1
     subst p
     unfold Annahme.Befugt
     constructor
@@ -146,16 +146,7 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
       cases hx
     · intro l hl
       cases hl
-  · exact ⟨zulassung_m2 _, by
-      apply aussen_gueltig_aus_kontext
-      intro run t s c w spur s' step
-      cases step with
-      | kontext _ _ regel execute =>
-          obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-          cases (List.cons.inj planEq).1
-          obtain ⟨rfl, rfl⟩ := MemInstruction.activateGenauInternal execute
-          exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-            (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩⟩
+  · exact memProgramAussenLokal _ code
   · exact memProgramFlussLokal _ code
   · refine ⟨?_, ?_, ?_, ?_⟩
     · intro η lauf
@@ -166,11 +157,7 @@ private theorem memAkzeptiertX86 (code : List MemInstruction) :
       exact ⟨stapelZustand_leer rfl _, speicherZustand_leer rfl _⟩
     · exact tiefenBezug_eq rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := MemInstruction.activateGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation _ code _ i⟩
 
 theorem activateJoint : ActivateJointAussage := by
   let k : Katalog := Plattform.x86_64.katalog

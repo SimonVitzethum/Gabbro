@@ -36,13 +36,14 @@ theorem sperr_schritt_erfuellbar (c d : Kontext) :
     * `beende`: end the acting thread (the form records its outcome in its own status);
     * `wechsle kern kind`: run the running context `kind` on the core `kern`, which the acting context
       holds or which is idle (a core start).
-    The last four are the interrupt-control actions (MK-20): a form step of the matching class plans
-    exactly one of them, and the machine applies the named per-core effect, pending send or routing:
+    The interrupt-control actions (MK-20) are planned by the matching form class:
     * `maskiere vektor aus`: set the mask bit of `vektor` to `aus` on every core running the acting
       context (vacuous when it runs nowhere);
     * `prioritaet grenze`: set the priority threshold to `grenze` on the same cores;
     * `sende vektor kern`: append the raised vector for the target core to the software queue;
-    * `leite leitung kern prioritaet`: map the line to its target core and priority. -/
+    * `leite leitung kern prioritaet`: map the line to its target core and priority.
+
+    A memory form plans `ruecknahmeAbschliessen` when its revocation guard permits completion. -/
 inductive Aktion (L Bedingung : Type) where
   | intern
   | warte (b : Bedingung)
@@ -58,6 +59,18 @@ inductive Aktion (L Bedingung : Type) where
   | prioritaet (grenze : Nat)
   | sende (vektor kern : Nat)
   | leite (leitung kern prioritaet : Nat)
+  | ruecknahmeAbschliessen (token : Zuruecknahme)
+
+/-- Revocation completion is an ordered internal effect. It adds no access or catalogue
+    event to the RC11 graph. All catalogue events retain their existing order. -/
+def Aktion.graphEreignisse {L Bedingung : Type} (action : Aktion L Bedingung)
+    (events : List Ereignis) : List Ereignis :=
+  match events with
+  | [] => []
+  | _ :: _ =>
+    match action with
+    | .ruecknahmeAbschliessen _ => []
+    | _ => events
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where
@@ -203,6 +216,11 @@ inductive FuehrtAus [DecidableEq L] (t : Nat) (c : Kontext) (s u : Zustand L Ort
   | leite (leitung kern prioritaet : Nat) :
       FuehrtAus t c s u (.leite leitung kern prioritaet) [] []
         { u with leitung := Function.update u.leitung leitung (kern, prioritaet) }
+  /-- The form provides the checked completion. The machine records its token in the
+      current epoch without changing the protocol state. -/
+  | ruecknahmeAbschliessen (token : Zuruecknahme) :
+      FuehrtAus t c s u (.ruecknahmeAbschliessen token) []
+        [.ruecknahmeAbgeschlossen s.epoche token] u
 
 /-- Physical opportunity, dispatch and a live context are required for a context step. -/
 def KannSchreiten (run : HwLauf) (t : Nat) (c : Kontext) (s : Zustand L Ort Wert Raum Lok Grund) : Prop :=
@@ -218,7 +236,7 @@ def FuehrtSchrittAus [DecidableEq L] (t : Nat) (c : Kontext)
       FuehrtAus e t c s u plan.aktion sperren spur.aussen v ∧
       Speicherfolge s.initial (.kontext c) s.graph
         (sperren ++ plan.lesen ++ schreibEreignisse plan.fuss plan.schreibt plan.modus plan.wert ++
-          spur.aussen.map (aussenEtikett e)) spur.speicher s'.graph ∧
+          (plan.aktion.graphEreignisse spur.aussen).map (aussenEtikett e)) spur.speicher s'.graph ∧
       s' = { v with graph := s'.graph }
 
 /-- An environmental arrival is a separate transition, even while the receiving context is

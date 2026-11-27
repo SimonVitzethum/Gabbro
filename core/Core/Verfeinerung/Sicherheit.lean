@@ -39,6 +39,7 @@ theorem FuehrtAus.verbrauch {t c aktion lock outside v}
   | prioritaet _ => exact inner
   | sende _ _ => exact inner
   | leite _ _ _ => exact inner
+  | ruecknahmeAbschliessen _ => exact inner
 
 theorem FuehrtSchrittAus.verbrauch {t c plan spur}
     (step : FuehrtSchrittAus e t c s u plan spur s') (vorher : s.Verbrauch) : s'.Verbrauch := by

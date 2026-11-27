@@ -53,7 +53,18 @@ theorem katalog_antwort_erfuellbar (p : Plattform) (bytes : List UInt8) :
 def HwLauf.gelegenheit (run : HwLauf) (t core : Nat) : Prop :=
   (run.angebot t).core = some core
 
-/-- Events at the boundary, carrying the observations of the selected rows. -/
+/-- Pending revocation of one page range. An unmap token owns the frames until release.
+    A narrowing token owns no frame and completes when no cached cell exceeds the new rights. -/
+structure Zuruecknahme where
+  raum : Nat
+  seite : Nat
+  seiten : Nat
+  generation : Nat
+  frameBasis : Nat
+  nurRechte : Bool
+  deriving DecidableEq, Repr
+
+/-- The ordered boundary label records catalogue events and internal protocol effects. -/
 inductive Ereignis where
   | frage (e : FrageEreignis)
   | antwort (e : AntwortEreignis)
@@ -62,6 +73,7 @@ inductive Ereignis where
   | dma (endpoint : Endpunkt) (access : DmaZugriff)
   | seite (e : SeitenEreignis)
   | persistenz (e : PersistEreignis)
+  | ruecknahmeAbgeschlossen (epoche : Nat) (token : Zuruecknahme)
 
 end Gabbro.Core.Katalog
 

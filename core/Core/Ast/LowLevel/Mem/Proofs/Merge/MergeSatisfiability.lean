@@ -20,33 +20,18 @@ private theorem memProgram_akzeptiert (k : Katalog) (code : List MemInstruction)
   · intro i c s u w pl hstep
     dsimp [memProgram, MemInstruction.rule, MemInstruction.step] at hstep
     rcases hstep with ⟨frame, heval, hpl, hu⟩
-    have hpl' : pl = plan := (List.cons.inj hpl).1
+    have hpl' := (List.cons.inj hpl).1
     subst pl
     rw [Annahme.Befugt]
     constructor
     · intro x hx
-      simp only [plan] at hx
       cases hx
     · intro l hl
-      simp only [plan] at hl
       cases hl
-  · apply aussen_gueltig_aus_kontext (memProgram k code)
-    intro run t s c w spur s' step
-    cases step with
-    | kontext _ _ regel execute =>
-      obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-      cases (List.cons.inj planEq).1
-      dsimp [memProgram] at execute
-      obtain ⟨rfl, rfl⟩ := MemInstruction.genauInternal (k := k) execute
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+  · exact (memProgramAussenLokal k code).2
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := MemInstruction.genauInternal (k := k) haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation k code _ i⟩
   · intro ρ _
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩

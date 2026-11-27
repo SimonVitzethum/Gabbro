@@ -136,6 +136,7 @@ private theorem ausfuehrbar_fuehrtAus (e : Einrichtung Nat Zelle Int Nat Rahmen 
   | frage _ => exact False.elim h
   | verbrauche _ => exact False.elim h
   | rueckkehr => exact False.elim h
+  | ruecknahmeAbschliessen _ => exact False.elim h
 
 /-- **Composability of the accepted steps of a lifecycle instruction**
     (`FadenKomponierbarAussage`). The machine's acceptance condition decides which protocol action

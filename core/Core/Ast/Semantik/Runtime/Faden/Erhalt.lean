@@ -35,6 +35,7 @@ def Aktion.Still : Aktion L Bedingung → Prop
   | .prioritaet _ => True
   | .sende _ _ => True
   | .leite _ _ _ => True
+  | .ruecknahmeAbschliessen _ => False
   | .intern => True
   | .warte _ => False
   | .sperre _ _ => False
@@ -61,6 +62,7 @@ def Aktion.Ausfuehrbar (s u : Zustand L Ort Wert Raum Lok Grund) (c : Kontext) :
   | .prioritaet _ => True
   | .sende _ _ => True
   | .leite _ _ _ => True
+  | .ruecknahmeAbschliessen _ => False
   | .warte _ => False
   | .sperre _ _ => False
   | .frage _ => False
@@ -95,6 +97,7 @@ theorem FuehrtAus.still_erhaelt {a : Aktion L Bedingung} {sperren : List (Speich
   | prioritaet _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | sende _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | leite _ _ _ => exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | ruecknahmeAbschliessen _ => exact False.elim ha
 
 /-- **A start, exactly**: the thread with the next number runs, the counter is one higher, the acting context
     is recorded as its creator, no other status and no other creator entry changes. -/

@@ -33,6 +33,7 @@ abbrev SpeicherSpur (Ort Wert : Type) := List (SpeicherAkteur Ort × Speicher.Et
 
 structure SchrittSpur (Ort Wert : Type) where
   speicher : SpeicherSpur Ort Wert
+  /-- Ordered catalogue events and internal protocol effects of the step. -/
   aussen : List Ereignis
 
 def AbsturzAngeboten (k : Katalog.Katalog) (run : HwLauf) (t : Nat) : Prop :=

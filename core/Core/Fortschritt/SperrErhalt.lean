@@ -122,7 +122,7 @@ theorem kontextSchritt_sperren {t c s u} {plan : SchrittPlan L Ort Wert Bedingun
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)
   | .starte | .verbinde _ | .beende | .wechsle _ _ | .maskiere _ _ | .prioritaet _
-  | .sende _ _ | .leite _ _ _ =>
+  | .sende _ _ | .leite _ _ _ | .ruecknahmeAbschliessen _ =>
     rw [hplan] at haus
     cases haus
     exact Or.inl (congrFun hrahmen.sperren m)
