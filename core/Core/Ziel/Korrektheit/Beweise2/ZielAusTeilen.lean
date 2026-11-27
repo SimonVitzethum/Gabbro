@@ -65,7 +65,7 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
     subst E'
     subst E
     obtain ⟨η, valid, sim, _, zielFX, progress⟩ :=
-      einheitVon_sim_ziel_fortschritt existiert P t run (scheduler t hacc H ρ' run)
+      einheitVon_sim_ziel_fortschritt existiert P t run (scheduler t hacc.regeln H ρ' run)
     refine ⟨⟨einheitVon P t, η⟩, ?_, ?_⟩
     · exact ⟨rfl, valid⟩
     · unfold Ziel.Verfeinert
@@ -83,11 +83,11 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
         · refine ⟨rfl, ?_⟩
           change DeadlockFrei η
           exact deadlockfrei_aus_waechter valid hacc.2.2
-      · exact ⟨rfl, schranken t hacc H ρ' run⟩
+      · exact ⟨rfl, schranken t hacc.regeln H ρ' run⟩
 
 /-- The goal over `R₀` follows from the listed proof obligations. -/
 theorem zielAusTeilenMitLuecken
-    (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Akzeptiert E →
+    (idealLuecke : ∀ E : Ast.Semantik.Einheit, Annahme.Quelle.Akzeptiert E →
       Maschine.I.Bestimmt E.einrichtung E.system ∧ Maschine.I.Fortschritt E.einrichtung E.system)
     (niSpuren : VergleichSpurenAussage) (existiert : ZugriffSchrittExistiertAussage)
     (B : FormBeleg) (bildG : BildGueltigAussage P) (formG : FormenGedecktAussage P B)
@@ -103,7 +103,7 @@ theorem zielAusTeilenMitLuecken
     · intro f
       exact formG f
     · intro E hE
-      exact Annahme.akzeptiert_katalog E hE
+      exact Annahme.akzeptiert_katalog E hE.regeln
     · intro K hK
       exact Katalog.katalog_nichtLeer K hK
     · intro a E hbez hacc H hwH

@@ -7,7 +7,7 @@
   `Verfeinerung/Review/Befunde.lean`): the force of the goal theorem lies in the fields of the one frame it is
   stated over. `R₀ P B` binds every field of `Rahmen` to the concrete constants of `core/`:
 
-  * the units are the elaborated units (`Ast.Semantik.Einheit`), acceptance is `Annahme.Akzeptiert`, the
+  * the units are the elaborated units (`Ast.Semantik.Einheit`), acceptance is `Annahme.Quelle.Akzeptiert`, the
     denotation of text is `Ast.Semantik.Bezeichnet P .unit` on the selected platform `P`, the catalogue is the
     unit's own `katalog`, hardware, fair histories and starts are those of `Katalog`;
   * the runs are the maximal implementation runs `Maschine.Laeufe`, the ideal runs `Maschine.I.Laeufe`, the
@@ -36,6 +36,7 @@
 module
 
 public import Core.Ziel.Sicherheit
+public import Core.Annahme.Quellbindung
 public import Core.Ast.Semantik.Runtime.Sicherheit
 public import Core.Verfeinerung.Fortschritt
 public import Core.Fortschritt.Klasse
@@ -73,7 +74,7 @@ def sicherheitVon (E : Ast.Semantik.Einheit) :
   enthaelt := B.enthaelt
   realisiert := B.realisiert
   Bezeichnet := Ast.Semantik.Bezeichnet P Ast.Category.unit
-  Akzeptiert := fun E => Annahme.Akzeptiert E
+  Akzeptiert := Annahme.Quelle.Akzeptiert
   Katalog := Katalog.Katalog
   katalog := fun E => E.katalog
   KatalogWohlgeformt := fun K => Katalog.KatalogWohlgeformt K

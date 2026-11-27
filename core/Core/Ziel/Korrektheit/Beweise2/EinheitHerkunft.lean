@@ -33,7 +33,13 @@ theorem spracheinheit_lauftransport (P : Katalog.Plattform) (B : FormBeleg) (E :
     ((R₀ P B).Laeufe E.val H ⟨E.val, ρ⟩ ↔ Maschine.Laeufe E.val H ρ) ∧
     ((R₀ P B).IdealLaeufe E.val ⟨E.val, ι⟩ ↔ Maschine.I.Laeufe E.val ι) ∧
     ((R₀ P B).Sim E.val ⟨E.val, ρ⟩ ⟨E.val, ι⟩ ↔ Maschine.I.Sim E.val ρ ι) := by
-  refine ⟨Iff.rfl, ⟨And.right, fun h => ⟨rfl, h⟩⟩, ⟨And.right, fun h => ⟨rfl, h⟩⟩, ?_⟩
+  have hacc : Annahme.Quelle.Akzeptiert E.val ↔ Annahme.Akzeptiert E.val := by
+    obtain ⟨E, h⟩ := E
+    cases h with
+    | quelle P t => exact Annahme.Quelle.akzeptiert_elaboriert_iff P t
+    | mitInvarianten P u => exact Annahme.Quelle.akzeptiert_mitInvarianten_iff P u
+    | verlinkt plan p h => exact Annahme.Quelle.akzeptiert_link_iff plan h
+  refine ⟨hacc, ⟨And.right, fun h => ⟨rfl, h⟩⟩, ⟨And.right, fun h => ⟨rfl, h⟩⟩, ?_⟩
   constructor
   · rintro ⟨_, h, sim⟩
     cases h

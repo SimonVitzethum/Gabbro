@@ -117,6 +117,10 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.SperrHalterHalten,
     `Gabbro.Core.Annahme.WaechterHalten,
     `Gabbro.Core.Annahme.Akzeptiert,
+    `Gabbro.Core.Annahme.Quelle.FragmentHerkunft,
+    `Gabbro.Core.Annahme.Quelle.Idealbindung,
+    `Gabbro.Core.Annahme.Quelle.Lokal,
+    `Gabbro.Core.Annahme.Quelle.Akzeptiert,
     `Gabbro.Core.Annahme.akzeptiert_katalog],
   syntaxModules := #[`Core.Ast],
   -- `Core.Speicher` is the shared M3 state foundation both machines step over: `I` runs

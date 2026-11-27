@@ -1,6 +1,6 @@
 module
 
-public import Core.Linken.Modul
+public import Core.Ast.Program.Linken
 public import Core.Ast.Semantik.Elaborierung
 public import Core.Ast.Aggregate.Types.Model
 public import Core.Annahme.Annahme

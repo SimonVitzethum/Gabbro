@@ -1,6 +1,6 @@
 module
 
-public import Core.Linken.Modul
+public import Core.Ast.Program.Linken
 public import Core.Linken.Gegenbeispiel
 public import Core.Maschine.Schritte
 public import Core.Maschine.Start

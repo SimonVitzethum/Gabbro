@@ -117,11 +117,10 @@ theorem ziel_klein (P : Katalog.Plattform) : DurchstichKleinAussage P := by
   · exact klassenAussagen
   · exact atomAussagen
 
-/-- Acceptance over the slice is acceptance in the concrete frame R₀: the
-    `Akzeptiert` field of `R₀ P B` is definitionally `Annahme.Akzeptiert`. -/
+/-- Elaborated units have the same acceptance in the slice and in the concrete frame. -/
 theorem klein_akzeptiert_bei_R₀ (P : Katalog.Plattform) (B : FormBeleg)
-    (E : Ast.Semantik.Einheit) : (R₀ P B).Akzeptiert E ↔ Annahme.Akzeptiert E :=
-  Iff.rfl
+    (t : Ast.Unit) : (R₀ P B).Akzeptiert (einheitVon P t) ↔ Annahme.Akzeptiert (einheitVon P t) :=
+  Annahme.Quelle.akzeptiert_elaboriert_iff P t
 
 /-- The sharp edge of gaps S/N/F: the slice contains a non-frame instruction, so the
     machine-level slice exceeds what the `Rein`-only leg proofs cover. -/

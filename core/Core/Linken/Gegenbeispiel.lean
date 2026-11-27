@@ -1,6 +1,6 @@
 module
 
-public import Core.Linken.Modul
+public import Core.Ast.Program.Linken
 public import Core.Annahme.Annahme
 public import Core.Ast.LowLevel.Proofs.EnvironmentSatisfiability
 

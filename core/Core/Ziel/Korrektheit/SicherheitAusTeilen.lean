@@ -36,6 +36,6 @@ theorem sicherheitAusTeilen (P : Katalog.Plattform) (B : FormBeleg) : Sicherheit
   change Maschine.Laeufe E' H ρ' at hLauf
   subst E'
   subst E
-  exact hAkzeptiert t hE_akzeptiert H ρ' hLauf
+  exact hAkzeptiert t hE_akzeptiert.regeln H ρ' hLauf
 
 end Gabbro.Core.Ziel.Korrektheit

@@ -1,7 +1,7 @@
 module
 
 public import Core.Ziel.Korrektheit.Pruefer
-public import Core.Linken.Modul
+public import Core.Ast.Program.Linken
 
 @[expose] public section
 

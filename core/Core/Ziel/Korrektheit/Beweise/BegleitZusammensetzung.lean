@@ -167,9 +167,9 @@ def NIAkzeptiertAussage.nichtTrivial := Beobachtung.ni_erfuellbar
     The accepted empty source unit's admitted run is a reflexive comparison. -/
 theorem VergleichSpurenAussage.erfuellbar (P : Plattform) :
     ∃ (E : Ast.Semantik.Einheit) (H₁ H₂ : Umgebung) (ρ₁ ρ₂ : Lauf E),
-      Annahme.Akzeptiert E ∧ Beobachtung.Vergleich E H₁ H₂ ρ₁ ρ₂ := by
+      Annahme.Quelle.Akzeptiert E ∧ Beobachtung.Vergleich E H₁ H₂ ρ₁ ρ₂ := by
   obtain ⟨H, _, _, ρ, lauf⟩ := trivialUnit_lauf P
-  exact ⟨einheitVon P trivialUnit, H, H, ρ, ρ, trivialUnit_akzeptiert P,
+  exact ⟨einheitVon P trivialUnit, H, H, ρ, ρ, (Annahme.Quelle.akzeptiert_elaboriert_iff P trivialUnit).2 (trivialUnit_akzeptiert P),
     ⟨lauf, lauf, rfl, rfl, rfl⟩⟩
 
 /-- The five legs of the goal hold jointly as soon as the two open ones are supplied: image validity, form

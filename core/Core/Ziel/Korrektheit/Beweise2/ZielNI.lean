@@ -29,7 +29,7 @@ theorem zielNI_vergleichslauf (P : Katalog.Plattform) (B : FormBeleg)
 
 /-- The low traces of every admitted comparison of every accepted unit agree up to release. -/
 def VergleichSpurenAussage : Prop :=
-  ∀ (E : Ast.Semantik.Einheit), Annahme.Akzeptiert E →
+  ∀ (E : Ast.Semantik.Einheit), Annahme.Quelle.Akzeptiert E →
     ∀ {H₁ H₂ : Katalog.Umgebung} {ρ₁ ρ₂ : Maschine.Lauf E},
       Beobachtung.Vergleich E H₁ H₂ ρ₁ ρ₂ →
       Beobachtung.NiedrigAequiv E (Beobachtung.NiedrigeBeob E ρ₁) (Beobachtung.NiedrigeBeob E ρ₂)
