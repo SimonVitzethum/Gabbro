@@ -71,7 +71,8 @@ theorem mehrSchnittUmgebung_atomarTotal {p : Plattform} {h : Umgebung} {plan : S
             | .warten => .warten
           else atomar p (h.politik.sicht u verlauf) q := by
   cases hplan : plan u with
-  | none => rfl
+  | none =>
+      simp only [mehrSchnittSicht, hplan]
   | some pair =>
       rcases pair with ⟨objekt, body⟩
       dsimp only [mehrSchnittSicht]
@@ -95,7 +96,8 @@ theorem mehrSchnittUmgebung_nichtZufallErhalt {B : Zufallsbindung} {p : Plattfor
     atomar p (mehrSchnittSicht h.politik.sicht plan u verlauf) q =
       atomar p (h.politik.sicht u verlauf) q := by
   cases hplan : plan u with
-  | none => rfl
+  | none =>
+      simp only [mehrSchnittSicht, hplan]
   | some pair =>
       rcases pair with ⟨objekt, body⟩
       dsimp only [mehrSchnittSicht]
@@ -109,7 +111,7 @@ theorem mehrSchnittUmgebung_nichtZufallErhalt {B : Zufallsbindung} {p : Plattfor
 def schnittIndex (B : Zufallsbindung)
     {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type} [DecidableEq L]
     {E : Maschine.Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
-    (ρ : Maschine.Lauf E) (u : Nat) : Nat := ziehungsBis B ρ u
+    (ρ : Maschine.Lauf E) (u : Nat) : Nat := ziehungenBis B ρ u
 
 /-- **Causality of the index.** Two replays agreeing on states up to `u` and traces below
     `u` have consumed the same number of marked answers, hence select the same draw. -/
@@ -126,7 +128,7 @@ theorem schnittIndex_stimmtÜberein (B : Zufallsbindung)
          fun t ht => h.2 t (Nat.lt_trans ht (Nat.lt_succ_self u))⟩
       have hi := ih hprev
       have hspur : ρ₁.zeit.spur u = ρ₂.zeit.spur u := h.2 u (Nat.lt_succ_self u)
-      simp only [schnittIndex, ziehungsBis, hi, antwortenBei, hspur]
+      simp only [schnittIndex, ziehungenBis, hi, antwortenBei, hspur]
 
 /-- A shared plan with two distinct draw cuts on one object: the body at each cut is the
     code of the draw whose index is the earlier marked response prefix count. -/
@@ -150,7 +152,7 @@ theorem zweiSchnittPlan_indexVerschieden (B : Zufallsbindung)
     schnittIndex B ρ 0 ≠ schnittIndex B ρ 1 := by
   have h0 : schnittIndex B ρ 0 = 0 := rfl
   have h1 : schnittIndex B ρ 1 = 1 := by
-    simp only [schnittIndex, ziehungsBis, antwortenBei_anzahl B ρ 0 a spur hfrag hspur haussen]
+    simp only [schnittIndex, ziehungenBis, antwortenBei_anzahl B ρ 0 a spur hfrag hspur haussen]
   omega
 
 /-- **Two distinct draw cuts on one shared policy.** Both cuts carry the draw-selected
@@ -165,16 +167,16 @@ theorem zweiSchnittPlan_atomarTotal {B : Zufallsbindung} (code : Fin B.quelle.an
     let plan := zweiSchnittPlan B code objekt b ρ
     atomar p (mehrSchnittSicht h.politik.sicht plan 0 verlauf) q0 =
         (match atomar p (h.politik.sicht 0 verlauf) q0 with
-         | .antwort a => .antwort (antwortBody q0 (code (Ziehung B.quelle b 0)) a)
+         | .antwort a => .antwort (antwortBody q0 (code (Ziehung B.quelle b (schnittIndex B ρ 0))) a)
          | .warten => .warten) ∧
     atomar p (mehrSchnittSicht h.politik.sicht plan 1 verlauf) q1 =
         (match atomar p (h.politik.sicht 1 verlauf) q1 with
-         | .antwort a => .antwort (antwortBody q1 (code (Ziehung B.quelle b 1)) a)
+         | .antwort a => .antwort (antwortBody q1 (code (Ziehung B.quelle b (schnittIndex B ρ 1))) a)
          | .warten => .warten) := by
   dsimp only
   constructor
   · rw [mehrSchnittUmgebung_atomarTotal]
-    simp only [zweiSchnittPlan, schnittIndex, hobj0, if_true]
+    simp only [zweiSchnittPlan, hobj0, if_true]
   · rw [mehrSchnittUmgebung_atomarTotal]
     simp only [zweiSchnittPlan, hobj1, if_true]
 
