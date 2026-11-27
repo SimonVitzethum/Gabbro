@@ -68,10 +68,10 @@ private theorem mehrSchnittPlan_erfolg {B : Zufallsbindung}
     have rdy : ((h.politik.sicht u verlauf).objects q.handle.origin.object).ready = true := by
       rw [hobj]
       exact ready
-    exact atomar_exchange_erfolg p (h.politik.sicht u verlauf) q operation supported valid warte rdy
+    simpa only [hobj] using
+      atomar_exchange_erfolg p (h.politik.sicht u verlauf) q operation supported valid warte rdy
   rw [basis]
-  rw [operation]
-  simp only [antwortBody, erfolgBody, wertBody]
+  simp only [antwortBody, erfolgBody, wertBody, operation]
 
 /-- The commit of the shared policy at a scheduled cut is the atomic decision above, since
     the shared environment is row-governed by `mehrSchnittUmgebung_hardware`. -/
@@ -127,7 +127,7 @@ private theorem zufallsAnkunftBeiPolitik {k : Katalog} {h : Umgebung} {run : HwL
 private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     (code : Fin B.quelle.anz → List UInt8) (objekt : Objekt) (k : Katalog) (h : Umgebung)
     (plan : SchnittPlan) (b : Band) (index : Nat)
-    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form)
+    (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) (hk : k = E.katalog)
     (u : Nat) (s : Zustand L Ort Wert Raum Lok Grund) (q : FrageEreignis) (run : HwLauf)
     (hardware : Hardware k h) (konform : run.konform k (mehrSchnittUmgebung k h plan))
     (pending : q ∈ s.fragen) (epoche : s.epoche ≤ q.cut) (gestellt : q.cut ≤ u)
@@ -164,8 +164,8 @@ private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     refine ⟨a, spur, s, s', rfl, rfl, ?_, reply.origin, reply.checkedObjects, body, ?_, hbody, ?_⟩
     · simpa only [hquestion] using marker
     · rw [areply]
-      rfl
-    · exact ⟨run, schritt⟩
+    · rw [hk] at schritt
+      exact ⟨run, schritt⟩
   · simp
 
 /-- The two-position cylinder of the two draw cuts has exactly the product measure. -/
