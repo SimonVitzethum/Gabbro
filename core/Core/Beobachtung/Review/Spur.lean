@@ -63,6 +63,9 @@ def aussenBeob (E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form) :
     | .write addr _ => (sichtbar (E.etiketten.persist addr) (.katalog (.persistenz e))).toList
     | .durable w | .discard w => (sichtbar (E.etiketten.persist w.addr) (.katalog (.persistenz e))).toList
     | .flush _ | .fence | .crash => [.katalog (.persistenz e)]
+  -- The internal token records translation authority, without an outside action
+  -- or a public Mem output. Its full identity stays in the matched raw trace.
+  | .ruecknahmeAbgeschlossen _ _ => []
 
 def speicherBeob (label : Etiketten Ort) (e : SpeicherAkteur Ort × Speicher.Etikett Ort Wert) :
     Option (NiedrigesEreignis Ort Wert Grund Form) :=
