@@ -155,10 +155,9 @@ def austauschUmgebung (k : Katalog) (h : Umgebung) (t : Nat) (objekt : Objekt)
   let sicht := fun u verlauf =>
     let basis := h.politik.sicht u verlauf
     if u = t then austauschSicht basis objekt body else basis
-  { h with politik :=
-      { h.politik with sicht := sicht,
-        antwort := fun u verlauf q =>
-          if u = t then atomar k.plattform (sicht u verlauf) q else h.politik.antwort u verlauf q } }
+  let antwort := fun u verlauf q =>
+    if u = t then atomar k.plattform (sicht u verlauf) q else h.politik.antwort u verlauf q
+  { h with politik := ⟨sicht, antwort, h.politik.dma⟩ }
 
 theorem austauschUmgebung_hardware (hardware : Hardware k h) (t : Nat) (objekt : Objekt)
     (body : List UInt8) : Hardware k (austauschUmgebung k h t objekt body) := by
@@ -204,7 +203,7 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     exact frage.2
   have selected : k.enthaelt (.endpoint q.question.endpoint) := (konform.2 t).2.2.2.1 _ delivery
   have sichtbar : sicht = austauschSicht basis q.question.objekt body := by
-    simp only [sicht, h', austauschUmgebung, if_pos rfl, basis]
+    simp only [sicht, h', austauschUmgebung, if_pos rfl, if_true, basis]
   have objekt (o : Objekt) : (sicht.objects o).generation = (basis.objects o).generation ∧
       (sicht.objects o).alive = (basis.objects o).alive := by
     rw [sichtbar, austauschSicht]
@@ -214,7 +213,9 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     · simp only [Function.update_of_ne gleich, and_self]
   have gueltig (z : Zugriff) : sicht.gueltig q.question.endpoint z =
       basis.gueltig q.question.endpoint z := by
-    have kanaele : sicht.channels = basis.channels := by rw [sichtbar]
+    have kanaele : sicht.channels = basis.channels := by
+      rw [sichtbar]
+      rfl
     simp only [AussenSicht.gueltig, AussenSicht.herkunft, kanaele, (objekt _).1, (objekt _).2]
   have valid' : q.question.zugriffe.all (sicht.gueltig q.question.endpoint) = true := by
     rw [funext gueltig]
@@ -236,6 +237,7 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     have erfolg : sicht.erfolg k.plattform q.question = .ok (.exchanged B.kennung body) := by
       simp only [AussenSicht.erfolg, operation, marke, Frage.objekt] at antwortBody ⊢
       rw [antwortBody]
+    change (sicht.objects q.question.handle.origin.object).ready = true at rdy
     simp only [atomar, supported, valid', wartet, rdy, erfolg, Bool.not_true, Bool.false_eq_true,
       ↓reduceIte, reply, Frage.objekt]
   let a : AntwortEreignis := ⟨t, q.context, q.questionInstance, q.question, reply⟩
