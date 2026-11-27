@@ -61,6 +61,7 @@ theorem frageStelltKontext [DecidableEq L]
   | prioritaet _ => exact (List.not_mem_nil hmem).elim
   | sende _ _ => exact (List.not_mem_nil hmem).elim
   | leite _ _ _ => exact (List.not_mem_nil hmem).elim
+  | ruecknahmeAbschliessen _ => cases List.mem_singleton.mp hmem
 
 /-- The hosted form meets the authority obligation: both plans have empty footprints,
     so every read and write leg is vacuous. -/

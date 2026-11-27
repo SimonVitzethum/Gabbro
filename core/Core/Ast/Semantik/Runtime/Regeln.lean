@@ -165,7 +165,7 @@ def Befehl.maschinennach (b : Befehl) (c : Kontext) (s u : Zustand) : Zustand :=
   | .leite leitung kern prio =>
     { u with leitung := Function.update u.leitung leitung (kern, prio) }
   | .warte _ | .sperre _ _ | .frage _ | .verbrauche _ | .rueckkehr | .starte | .verbinde _ |
-    .beende | .wechsle _ _ => u
+    .beende | .wechsle _ _ | .ruecknahmeAbschliessen _ => u
 
 /-- A local or call instruction plans only the internal action. -/
 theorem Befehl.plan_lokal_ruf (b : Befehl) (h : b.klasse = .lokal ∨ b.klasse = .ruf)
