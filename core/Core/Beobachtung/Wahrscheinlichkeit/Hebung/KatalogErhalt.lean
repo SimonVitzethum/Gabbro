@@ -189,6 +189,15 @@ theorem atomar_austauschSicht_verschieden {p : Plattform} {basis : AussenSicht} 
     · exact austauschSicht_erfolg_unempfindlich p basis objekt body q
         (koerperEmpfindlich_false_of_not_true hsens)
 
+/-- The form in which the lift uses the law: a nonrandom question disjoint from the draw keeps
+    its decision. The nonrandom premise is the lift's own restriction; the equality itself only
+    needs the disjointness above. -/
+theorem atomar_austauschSicht_nichtZufall {B : Zufallsbindung} {p : Plattform} {basis : AussenSicht}
+    {objekt : Objekt} {body : List UInt8} {q : Frage}
+    (hd : q.handle.origin.object ≠ objekt) (_ : ¬ Zufallsfrage B q) :
+    atomar p (austauschSichtOeffentlich basis objekt body) q = atomar p basis q :=
+  atomar_austauschSicht_verschieden hd
+
 theorem atomar_austauschSicht_unempfindlich {p : Plattform} {basis : AussenSicht} {objekt : Objekt}
     {body : List UInt8} {q : Frage} (hsens : koerperEmpfindlich q.operation = false) :
     atomar p (austauschSichtOeffentlich basis objekt body) q = atomar p basis q := by
