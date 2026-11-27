@@ -8,6 +8,7 @@ import Mathlib.Algebra.BigOperators.Fin
 namespace Gabbro.Core.Beobachtung
 
 open Katalog Maschine
+open Ast.Semantik (Zelle)
 
 /-- PHYSICALLY CANONICAL START ACCOUNTING. The byte footprint of all granted
     extents, independent of every typed view width: width one books one cell per
