@@ -268,7 +268,7 @@ private theorem niOeffentlicherHandle_oeffentlich :
         simpa only [niOeffentlicheFrage, Frage.zugriffe, AussenOperation.required,
           List.mem_singleton] using mem
       subst zugriff
-      simp [niEtiketten, niObjekt, niOeffentlicherHandle, niOeffentlichesObjekt] at klasse
+      simp? [niEtiketten, niObjekt, niOeffentlicherHandle, niOeffentlichesObjekt] at klasse
   · rfl
 
 /-- The public cProcess object is live and readable; its body is carried by `body`. -/
@@ -334,11 +334,11 @@ private theorem niUmgebungen_projektionGleich :
   apply Prod.ext
   · funext t history
     have h := hatHoheAntwort_niedrig history
-    simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
+    simp? [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
   · apply Prod.ext
     · funext t history q
       have h := hatHoheAntwort_niedrig history
-      simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
+      simp? [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
     · funext t history e phase
       rfl
 
@@ -359,6 +359,6 @@ theorem projektionGleich_ohne_antwortKopplung :
   refine ⟨niUmgebungAuf, niUmgebungZu, 0, history, niOeffentlicheFrage,
     niUmgebungAuf_hardware, niUmgebungZu_hardware, niUmgebungen_projektionGleich,
     niOeffentlicherHandle_oeffentlich, ?_⟩
-  simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, hhoch, niSichtRevokation, atomar_niOeffen]
+  simp? [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, hhoch, niSichtRevokation, atomar_niOeffen]
 
 end Gabbro.Core.Beobachtung

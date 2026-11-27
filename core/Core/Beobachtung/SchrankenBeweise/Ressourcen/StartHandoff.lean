@@ -175,11 +175,11 @@ theorem view_value_layout (target : ZielDaten) (slot : Nat) (extent : Strecke)
       shape.fits extent ∧ 0 < shape.bytes := by
   unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value at yields
   cases hlayout : Gabbro.Core.Ast.LowLevel.layout target written with
-  | none => simp [hlayout] at yields
+  | none => simp? [hlayout] at yields
   | some shape =>
       by_cases fits : shape.fits extent
       · exact ⟨shape, rfl, fits, layout_positive_bytes target written shape hlayout⟩
-      · simp [hlayout, fits] at yields
+      · simp? [hlayout, fits] at yields
 
 /-- The logical boot cell of a grant is present exactly when one complete cell
     of the checked width fits into the physical extent. -/
@@ -319,21 +319,24 @@ theorem source_region_zwei_breiten
   have hlayout₁ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₁ = some s₁ := by rfl
   have hlayout₂ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₂ = some s₂ := by rfl
   have fits₁ : s₁.fits extent := by
-    constructor <;> decide
+    change 0x1000 % 1 = 0 ∧ 0x1000 + 1 ≤ 0x2000
+    omega
   have fits₂ : s₂.fits extent := by
-    constructor <;> decide
+    change 0x1000 % 2 = 0 ∧ 0x1000 + 2 ≤ 0x2000
+    omega
   have yield₁ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
       (.view w₁ valid₁) =
       some ⟨.regionView w₁.type, ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
-    simp [hlayout₁, fits₁, s₁]
+    simp? [hlayout₁, fits₁, s₁]
   have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
       (.view w₂ valid₂) =
       some ⟨.regionView w₂.type, ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
-    simp [hlayout₂, fits₂, s₂]
+    simp? [hlayout₂, fits₂, s₂]
   refine ⟨extent, s₁, s₂, hlayout₁, hlayout₂, fits₁, fits₂, ?_, ?_, ?_⟩
-  · decide
+  · change (1 : Nat) ≠ 2
+    omega
   · exact ⟨_, yield₁⟩
   · exact ⟨_, yield₂⟩
 

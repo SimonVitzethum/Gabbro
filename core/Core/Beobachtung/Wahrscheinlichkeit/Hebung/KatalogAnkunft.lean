@@ -286,12 +286,21 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
     Umgebung.referenz_fair k 1 _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
   have zeile : ZufallszeileZugelassen k B := by
     change Zeile.zufall 0 ∈ Plattform.x86_64.zeilen
-    decide
+    apply List.mem_append_right
+    apply List.mem_cons_of_mem
+    apply List.mem_append_right
+    apply List.mem_append_right
+    exact List.mem_cons_self
   have marker : Zufallsfrage B q.question := rfl
   have pending : q ∈ s.fragen := List.mem_cons_self
   have delivery : (run.angebot 1).delivery q.question.endpoint = true := by
     change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
-    decide
+    apply decide_eq_true
+    apply List.mem_append_right
+    apply List.mem_cons_of_mem
+    apply List.mem_append_left
+    apply List.mem_map_of_mem
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
   have valid : q.question.zugriffe.all (snapshot.gueltig .cProcess) = true := by
     simp only [q, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
       AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
