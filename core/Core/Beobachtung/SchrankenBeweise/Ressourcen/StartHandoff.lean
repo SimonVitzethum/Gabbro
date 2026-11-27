@@ -143,7 +143,7 @@ theorem layout_positive_bytes (target : ZielDaten) (written : Gabbro.Core.Ast.Wr
         injection h with hs
         subst shape
         have widths : width = 8 ∨ width = 16 ∨ width = 32 ∨ width = 64 := by
-          simpa only [List.mem_cons, List.mem_nil, or_false] using cond.1
+          simpa using cond.1
         rcases widths with rfl | rfl | rfl | rfl <;> decide
       · cases h
   | _ =>
@@ -306,6 +306,8 @@ theorem source_region_zwei_breiten
         Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
           (.view (.integer false 16 none) valid₂) = some v₂) := by
   let extent : Strecke := ⟨0x1000, 0x2000⟩
+  let w₁ : Gabbro.Core.Ast.WrittenType := .integer false 8 none
+  let w₂ : Gabbro.Core.Ast.WrittenType := .integer false 16 none
   let s₁ : Gabbro.Core.Ast.LowLevel.Layout :=
     ⟨.integer false 8 none, 1, 1, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
   let s₂ : Gabbro.Core.Ast.LowLevel.Layout :=
@@ -319,15 +321,13 @@ theorem source_region_zwei_breiten
   have fits₂ : s₂.fits extent := by
     constructor <;> decide
   have yield₁ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 8 none) valid₁) =
-      some ⟨.regionView (.integer false 8 none).type,
-        ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
+      (.view w₁ valid₁) =
+      some ⟨.regionView w₁.type, ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
     simp [hlayout₁, fits₁]
   have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 16 none) valid₂) =
-      some ⟨.regionView (.integer false 16 none).type,
-        ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
+      (.view w₂ valid₂) =
+      some ⟨.regionView w₂.type, ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
     simp [hlayout₂, fits₂]
   refine ⟨extent, s₁, s₂, hlayout₁, hlayout₂, fits₁, fits₂, ?_, ?_, ?_⟩
