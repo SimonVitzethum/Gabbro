@@ -17,7 +17,7 @@ module
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.KatalogErhalt
 public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.Teilbuendel
 
-public section
+@[expose] public section
 
 namespace Gabbro.Core.Beobachtung
 
