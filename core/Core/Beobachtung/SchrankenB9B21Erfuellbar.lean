@@ -192,7 +192,7 @@ theorem b21_belegte_buchung_erfuellbar :
     eineZelle_encard start, ?_, ?_, b9_b21_aus_pflichten pflichten lauf⟩
   · simp [eineZelle]
   · rw [eineZelle_encard]
-    exact Nat.zero_lt_one
-  · exact speicher_beschraenzt eineZelle (eineZelle_encard start).le
+    decide
+  · exact speicher_beschraenkt eineZelle (eineZelle_encard start).le
 
 end Gabbro.Core.Beobachtung
