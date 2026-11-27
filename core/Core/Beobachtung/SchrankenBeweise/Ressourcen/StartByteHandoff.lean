@@ -136,6 +136,33 @@ theorem handoffByteCell_uerberdeckt (extent : Strecke) (a : Nat) :
     simp only [Strecke.drin]
     omega
 
+/-- A physical address in the handoff belongs to exactly one booked pair of
+    region slot and byte offset when the granted regions are disjoint. -/
+theorem handoffBooking_byte_eindeutig {regions : List Strecke}
+    (disjoint : regions.Pairwise Strecke.getrennt) (booking : Sicherheit.Buchung Zelle) (a : Nat)
+    (inside : ∃ i extent, regions[i]? = some extent ∧ extent.drin a) :
+    ∃! cell : Nat × Nat, ∃ extent, regions[cell.1]? = some extent ∧
+      (handoffByteCell extent cell.2).drin a ∧
+      ((handoffBooking 1 regions booking).umfang cell.1)[cell.2]? = some (.region cell.1 cell.2) := by
+  obtain ⟨i, extent, grant, inGrant⟩ := inside
+  obtain ⟨b, bounded, contains⟩ := (handoffByteCell_uerberdeckt extent a).mp inGrant
+  have booked : ((handoffBooking 1 regions booking).umfang i)[b]? = some (.region i b) :=
+    (handoffBooking_lookup 1 regions booking grant).mpr (by simpa only [Nat.div_one] using bounded)
+  refine ⟨(i, b), ⟨extent, grant, contains, booked⟩, ?_⟩
+  rintro ⟨j, offset⟩ ⟨other, otherGrant, otherContains, otherBooked⟩
+  by_cases slot : j = i
+  · subst j
+    have same : other = extent := Option.some.inj (otherGrant.symm.trans grant)
+    subst other
+    have byte : offset = b := by
+      simp only [handoffByteCell, Strecke.drin] at contains otherContains
+      omega
+    rw [byte]
+  · have separated := handoffByteCell_getrennt_slots disjoint slot otherGrant grant otherBooked booked
+    simp only [Strecke.getrennt] at separated
+    simp only [Strecke.drin] at contains otherContains
+    omega
+
 /-- Each byte of a booked view cell has exactly one entry in the canonical
     booking for the same grant, regardless of the width of the view. -/
 theorem handoffBooking_view_byte {bytes : Nat} {regions : List Strecke}
