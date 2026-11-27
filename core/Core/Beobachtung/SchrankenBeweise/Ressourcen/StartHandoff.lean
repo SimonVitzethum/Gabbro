@@ -1,6 +1,7 @@
 module
 
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.BindungEndlich
+import Mathlib.Algebra.BigOperators.Fin
 
 @[expose] public section
 
@@ -386,7 +387,7 @@ theorem handoffBooking_byte_encard {L Wert Raum Lok Grund : Type}
       let i : Fin regions.length := ⟨slot, hslot⟩
       have g := List.getElem?_eq_getElem (l := regions) hslot
       have hlen : (handoffCells 1 regions slot).length = foot i := by
-        simp [handoffCells, g, foot]
+        simp [handoffCells, g, foot, i]
       have hoff : offset < foot i := by simpa [hlen] using h.2
       exact ⟨⟨i, ⟨offset, hoff⟩⟩, rfl⟩
     · rintro ⟨⟨i, d⟩, hp⟩
@@ -402,8 +403,7 @@ theorem handoffBooking_byte_encard {L Wert Raum Lok Grund : Type}
     dsimp [idx]
     rw [Fintype.card_sigma]
     simp only [Fintype.card_fin]
-    dsimp [foot, handoffByteFootprint]
-    simpa using (Fin.sum_univ_fun_getElem regions (fun r : Strecke => r.bis - r.von))
+    simpa [foot, handoffByteFootprint] using (Fin.sum_univ_fun_getElem regions (fun r : Strecke => r.bis - r.von))
   rw [cells, code_injective.encard_range, ENat.card_eq_coe_fintype_card, card]
 
 /-- The single byte of physical storage addressed by a canonical cell. -/
@@ -414,10 +414,10 @@ def handoffByteCell (extent : Strecke) (offset : Nat) : Strecke :=
     interval of a grant is not charged twice by the width-one projection. -/
 theorem handoffByteCell_getrennt (extent : Strecke) {u v : Nat} (uv : u ≠ v) :
     Strecke.getrennt (handoffByteCell extent u) (handoffByteCell extent v) := by
-  unfold Strecke.getrennt handoffByteCell
+  simp only [Strecke.getrennt, handoffByteCell]
   by_cases h : u < v
-  · exact Or.inl (by omega)
-  · exact Or.inr (by omega)
+  · omega
+  · omega
 
 /-- Distinct granted slots never charge the same physical byte: the existing
     disjoint-placement theorem at width one gives separation of the byte cells
@@ -433,7 +433,7 @@ theorem handoffByteCell_getrennt_slots {regions : List Strecke}
     Strecke.getrennt (handoffByteCell left u) (handoffByteCell right v) := by
   have sep := handoffBooking_disjoint (by omega) disjoint distinct leftGrant rightGrant
     leftCell rightCell
-  simpa [handoffByteCell] using sep
+  simpa [handoffByteCell, Nat.add_assoc] using sep
 
 /-- A physical address lies in a grant exactly when it lies in one of its
     canonical byte cells: those cells cover the grant without gaps. -/
@@ -442,12 +442,13 @@ theorem handoffByteCell_uerberdeckt (extent : Strecke) (a : Nat) :
       (handoffByteCell extent offset).drin a := by
   constructor
   · intro ha
-    refine ⟨a - extent.von, by omega, ?_⟩
-    unfold handoffByteCell Strecke.drin
-    omega
+    simp only [Strecke.drin] at ha
+    refine ⟨a - extent.von, by omega, by
+      simp only [handoffByteCell, Strecke.drin]
+      omega⟩
   · rintro ⟨offset, hoff, ha⟩
-    unfold handoffByteCell Strecke.drin at ha
-    unfold Strecke.drin
+    simp only [handoffByteCell, Strecke.drin] at ha
+    simp only [Strecke.drin]
     omega
 
 /-- Every physical byte admitted by a typed view cell lies in a canonical byte
@@ -457,11 +458,11 @@ theorem handoffView_cell_in_kanonisch {bytes : Nat} {extent : Strecke} {offset a
     (cell : (⟨extent.von + offset * bytes, extent.von + (offset + 1) * bytes⟩ : Strecke).drin a) :
     ∃ b, b < (offset + 1) * bytes ∧
       (handoffByteCell extent b).drin a := by
-  unfold Strecke.drin at cell
+  simp only [Strecke.drin] at cell
   refine ⟨a - extent.von, ?_, ?_⟩
   · rw [Nat.add_mul, Nat.one_mul] at cell ⊢
     omega
-  · unfold handoffByteCell Strecke.drin
+  · simp only [handoffByteCell, Strecke.drin]
     omega
 
 /-- Two admitted typed views of one grant, at possibly different widths, charge
@@ -472,11 +473,11 @@ theorem handoff_two_views_gleicher_byte {b₁ b₂ : Nat} {extent : Strecke} {o�
     (c₁ : (⟨extent.von + o₁ * b₁, extent.von + (o₁ + 1) * b₁⟩ : Strecke).drin a)
     (c₂ : (⟨extent.von + o₂ * b₂, extent.von + (o₂ + 1) * b₂⟩ : Strecke).drin a) :
     ∃ b, b < extent.bis - extent.von ∧ (handoffByteCell extent b).drin a := by
-  unfold Strecke.enthaelt at in₁
-  unfold Strecke.drin at c₁ c₂
+  simp only [Strecke.enthaelt] at in₁
+  simp only [Strecke.drin] at c₁ c₂
   refine ⟨a - extent.von, ?_, ?_⟩
   · omega
-  · unfold handoffByteCell Strecke.drin
+  · simp only [handoffByteCell, Strecke.drin]
     omega
 
 /-- Exact relation of the canonical byte charge to the B21 logical-cell counter:
@@ -490,8 +491,7 @@ theorem handoff_view_count_relation {bytes : Nat} (positive : 0 < bytes) (extent
   let footprint := extent.bis - extent.von
   change footprint / bytes * bytes ≤ footprint ∧
     (footprint / bytes * bytes = footprint ↔ footprint % bytes = 0)
-  have decomp : footprint = (footprint / bytes) * bytes + footprint % bytes := by
-    exact (Nat.div_add_mod footprint bytes).symm
+  have decomp : footprint = (footprint / bytes) * bytes + footprint % bytes := (Nat.div_add_mod' footprint bytes).symm
   constructor
   · exact Nat.div_mul_le_self footprint bytes
   · constructor <;> intro h <;> omega
