@@ -110,7 +110,12 @@ theorem memProgramFlussLokal (k : Katalog) (code : List MemInstruction) :
       rw [← f.evaluate_congr _ _ localEq rights loans, eval₁] at eval₂
       cases eval₂
       rw [(List.cons.inj plan₁).1, (List.cons.inj plan₂).1]
-      refine ⟨⟨?_, ends, initial, rights, loans, answers⟩, rfl, rfl⟩
+      have sameToken : f.abschluss v₁ c = f.abschluss v₂ c := by
+        cases f <;> first | rfl | simp only [MemInstruction.abschluss, localEq]
+      have samePlan : f.schrittPlan v₁ c = f.schrittPlan v₂ c := by
+        simp only [MemInstruction.schrittPlan, sameToken]
+      refine ⟨⟨?_, ends, initial, rights, loans, answers⟩,
+        congrArg (Beobachtung.PlanSicht (memProgram k code)) samePlan, rfl⟩
       intro d _ _
       simp only [MemFrame.advance, localEq]
 
