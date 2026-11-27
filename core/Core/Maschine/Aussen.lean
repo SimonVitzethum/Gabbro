@@ -78,3 +78,21 @@ theorem verbrauche_verbrauch {z : Zustand L Ort Wert Raum Lok Grund} (h : z.Verb
   · simpa only [verbrauche, angekommen, Function.update_of_ne same] using h d
 
 end Gabbro.Core.Maschine.Zustand
+
+namespace Gabbro.Core.Sicherheit
+
+open Gabbro.Core.Katalog
+
+variable {L Ort Wert Raum Lok Grund : Type}
+
+def Registerzugriff : AussenOperation → Prop
+  | .registerRead _offset | .registerWrite _offset _value | .waitRegister _offset _expected => True
+  | .read | .write _bytes | .resolve _name | .firmware _service _bytes | .exchange _message => False
+
+/-- A device object has one owner in the authority state. Access requires its unloaned
+    authority at the transition, including when the register access is a synchronous reply. -/
+def RegisterErlaubt (s : Maschine.Zustand L Ort Wert Raum Lok Grund) (c : Nat) (q : Frage) : Prop :=
+  Registerzugriff q.operation →
+    ∃ owner, owner.nummer = c ∧ s.buchung.geraet q.objekt = some (owner, .frei)
+
+end Gabbro.Core.Sicherheit

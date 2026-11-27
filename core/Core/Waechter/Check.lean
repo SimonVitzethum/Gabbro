@@ -122,7 +122,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.Quelle.Lokal,
     `Gabbro.Core.Annahme.Quelle.Akzeptiert,
     `Gabbro.Core.Annahme.akzeptiert_katalog],
-  syntaxModules := #[`Core.Ast],
+  syntaxModules := #[`Core.Ast, `Core.Text.Token, `Core.Text.Lexeme],
   -- `Core.Speicher` is the shared M3 state foundation both machines step over: `I` runs
   -- quantify over `Zustand`, so the ideal layer includes it.
   idealModules := #[`Core.Maschine, `Core.Ideal, `Core.Speicher],

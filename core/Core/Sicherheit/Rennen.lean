@@ -1,6 +1,7 @@
 module
 
 public import Core.Sicherheit.Aussen
+public import Core.Maschine.Aussen
 
 @[expose] public section
 
@@ -22,16 +23,6 @@ def Konflikt (g : SpeicherGraph Ort Wert) (i j : Fin g.ev.length) : Prop :=
   i ≠ j ∧ AusgefuehrterZugriff g i ∧ AusgefuehrterZugriff g j ∧
     g.graph.ort i = g.graph.ort j ∧ (g.graph.schreibt i ∨ g.graph.schreibt j) ∧
     (g.graph.na i ∨ g.graph.na j)
-
-def Registerzugriff : AussenOperation → Prop
-  | .registerRead _offset | .registerWrite _offset _value | .waitRegister _offset _expected => True
-  | .read | .write _bytes | .resolve _name | .firmware _service _bytes | .exchange _message => False
-
-/-- A device object has one owner in the authority state. Access requires its unloaned
-    authority at the transition, including when the register access is a synchronous reply. -/
-def RegisterErlaubt (s : Maschine.Zustand L Ort Wert Raum Lok Grund) (c : Nat) (q : Frage) : Prop :=
-  Registerzugriff q.operation →
-    ∃ owner, owner.nummer = c ∧ s.buchung.geraet q.objekt = some (owner, .frei)
 
 /-- Conflicting real accesses in one memory prefix are ordered. -/
 def RennenImGraph (g : SpeicherGraph Ort Wert) : Prop :=
