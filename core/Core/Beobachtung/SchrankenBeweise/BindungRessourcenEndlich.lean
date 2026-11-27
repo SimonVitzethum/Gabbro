@@ -347,4 +347,79 @@ theorem geladeneRegion_ledger_anschluss (P : Plattform) (u : UnitMitSchranken)
     ⟨h1, h2, h3, h4, _⟩
   exact ⟨h1, h2, h3, h4⟩
 
+/-- Complete logical cells in a physical handoff, for an explicitly supplied
+    storage width in bytes. A trailing partial cell is unusable. -/
+def handoffCells (bytes : Nat) (regions : List Strecke) (slot : Nat) : List Zelle :=
+  match regions[slot]? with
+  | none => []
+  | some extent => (List.range ((extent.bis - extent.von) / bytes)).map (.region slot)
+
+/-- The same extent projection consumed by the access and live-cell rules.
+    Boot metadata and all authority fields are kept by the caller. -/
+def handoffBooking (bytes : Nat) (regions : List Strecke) (booking : Sicherheit.Buchung Zelle) :
+    Sicherheit.Buchung Zelle :=
+  { booking with umfang := handoffCells bytes regions }
+
+theorem handoffBooking_nil (bytes : Nat) :
+    handoffBooking bytes [] Sicherheit.Buchung.leer = Sicherheit.Buchung.leer := rfl
+
+/-- At a granted slot, the ledger lookup is exactly the source cell of that
+    slot and logical offset, provided the complete cell fits in the grant. -/
+theorem handoffBooking_lookup (bytes : Nat) (regions : List Strecke)
+    (booking : Sicherheit.Buchung Zelle) {slot offset : Nat} {extent : Strecke}
+    (grant : regions[slot]? = some extent) :
+    ((handoffBooking bytes regions booking).umfang slot)[offset]? =
+      some (.region slot offset) ↔ offset < (extent.bis - extent.von) / bytes := by
+  change (handoffCells bytes regions slot)[offset]? = _ ↔ _
+  rw [handoffCells, grant]
+  constructor
+  · intro h
+    have bound := (List.getElem?_eq_some_iff.mp h).1
+    simpa only [List.length_map, List.length_range] using bound
+  · intro h
+    simp only [List.getElem?_map, List.getElem?_range h, Option.map_some]
+
+/-- The ledger's logical offset denotes a complete physical subextent of the
+    grant. The positive layout width and the grant's actual endpoints determine
+    that subextent. -/
+theorem handoffBooking_inside {bytes : Nat} (positive : 0 < bytes) {regions : List Strecke}
+    {booking : Sicherheit.Buchung Zelle} {slot offset : Nat} {extent : Strecke}
+    (grant : regions[slot]? = some extent)
+    (booked : ((handoffBooking bytes regions booking).umfang slot)[offset]? =
+      some (.region slot offset)) :
+    extent.enthaelt ⟨extent.von + offset * bytes, extent.von + (offset + 1) * bytes⟩ := by
+  have fits := (handoffBooking_lookup bytes regions booking grant).mp booked
+  have last := (Nat.le_div_iff_mul_le positive).mp (Nat.succ_le_of_lt fits)
+  have growth : offset * bytes < (offset + 1) * bytes := by
+    rw [Nat.add_mul, Nat.one_mul]
+    omega
+  have extentPositive : extent.von < extent.bis := by
+    have : bytes ≤ (offset + 1) * bytes := by rw [Nat.add_mul, Nat.one_mul]; omega
+    omega
+  exact ⟨Nat.le_add_right _ _, Nat.add_lt_add_left growth _, by omega⟩
+
+/-- Distinct slots in the admitted handoff assign disjoint physical storage
+    to the logical cells recorded in the ledger. -/
+theorem handoffBooking_disjoint {bytes : Nat} (positive : 0 < bytes)
+    {regions : List Strecke} (disjoint : regions.Pairwise Strecke.getrennt)
+    {booking : Sicherheit.Buchung Zelle} {i j u v : Nat} {left right : Strecke}
+    (distinct : i ≠ j) (leftGrant : regions[i]? = some left)
+    (rightGrant : regions[j]? = some right)
+    (leftCell : ((handoffBooking bytes regions booking).umfang i)[u]? = some (.region i u))
+    (rightCell : ((handoffBooking bytes regions booking).umfang j)[v]? = some (.region j v)) :
+    Strecke.getrennt ⟨left.von + u * bytes, left.von + (u + 1) * bytes⟩
+      ⟨right.von + v * bytes, right.von + (v + 1) * bytes⟩ := by
+  obtain ⟨hi, hleft⟩ := List.getElem?_eq_some_iff.mp leftGrant
+  obtain ⟨hj, hright⟩ := List.getElem?_eq_some_iff.mp rightGrant
+  have grants : left.getrennt right := by
+    rw [← hleft, ← hright]
+    by_cases before : i < j
+    · exact disjoint.rel_getElem_of_lt hi hj before
+    · exact (disjoint.rel_getElem_of_lt hj hi (by omega)).getrennt_symm
+  obtain ⟨beginL, _, endL⟩ := handoffBooking_inside positive leftGrant leftCell
+  obtain ⟨beginR, _, endR⟩ := handoffBooking_inside positive rightGrant rightCell
+  exact grants.elim
+    (fun h => Or.inl (endL.trans (h.trans beginR)))
+    (fun h => Or.inr (endR.trans (h.trans beginL)))
+
 end Gabbro.Core.Beobachtung
