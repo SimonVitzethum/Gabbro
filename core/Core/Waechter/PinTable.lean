@@ -229,6 +229,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Maschine.I.Haengt, 1652197449597261956),
   (`Gabbro.Core.Maschine.I.RegelKomponierbar, 13262171122977372250),
   (`Gabbro.Core.Annahme.Akzeptiert, 13239806282219378221),
+  (`Gabbro.Core.Annahme.Quelle.Akzeptiert, 0),
   (`Gabbro.Core.Annahme.Lokal, 17538820847396158536),
   (`Gabbro.Core.Annahme.AussenLokal, 6864364937997567790),
   (`Gabbro.Core.Annahme.KlauselnWahr, 14341656526066391883),

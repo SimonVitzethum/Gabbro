@@ -202,17 +202,15 @@ theorem ideal_quelleinheit (zugriff : ZugriffZielAussage) (p : Ast.Semantik.Frag
    * Linked fragments. Successful links supply the classes via `Linken.linke_klassenrein`.
      `Beweise2.EinheitHerkunft` uses this with the ordinary and invariant-carrying source cases.
 
-   The generalization does NOT close `idealLuecke`: the eighth conjunct of `NichtLeer` ranges over every accepted
-   `Einheit`, while the theorem above ranges over `Fragment.einheit` units with a proved class obligation. The
-   counterexample below (`lueckenEinheit`) is accepted but is not the elaboration of any fragment, so `R₀`, the goal
-   statements and the proof requirements stay exactly as they are and M12 is not claimed closed. -/
+   The counterexample below passes the generic rule checks. The concrete frame's local source binding
+   rejects this injected rule table, as proved in `Beweise2.EinheitHerkunft`. -/
 
 /-- A system with no forms at any state: no rule steps, no head, nothing finished, never blocked. -/
 def keinFormenSystem : MaschinenSystem Nat Zelle Int Nat Rahmen PUnit PUnit PUnit Befehl :=
   ⟨fun _ => ⟨fun _ _ _ _ _ => False, fun _ _ _ _ _ => False⟩,
    fun _ _ => none, fun _ _ => False, fun _ _ _ => False⟩
 
-/-- An accepted unit whose forms are absent everywhere. Its start binds one running, dispatched context,
+/-- A unit whose forms are absent everywhere. Its start binds one running, dispatched context,
     its source tables and bounds are empty, and only the system is changed against an elaborated empty unit. -/
 def lueckenEinheit : Ast.Semantik.Einheit :=
   { einheitVon Katalog.Plattform.x86_64 (⟨[], Ast.UnitBody.done⟩ : Ast.Unit) with
@@ -227,7 +225,7 @@ def lueckenEinheit : Ast.Semantik.Einheit :=
     fluss := .leer
     domaenen := eineTabelle }
 
-/-- The unit is accepted: no form steps, no generated guard use, no written clause, no bound, no lock section. -/
+/-- The unit passes the generic rule checks with empty form steps, guard uses, clauses and bounds. -/
 theorem lueckenEinheit_akzeptiert : Annahme.Akzeptiert lueckenEinheit := by
   refine ⟨⟨Katalog.Plattform.katalog_wohlgeformt .x86_64, ?_,
     ⟨Aussen.zulassung_m2 _, ?_⟩, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
