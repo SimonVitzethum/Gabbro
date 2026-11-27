@@ -81,14 +81,23 @@ theorem verbindeKomponierbar : VerbindeKomponierbarAussage := by
     { u with erzeuger := Function.update u.erzeuger kind none }
     rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.verbinde hfertig herz)⟩
 
-/-- **Composability of an accepted end** (`BeendeKomponierbarAussage`). The form sets the outcome
-    and the protocol restores the interrupted dispatch when the acting context is an active handler. -/
-theorem beendeKomponierbar : BeendeKomponierbarAussage := by
-  intro p platform z t s c w plan u _hkopf hstep hakt hfertig
+/-- A terminal lifecycle step has no events and preserves the graph. Its successor
+    restores the interrupted dispatch when the acting context is an active handler. -/
+theorem beendeVollzug (e : Einrichtung Nat Zelle Int Nat Rahmen PUnit PUnit)
+    {z : Fadenform} {t : Nat} {s u : Zustand} {c : Kontext} {plan : Plan} {w : PUnit.{1}}
+    (hstep : (Befehl.faden z).ideal c s w [plan] u) (hakt : plan.aktion = .beende)
+    (hfertig : ∃ ausgang, u.status c = .beendet ausgang) :
+    FuehrtSchrittAus e t c s u plan ⟨[], []⟩
+      { Abschlussrueckkehr s u c with graph := s.graph } := by
   obtain ⟨rahmen, hlesen, hfuss⟩ := faden_schritt_fakten hstep
   obtain ⟨ausgang, hfertig⟩ := hfertig
-  exact ⟨_, _, fuehrtSchrittAus_still (p.einheit platform).einrichtung t c s u plan (Abschlussrueckkehr s u c)
-    rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.beende hfertig)⟩
+  exact fuehrtSchrittAus_still e t c s u plan (Abschlussrueckkehr s u c)
+    rahmen hlesen hfuss (by rw [hakt]; exact FuehrtAus.beende hfertig)
+
+/-- **Composability of an accepted end** (`BeendeKomponierbarAussage`). -/
+theorem beendeKomponierbar : BeendeKomponierbarAussage := by
+  intro p platform _ _ _ _ _ _ _ _ hstep hakt hfertig
+  exact ⟨_, _, beendeVollzug (p.einheit platform).einrichtung hstep hakt hfertig⟩
 
 /-- **Composability of an accepted switch** (`WechsleKomponierbarAussage`). The free core, the running
     context on no core and the distinctness from the acting context are the premises of
