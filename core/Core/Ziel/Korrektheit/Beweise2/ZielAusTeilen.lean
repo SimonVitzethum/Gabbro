@@ -2,8 +2,8 @@
   File:      core/Core/Ziel/Korrektheit/Beweise2/ZielAusTeilen.lean
   Subject:   Composition of the goal theorem GabbroZielForm (R₀ P B) from its proof obligations.
 
-  The scheduler obligations are properties of each admitted implementation run on a fair
-  hardware history. The same ideal run carries simulation, answer accounting and progress.
+  The same ideal run carries simulation, answer accounting and progress. The remaining
+  progress obligation is return from preemption on fair hardware histories.
 -/
 module
 
@@ -22,6 +22,7 @@ public import Core.Katalog.Start
 public import Core.Maschine.Start
 public import Core.Fortschritt.Saetze
 import Core.Ziel.Korrektheit.Beweise.BildGueltig
+import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
 import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
 
 @[expose] public section
@@ -32,15 +33,14 @@ open Gabbro.Core
 open Gabbro.Core.Maschine
 open Gabbro.Core.Fortschritt
 
-variable {P : Katalog.Plattform} (scheduler :
+variable {P : Katalog.Plattform} (rueckkehr :
   ∀ (t : Ast.Unit), Annahme.Akzeptiert (einheitVon P t) →
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ →
       Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
-      Maschine.SchedulerFair (einheitVon P t) ρ ∧
       Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
 
-include scheduler
+include rueckkehr
 
 /-- Every admissible start has a run, and every implementation run has one ideal run
     carrying all legs of `Verfeinert`. -/
@@ -68,7 +68,8 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
     subst E'
     subst E
     obtain ⟨η, valid, sim, _, zielFX, progress⟩ :=
-      einheitVon_sim_ziel_fortschritt existiert P t run (scheduler t hacc.regeln H ρ' run)
+      einheitVon_sim_ziel_fortschritt existiert P t run
+        (fun fair => ⟨einheitVon_schedulerFair P t run, rueckkehr t hacc.regeln H ρ' run fair⟩)
     refine ⟨⟨einheitVon P t, η⟩, ?_, ?_⟩
     · exact ⟨rfl, valid⟩
     · unfold Ziel.Verfeinert
@@ -123,7 +124,7 @@ theorem zielAusTeilen (niSpuren : VergleichSpurenAussage) (B : FormBeleg)
     · intro E hacc
       exact ideal_akzeptiert_quellbindung hacc
   · constructor
-    · exact zielAusTeilenVerfeinerung scheduler B zugriffSchrittExistiert (schrankenAkzeptiert P)
+    · exact zielAusTeilenVerfeinerung rueckkehr B zugriffSchrittExistiert (schrankenAkzeptiert P)
     · exact (zielNI_iff_vergleich P B).2 niSpuren
 
 end Gabbro.Core.Ziel.Korrektheit
