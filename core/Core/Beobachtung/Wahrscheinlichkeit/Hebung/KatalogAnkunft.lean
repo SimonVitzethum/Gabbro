@@ -4,7 +4,7 @@
 -/
 module
 
-public import Core.Beobachtung.Wahrscheinlichkeit.Hebung
+public import Core.Beobachtung.Wahrscheinlichkeit.Hebung.ZiehungsMass
 
 public section
 
@@ -250,5 +250,68 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
   refine ⟨a, ⟨[(.aussen, label)], [.antwort a]⟩, { s.antwort a with graph := g' },
     hw', ⟨rfl, konform.2⟩, zeile, zu, ?_, rfl⟩
   exact ⟨offered, rfl, .cons (.ohne (Or.inl rfl)) schritt (.nil _), rfl⟩
+
+/-- Both outcomes of the platform coin have mass `1/2` and give real arrivals at the same
+    pending exchange and cut. Each answer carries the current origin and the checked handle. -/
+theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
+    (basis : Zustand L Ort Wert Raum Lok Grund) :
+    ∃ (s : Zustand L Ort Wert Raum Lok Grund) (q : FrageEreignis), q ∈ s.fragen ∧
+      ∀ bit : Bool,
+        let wert : Fin muenzQuelle.anz := ⟨if bit then 1 else 0, by cases bit <;> decide⟩
+        let body : List UInt8 := if bit then [1] else []
+        bandMass muenzQuelle {band | Ziehung muenzQuelle band 0 = wert} = (2⁻¹ : ENNReal) ∧
+        ∀ band : Band, Ziehung muenzQuelle band 0 = wert →
+          ∃ h run a spur s', Hardware Plattform.x86_64.katalog h ∧
+            run.konform Plattform.x86_64.katalog h ∧ (run.angebot 1).crash = false ∧ a.zu q ∧
+            AntwortSchritt e Plattform.x86_64.katalog run 1 a s spur s' ∧
+            a.reply = ⟨⟨⟨.cProcess, 1⟩, 0⟩, [⟨⟨.cProcess, 1⟩, 0⟩], .ok (.exchanged [] body)⟩ := by
+  let obj : Objekt := ⟨.cProcess, 1⟩
+  let handle : Handle := ⟨0, ⟨obj, 0⟩, [.invoke]⟩
+  let q : FrageEreignis := ⟨0, 0, 0, ⟨.cProcess, handle, [], .exchange []⟩⟩
+  let s := (Zustand.start (L := L) basis.lokal basis.status basis.kerne basis.rechte
+    basis.initial basis.persistenz).frage q
+  let snapshot : AussenSicht := { AussenSicht.leer with
+    objects := Function.update AussenSicht.leer.objects obj ⟨0, true, true, [], fun _ => 0⟩
+    channels := fun ep i => if ep = .cProcess ∧ i = 0 then some handle else none }
+  let k := Plattform.x86_64.katalog
+  let h := Umgebung.referenz k 1 (fun _ _ => snapshot)
+  let run := Umgebung.referenzLauf k 1 (fun _ _ => snapshot)
+  let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
+  have fair : FairLaeufe k h run :=
+    Umgebung.referenz_fair k 1 _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
+  have zeile : ZufallszeileZugelassen k B := by
+    change Zeile.zufall 0 ∈ Plattform.x86_64.zeilen
+    decide
+  have marker : Zufallsfrage B q.question := rfl
+  have pending : q ∈ s.fragen := List.mem_cons_self
+  have delivery : (run.angebot 1).delivery q.question.endpoint = true := by
+    change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
+    decide
+  have valid : q.question.zugriffe.all (snapshot.gueltig .cProcess) = true := by
+    simp only [q, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
+      AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
+      ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
+  have ready : (snapshot.objects obj).ready = true := by
+    simp only [snapshot, Function.update_self]
+  refine ⟨s, q, pending, ?_⟩
+  intro bit
+  dsimp only
+  refine ⟨?_, ?_⟩
+  · rw [bandMass_ziehung]
+    exact PMF.ofFintype_apply muenzSumme _
+  · intro band draw
+    let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
+    obtain ⟨a, spur, s', hw, konform, _, zu, schritt, reply⟩ :=
+      zufallsAnkunft fair.hardware fair.konform zeile q marker pending (Nat.le_refl _) (Nat.zero_le _)
+        (fun _ mem => (List.not_mem_nil mem).elim) delivery rfl valid ready
+        Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig code band 0
+    refine ⟨_, _, a, spur, s', hw, konform, rfl, zu, schritt, ?_⟩
+    change Ziehung B.quelle band 0 = _ at draw
+    have body : code (Ziehung B.quelle band 0) = if bit then [1] else [] := by
+      rw [draw]
+      cases bit <;> rfl
+    rw [reply]
+    simp only [austauschUmgebung, austauschSicht, if_true, snapshot, q, Frage.objekt, handle, obj,
+      Frage.zugriffe, List.map_cons, List.map_nil, AussenSicht.herkunft, Function.update_self, body, B]
 
 end Gabbro.Core.Beobachtung

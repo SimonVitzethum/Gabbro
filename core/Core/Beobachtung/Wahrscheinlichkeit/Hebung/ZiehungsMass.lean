@@ -8,8 +8,7 @@
   forward along currying to `Band = Nat → Nat → Nat`. `Measure.infinitePi_pi` then
   gives the cylinder weight exactly, for every key-`Nodup` path.
 
-  The replay side of `Hebebuendel` is not supplied here; the pinned statement is
-  refuted separately in `Gegenbeispiel.lean`.
+  The band measure is defined independently of the machine's arrival semantics.
 -/
 module
 
@@ -160,6 +159,14 @@ theorem bandMass_zylinder (Q : Zufallsquelle) (Z : Zylinder Q)
         simp only [Function.comp_apply]
         exact hg p hp))
     _ = ZylinderGewicht Q Z := by rfl
+
+/-- The law at a single draw position, expressed using the draw operation itself. -/
+theorem bandMass_ziehung (Q : Zufallsquelle) (index : Nat) (wert : Fin Q.anz) :
+    bandMass Q {band | Ziehung Q band index = wert} = Q.gesetz wert := by
+  let Z : Zylinder Q := ⟨[(index, wert)]⟩
+  have mass := bandMass_zylinder Q Z (List.nodup_singleton _)
+  simpa only [Z, ZylinderGewicht, List.mem_singleton, forall_eq, List.map_cons, List.map_nil,
+    List.prod_cons, List.prod_nil, mul_one, Fin.ext_iff, Ziehung] using mass
 
 /-- The measure side of the lift bundle, packaged for reuse. -/
 structure MassBuendel (B : Zufallsbindung) where
