@@ -67,10 +67,13 @@ def Aktion.graphEreignisse {L Bedingung : Type} (action : Aktion L Bedingung)
     (events : List Ereignis) : List Ereignis :=
   match events with
   | [] => []
-  | _ :: _ =>
+  | _event :: _rest =>
     match action with
-    | .ruecknahmeAbschliessen _ => []
-    | _ => events
+    | .ruecknahmeAbschliessen _token => []
+    | .intern | .warte _bedingung | .sperre _lock _sperrAktion | .frage _frage
+    | .verbrauche _antwort | .rueckkehr | .starte | .verbinde _kind | .beende
+    | .wechsle _kern _kind | .maskiere _vektor _aus | .prioritaet _grenze
+    | .sende _vektor _kern | .leite _leitung _kern _prioritaet => events
 
 /-- One form step supplies its memory reads and the writes of its footprint in source order. -/
 structure SchrittPlan (L Ort Wert Bedingung : Type) where

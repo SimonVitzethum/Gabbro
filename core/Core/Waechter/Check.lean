@@ -338,7 +338,8 @@ private meta def catalogueKinds : Array ClosedKinds := #[
   ⟨`Gabbro.Core.Maschine.Ergebnis, [`Gabbro.Core.Maschine.Ergebnis.ende, `Gabbro.Core.Maschine.Ergebnis.katalog]⟩,
   ⟨`Gabbro.Core.Katalog.Ereignis, [`Gabbro.Core.Katalog.Ereignis.frage, `Gabbro.Core.Katalog.Ereignis.antwort,
     `Gabbro.Core.Katalog.Ereignis.interrupt, `Gabbro.Core.Katalog.Ereignis.geraet, `Gabbro.Core.Katalog.Ereignis.dma,
-    `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz]⟩]
+    `Gabbro.Core.Katalog.Ereignis.seite, `Gabbro.Core.Katalog.Ereignis.persistenz,
+    `Gabbro.Core.Katalog.Ereignis.ruecknahmeAbgeschlossen]⟩]
 private meta def closing : Option ClosingSpec := none
 
 /-- The goal statements whose closure Regel N treats like named statements: the `Core/Ziel` shapes and
