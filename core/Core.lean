@@ -405,6 +405,7 @@ public import Core.Ziel.Korrektheit.Beweise2.EinheitHerkunft
 public import Core.Ast.Program.Linken
 public import Core.Annahme.Quellbindung
 public import Core.Linken.Aussage
+public import Core.Linken.NI
 public import Core.Linken.Folgeaufruf
 public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ziel.Review.Slice.Surface
