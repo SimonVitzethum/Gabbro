@@ -175,12 +175,14 @@ theorem zweiZiehungsSchnitte_mass (Q : Zufallsquelle) (a0 a1 : Fin Q.anz) :
       Q.gesetz a0 * Q.gesetz a1 := by
   let Z : Zylinder Q := ⟨[(0, a0), (1, a1)]⟩
   have hnodup : (Z.pfad.map Prod.fst).Nodup := by
-    simp? [Z]
+    simp only [List.map_cons, List.map_nil, List.nodup_cons, List.mem_cons, zero_ne_one,
+      List.not_mem_nil, or_self, not_false_eq_true, List.nodup_nil, and_self, Z]
   have mass := bandMass_zylinder Q Z hnodup
   have hmenge : {band : Band | Ziehung Q band 0 = a0 ∧ Ziehung Q band 1 = a1} =
       {band : Band | ∀ p ∈ Z.pfad, band Q.id p.1 % Q.anz = p.2.val} := by
     ext band
-    simp? [Z, Ziehung, Fin.ext_iff]
+    simp only [Ziehung, Fin.ext_iff, Set.mem_ofPred_eq, List.mem_cons, List.not_mem_nil, or_false,
+      forall_eq_or_imp, forall_eq, Z]
   rw [hmenge]
   simpa only [Z, ZylinderGewicht, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil,
     mul_one] using mass
