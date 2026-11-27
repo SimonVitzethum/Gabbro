@@ -142,8 +142,9 @@ theorem layout_positive_bytes (target : ZielDaten) (written : Gabbro.Core.Ast.Wr
       · rename_i cond
         injection h with hs
         subst shape
-        simp only [List.mem_cons, List.mem_singleton] at cond
-        rcases cond.1 with rfl | rfl | rfl | rfl <;> decide
+        have widths : width = 8 ∨ width = 16 ∨ width = 32 ∨ width = 64 := by
+          simpa only [List.mem_cons, List.mem_nil, or_false] using cond.1
+        rcases widths with rfl | rfl | rfl | rfl <;> decide
       · cases h
   | _ =>
       simp only [Gabbro.Core.Ast.LowLevel.layout] at h
@@ -176,7 +177,7 @@ theorem view_value_layout (target : ZielDaten) (slot : Nat) (extent : Strecke)
   | none => simp [hlayout] at yields
   | some shape =>
       by_cases fits : shape.fits extent
-      · exact ⟨shape, hlayout, fits, layout_positive_bytes target written shape hlayout⟩
+      · exact ⟨shape, rfl, fits, layout_positive_bytes target written shape hlayout⟩
       · simp [hlayout, fits] at yields
 
 /-- The logical boot cell of a grant is present exactly when one complete cell
@@ -214,7 +215,7 @@ theorem quellanschluss_view_handoff (P : Plattform) (u : UnitMitSchranken)
       extent.enthaelt ⟨extent.von, extent.von + shape.bytes⟩ := by
   obtain ⟨shape, hlayout, fits, positive⟩ :=
     view_value_layout P.ziel slot extent written valid value yields
-  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le fits.2
+  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le' fits.2
   have booked : ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? =
       some (.region slot 0) := (handoffBooking_zero_booked_iff positive grant).mpr len
   have inside : extent.enthaelt
@@ -240,7 +241,7 @@ theorem quellanschluss_view_b21 (P : Plattform) (u : UnitMitSchranken)
   have grant0 : a.regions[0]? = some extent := by rw [grant]; rfl
   obtain ⟨shape, hlayout, fits, positive⟩ :=
     view_value_layout P.ziel 0 extent written valid value yields
-  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le fits.2
+  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le' fits.2
   have booked : ((handoffBooking shape.bytes a.regions s.buchung).umfang 0)[0]? =
       some (.region 0 0) := (handoffBooking_zero_booked_iff positive grant0).mpr len
   have count := quellladen_handoff_single_encard P u a p geladen shape.bytes grant
@@ -270,9 +271,9 @@ theorem quellanschluss_view_getrennt (P : Plattform) (a : AussenStart)
   have eq : shape = shapeJ := layout_unique P.ziel written shape shapeJ hlayout hlayoutJ
   subst shapeJ
   have bookedI : ((handoffBooking shape.bytes a.regions s.buchung).umfang i)[0]? =
-      some (.region i 0) := (handoffBooking_zero_booked_iff positive li).mpr (Nat.le_sub_of_add_le fi.2)
+      some (.region i 0) := (handoffBooking_zero_booked_iff positive li).mpr (Nat.le_sub_of_add_le' fi.2)
   have bookedJ : ((handoffBooking shape.bytes a.regions s.buchung).umfang j)[0]? =
-      some (.region j 0) := (handoffBooking_zero_booked_iff positive lj).mpr (Nat.le_sub_of_add_le fj.2)
+      some (.region j 0) := (handoffBooking_zero_booked_iff positive lj).mpr (Nat.le_sub_of_add_le' fj.2)
   have sep := handoffBooking_disjoint (booking := s.buchung) positive disjoint distinct
     li lj bookedI bookedJ
   exact ⟨shape, hlayout, by simpa using sep⟩
@@ -282,19 +283,28 @@ theorem quellanschluss_view_getrennt (P : Plattform) (a : AussenStart)
     widths, and the loader accepts a view of each. This is why the booking must
     take its width from the chosen type's layout (`layout_bytes_unique` rules
     out a second width for one fixed type). -/
-theorem source_region_zwei_breiten :
+theorem written_8_16_valid :
+    (Gabbro.Core.Ast.WrittenType.integer false 8 none : Gabbro.Core.Ast.WrittenType).valid [] ∧
+    (Gabbro.Core.Ast.WrittenType.integer false 16 none : Gabbro.Core.Ast.WrittenType).valid [] := by
+  constructor
+  · change 1 ≤ (8 : Nat) ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ 0 ≤ 255 ∧ (255 : Int) ≤ 255
+    omega
+  · change 1 ≤ (16 : Nat) ∧ 16 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ 0 ≤ 65535 ∧ (65535 : Int) ≤ 65535
+    omega
+
+theorem source_region_zwei_breiten
+    (valid₁ : (Gabbro.Core.Ast.WrittenType.integer false 8 none : Gabbro.Core.Ast.WrittenType).valid [])
+    (valid₂ : (Gabbro.Core.Ast.WrittenType.integer false 16 none : Gabbro.Core.Ast.WrittenType).valid []) :
     ∃ extent : Strecke, ∃ s₁ s₂ : Gabbro.Core.Ast.LowLevel.Layout,
       Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 8 none) = some s₁ ∧
       Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 16 none) = some s₂ ∧
       s₁.fits extent ∧ s₂.fits extent ∧ s₁.bytes ≠ s₂.bytes ∧
       (∃ v₁ : Gabbro.Core.Ast.Dynamisch,
         Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-          (.view (.integer false 8 none) (by decide)) =
-            some v₁) ∧
+          (.view (.integer false 8 none) valid₁) = some v₁) ∧
       (∃ v₂ : Gabbro.Core.Ast.Dynamisch,
         Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-          (.view (.integer false 16 none) (by decide)) =
-            some v₂) := by
+          (.view (.integer false 16 none) valid₂) = some v₂) := by
   let extent : Strecke := ⟨0x1000, 0x2000⟩
   let s₁ : Gabbro.Core.Ast.LowLevel.Layout :=
     ⟨.integer false 8 none, 1, 1, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
@@ -309,13 +319,13 @@ theorem source_region_zwei_breiten :
   have fits₂ : s₂.fits extent := by
     constructor <;> decide
   have yield₁ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 8 none) (by decide)) =
+      (.view (.integer false 8 none) valid₁) =
       some ⟨.regionView (.integer false 8 none).type,
         ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
     simp [hlayout₁, fits₁]
   have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 16 none) (by decide)) =
+      (.view (.integer false 16 none) valid₂) =
       some ⟨.regionView (.integer false 16 none).type,
         ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
