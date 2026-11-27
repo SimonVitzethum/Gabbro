@@ -252,6 +252,22 @@ def aggregatBeleg : FormBeleg where
       | .tupleValue => ∃ args, (tupleValueForm []).ErfuellbarAm Plattform.x86_64 start args
       | .tupleField => ∃ args, (tupleFieldForm []).ErfuellbarAm Plattform.x86_64 start args
 
+/-- The registry's stronger realisation proofs are reused directly: at a state whose program counter
+    sits at the form's linearisation point the form's instruction is at the head of the elaborated
+    unit. This is the executed occurrence behind the exact-position code witness above, not mere
+    membership of an instruction in a list. -/
+theorem aggregatForm_realisiertAussage (f : AggregatForm) :
+    match f with
+    | .arrayValue => ArrayValueRealisiertAussage
+    | .arrayIndex => ArrayIndexRealisiertAussage
+    | .tupleValue => TupleValueRealisiertAussage
+    | .tupleField => TupleFieldRealisiertAussage := by
+  cases f
+  · exact arrayValueRealisiert
+  · exact arrayIndexRealisiert
+  · exact tupleValue_realisiert
+  · exact TupleFieldRealisiert
+
 /-- The registry's joint-satisfiability statements are inhabited by the existing form proofs, so the
     premises of every rule in each entry hold together for every external start. -/
 private theorem aggregatForm_erfuellbar (f : AggregatForm) (start : AussenStart) :
