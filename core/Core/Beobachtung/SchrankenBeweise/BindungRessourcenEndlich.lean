@@ -183,7 +183,7 @@ theorem bindungLadeLeer_quell (P : Plattform) (u : UnitMitSchranken)
 
 /-- The precise missing connection: the admitted source run's load cut books no cell, so the
     source elaboration cannot exhibit a positive living-cell count there. The positive booked
-    case lives on the checked low-level path (`b21_belegte_buchung_erfuellbar`), which the
+    case lives on the hosted machine model (`b21_belegte_buchung_erfuellbar`), which the
     source load does not reach. -/
 theorem bindungSpeicher_quell_lade_leer (P : Plattform) (u : UnitMitSchranken)
     {H : Umgebung} {ρ : Lauf (einheitVon P u.baum)}

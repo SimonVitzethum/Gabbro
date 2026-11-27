@@ -1,6 +1,7 @@
 module
 
 public import Core.Linken.Aussage
+public import Core.Annahme.Quellbindung
 
 @[expose] public section
 
@@ -121,7 +122,7 @@ def folgeZeit (h : Umgebung) (s : AussenStart) (k : Nat) (assigned : s.assignmen
     returns to the second module with its call stack restored. The five transitions form a
     maximal ideal run under a conformant hardware offer and an admitted start. -/
 theorem folgeaufruf_erfuellbar :
-    BauplanAkzeptiert beispielPlan ∧
+    linke beispielPlan = some beispielFragment ∧ Quelle.Akzeptiert folgeEinheit ∧
       ∃ ρ : I.Lauf folgeEinheit, I.Laeufe folgeEinheit ρ ∧
         (∀ t < 5, ρ.zeit.spur t = some (.kontext eintritt (), ⟨[], []⟩)) ∧
         (∀ t, 5 ≤ t → ρ.zeit.spur t = none) ∧
@@ -133,7 +134,7 @@ theorem folgeaufruf_erfuellbar :
         ((ρ.zeit.zustand 5).lokal eintritt).pc = modulDef.fragment.code.length + 1 ∧
         ((ρ.zeit.zustand 5).lokal eintritt).fortsetzungen = [] ∧
         folgeEinheit.system.kopf (ρ.zeit.zustand 5) eintritt = none := by
-  refine ⟨⟨beispielFragment, beispielLinke, beispielAkzeptiert⟩, ?_⟩
+  refine ⟨beispielLinke, (Quelle.akzeptiert_link_iff beispielPlan beispielLinke).2 beispielAkzeptiert, ?_⟩
   obtain ⟨h, _, hardware, _⟩ :=
     katalog_nichtLeer folgeEinheit.katalog (Plattform.katalog_wohlgeformt .x86_64)
   have bild : folgeEinheit.bild.gueltig folgeEinheit.katalog.plattform.ziel :=

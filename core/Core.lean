@@ -104,6 +104,7 @@ public import Core.Beobachtung.Fluss.Beweise.GeraetSchritt
 public import Core.Beobachtung.Fluss.Beweise.GeraetEntwurf
 public import Core.Beobachtung.Fluss.Beweise.GeraetNichtTrivial
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Hilfe
+public import Core.Beobachtung.Fluss.Beweise.Geraet.KatalogPolitikNI
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Issue
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Consume
 public import Core.Beobachtung.Fluss.Beweise.Geraet.Recovery
@@ -395,6 +396,7 @@ public import Core.Ziel.Korrektheit.Beweise2.EinheitHerkunft
 public import Core.Ast.Program.Linken
 public import Core.Annahme.Quellbindung
 public import Core.Linken.Aussage
+public import Core.Linken.Folgeaufruf
 public import Core.Ziel.Review.Slice.Fragment
 public import Core.Ziel.Review.Slice.Surface
 public import Core.Ziel.Review.Slice.Goal

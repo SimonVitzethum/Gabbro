@@ -170,8 +170,8 @@ theorem b21_offen_erfuellbar :
   rw [live] at bound
   exact (not_le_of_gt zero_lt_one) bound
 
-/-- A real occupied region booking with a finite ceiling and an admitted run on the checked
-    low-level path: the loaded state books one cell, so its live-cell count is positive and
+/-- An occupied region booking with a finite ceiling and an admitted run in the hosted
+    machine model: the loaded state books one cell, so its live-cell count is positive and
     reaches the declared ceiling, and the memory bound is preserved at every cut. This is the
     booking case the source load (`bindungSpeicher_quell_lade_leer`) does not reach. -/
 theorem b21_belegte_buchung_erfuellbar :
@@ -190,9 +190,9 @@ theorem b21_belegte_buchung_erfuellbar :
     lauf.2.2.2.trans (congrArg (fun s => some (eineZelle s)) startEq)
   refine ⟨mitGrenzen eineZelle, _, ρ, eineZelle start, rfl, lauf, cut, ?_,
     eineZelle_encard start, ?_, ?_, b9_b21_aus_pflichten pflichten lauf⟩
-  · simp [eineZelle]
+  · rfl
   · rw [eineZelle_encard]
-    decide
+    exact zero_lt_one
   · exact speicher_beschraenkt eineZelle (eineZelle_encard start).le
 
 end Gabbro.Core.Beobachtung
