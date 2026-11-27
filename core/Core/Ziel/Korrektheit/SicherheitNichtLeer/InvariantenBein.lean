@@ -85,20 +85,31 @@ theorem invariantenBein_nichtVakuum :
     Umgebung.referenz_fair P.katalog 2 (fun _ _ => .leer)
       (Plattform.katalog_wohlgeformt P) (by decide)
   obtain ⟨start, zul⟩ := zulStart_erfuellbar hwOk (elaboriert_bild_gueltig P u)
-  obtain ⟨ρ, run, _, _⟩ := Maschine.fairer_lauf (E := E) zul fair
+  obtain ⟨ρ, run, hstart, _⟩ := Maschine.fairer_lauf (E := E) zul fair
   have safe := invariantenBein_nichtLeer P u konstruierteEinheit_nichtLeer
     (konstruierteEinheit_akzeptiert P) zugriffSicherBeweis H ρ run
-  have loaded : ∃ z, E.laden ρ.start (H.lade E.bild) = some z := by
+  let d := startdaten (programmMitInvarianten u).eingang (programmMitInvarianten u).eintritte
+    (start.assignment 0) P start.regions
+  let z : Zustand := Maschine.Zustand.start d.lokal d.status d.kerne d.rechte
+    (einrichtung (programmMitInvarianten u).eingang (programmMitInvarianten u).eintritte
+      (programmMitInvarianten u).speicher).initial
+    (.leer (startmedium start))
+  have hz : E.laden start (H.lade E.bild) = some z := by
     dsimp [E, H, elaborierenMitInvarianten, Fragment.einheit, Umgebung.referenz]
     rw [Ast.Semantik.laden, if_pos ⟨rfl, rfl⟩]
-    exact ⟨_, rfl⟩
-  obtain ⟨z, hz⟩ := loaded
-  have at0 : ρ.zeit.zustand 0 = some z := run.2.2.2.trans hz
+    rfl
+  have atStart : ρ.zeit.zustand 0 = E.laden start (H.lade E.bild) := by
+    rw [← hstart]
+    exact run.2.2.2
+  have at0 : ρ.zeit.zustand 0 = some z := atStart.trans hz
   let cut : Maschine.Schnitt E ρ := ⟨0, Or.inl rfl⟩
   have am := safe.1 cut z at0
   have hidx : (((programmMitInvarianten u).sicherheitsEinheit P).invarianten)[0]? =
       some (⟨none, konstruiertesPraedikat.gilt⟩ : Invariante Nat Zustand) := by
-    simp [konstruierteEinheit, konstruiertesPraedikat]
+    change (((u.invarianten.map Praedikat.gilt).map
+      (fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand)))[0]?) =
+      some (⟨none, konstruiertesPraedikat.gilt⟩ : Invariante Nat Zustand)
+    simp [u, konstruierteEinheit, konstruiertesPraedikat]
   have writers : ∀ c, z.status c = .laeuft → ¬ z.buchung.schreibt c 0 := by
     intro c _ h
     exact h
