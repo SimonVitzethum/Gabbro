@@ -32,7 +32,7 @@ def mehrSchnittSicht (basis : Nat → AussenVerlauf → AussenSicht)
     (plan : SchnittPlan) (u : Nat) (verlauf : AussenVerlauf) : AussenSicht :=
   match plan u with
   | none => basis u verlauf
-  | some (objekt, body) => austauschSichtOeffentlich (basis u verlauf) objekt body
+  | some (objekt, body) => austauschSicht (basis u verlauf) objekt body
 
 /-- One outside policy carrying all scheduled cuts. At a scheduled cut the answer is the
     atomic decision on the rewritten snapshot; everywhere else it is the base answer. -/
@@ -95,7 +95,7 @@ theorem mehrSchnittUmgebung_atomarTotal {p : Plattform} {h : Umgebung} {plan : S
 theorem mehrSchnittUmgebung_nichtZufallErhalt {B : Zufallsbindung} {p : Plattform}
     {h : Umgebung} {plan : SchnittPlan} {u : Nat} {verlauf : AussenVerlauf} {q : Frage}
     (hd : ∀ objekt body, plan u = some (objekt, body) → q.handle.origin.object ≠ objekt)
-    (hnat : ¬ Zufallsfrage B q) :
+    (_hnat : ¬ Zufallsfrage B q) :
     atomar p (mehrSchnittSicht h.politik.sicht plan u verlauf) q =
       atomar p (h.politik.sicht u verlauf) q := by
   cases hplan : plan u with
@@ -105,9 +105,9 @@ theorem mehrSchnittUmgebung_nichtZufallErhalt {B : Zufallsbindung} {p : Plattfor
       rcases pair with ⟨objekt, body⟩
       dsimp only [mehrSchnittSicht]
       rw [hplan]
-      exact atomar_austauschSicht_nichtZufall (B := B) (p := p)
+      exact atomar_austauschSicht_verschieden (p := p)
         (basis := h.politik.sicht u verlauf) (objekt := objekt) (body := body)
-        (hd objekt body hplan) hnat
+        (hd objekt body hplan)
 
 /-- The draw index at a cut is the number of marked random answers in the earlier marked
     response prefix of the replay, i.e. `Teilbuendel`'s consumed-answer count. -/
