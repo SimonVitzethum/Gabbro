@@ -291,14 +291,13 @@ theorem lebendeZellen_buche (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (n
     · rintro ⟨_, hj⟩
       by_cases hjold : j < (s.buchung.umfang o).length
       · exact Or.inl ⟨hleb, hjold⟩
-      · exact Or.inr ⟨rfl, Nat.le_of_not_gt hjold, hj⟩
+      · exact Or.inr ⟨trivial, Nat.le_of_not_gt hjold, hj⟩
     · intro h
       refine ⟨hleb, ?_⟩
       rcases h with ⟨_, hjold⟩ | ⟨_, _, hjneu⟩
       · exact Nat.lt_of_lt_of_le hjold (Nat.le_add_right _ _)
       · exact hjneu
   · simp only [hio, if_false, false_and, or_false]
-    constructor <;> intro h <;> exact h
 
 /-- The new cells are disjoint from every old live cell: old cells of the same object end before
     the appended range, and cells of other objects have a different object number. -/
@@ -331,7 +330,7 @@ theorem frischeZellen_encard (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat) (
     · rintro ⟨k, hk⟩
       rw [← hk]
       simp only [frischeZellen, Set.mem_setOf_eq, Prod.fst, Prod.snd]
-      refine ⟨rfl, ?_, ?_⟩ <;> omega
+      refine ⟨trivial, ?_, ?_⟩ <;> omega
   rw [hrange]
   have hinj : Function.Injective
       (fun k : Fin neu.length => (o, (s.buchung.umfang o).length + k.val)) := by
