@@ -345,7 +345,7 @@ theorem memRegelLokalActivateUnit (k : Katalog) (op : MemInstruction) :
     Annahme.RegelLokal (memUnit k op) op := by
   intro c s u w p hideal
   rcases hideal with ⟨frame, heval, hp, hu⟩
-  have hp' : p = plan := by simpa using hp
+  have hp' := (List.cons.inj hp).1
   subst p
   unfold Annahme.Befugt
   constructor
@@ -374,55 +374,7 @@ theorem memFortschrittActivate (form : MemForm) : MemFortschrittAussage form := 
   have hcond := (memRealisiertActivate form k scope tree op hop s c).mp hhead
   have heval : (op.evaluate k.plattform.ziel s c).isSome := hcond.2.2.2
   obtain ⟨frame, hframe⟩ := Option.isSome_iff_exists.mp heval
-  exact ⟨(), [plan], frame.advance c s, frame, hframe, rfl, rfl⟩
+  exact ⟨(), [op.schrittPlan s c], frame.advance c s, frame, hframe, rfl, rfl⟩
 
-namespace MemInstruction
-
-theorem activateStepTransfer {target} {op : MemInstruction} {c : Kontext} {s : MemState}
-    {w : PUnit} {plans : List Plan} {u : MemState} (h : op.step target c s w plans u) :
-    ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s := h
-
-theorem activateVollzug (target : ZielDaten) (op : MemInstruction) (frame : MemFrame)
-    (t : Nat) (c : Kontext) (s : MemState) :
-    FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
-  refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · intro l hl
-    simp only [plan] at hl
-    cases hl
-  · change FuehrtAus memSetup t c s (frame.advance c s) .intern [] [] (frame.advance c s)
-    exact FuehrtAus.intern
-  · change Speicherfolge s.initial (.kontext c) s.graph [] [] (frame.advance c s).graph
-    exact Speicherfolge.nil _
-
-theorem activateGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
-    {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
-  cases trace with
-  | mk events outside =>
-      cases action
-      simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
-      have unchanged : ∀ {recorded graph},
-          Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
-            recorded = [] ∧ graph = s.graph := by
-        intro _ _ run
-        cases run
-        exact ⟨rfl, rfl⟩
-      have hmem := unchanged memory
-      rw [hmem.1]
-      rw [hmem.2, ← rahmen.graph] at nextEq
-      exact ⟨rfl, nextEq⟩
-
-theorem activateVollzugGenau {target : ZielDaten} {op : MemInstruction} {t : Nat} {c : Kontext}
-    {s u : MemState} {w : PUnit} {p : Plan} {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (rule : op.step target c s w [p] u) (execute : FuehrtSchrittAus memSetup t c s u p trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨_, _, hp, _⟩ := activateStepTransfer rule
-  cases (List.cons.inj hp).1
-  exact activateGenauInternal execute
-
-end MemInstruction
 
 end Gabbro.Core.Ast.LowLevel

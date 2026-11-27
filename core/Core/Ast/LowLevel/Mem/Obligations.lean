@@ -84,31 +84,52 @@ theorem memRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussage fo
   intro k scope tree op _
   constructor
   · intro t c w vor zwischen nach p trace _ impl execute befugt
-    obtain ⟨frame, _, planEq, rfl⟩ := impl
-    cases (List.cons.inj planEq).1
-    rcases trace with ⟨memory, events⟩
-    obtain ⟨_, _, _, _, action, _, after⟩ := execute
-    cases action
-    rw [after]
+    rw [(MemInstruction.vollzugGenau impl execute).2]
     exact befugt
   · intro t c s w middle next p trace impl execute
-    obtain ⟨_, _, planEq, rfl⟩ := impl
-    cases (List.cons.inj planEq).1
-    rcases trace with ⟨memory, events⟩
-    obtain ⟨_, _, _, _, action, _, after⟩ := execute
-    cases action
-    rw [after]
-    exact ⟨fun _ => List.not_mem_nil, rfl⟩
+    obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau impl execute
+    refine ⟨?_, execute.1.verbraucht⟩
+    intro _ mem
+    obtain ⟨_, eq⟩ := MemInstruction.schrittSpur_aussen mem
+    cases eq
 
 def MemAussenLokalAussage (form : MemForm) : Prop :=
   ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →
     Annahme.AussenLokal (memUnit k op)
 
+theorem memProgramAussenLokal (k : Katalog) (code : List MemInstruction) :
+    Annahme.AussenLokal (memProgram k code) := by
+  refine ⟨Aussen.zulassung_m2 _, ?_⟩
+  apply Annahme.aussen_gueltig_aus_kontext
+  intro run t s c w spur next step
+  cases step with
+  | kontext _ _ rule execute =>
+    obtain ⟨op, _, impl⟩ := rule
+    have step : op.step k.plattform.ziel c s w [_] _ := impl
+    obtain ⟨rfl, rfl⟩ := MemInstruction.vollzugGenau step execute
+    obtain ⟨_, _, _, rfl⟩ := step
+    refine ⟨⟨?_, [], (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩,
+      fun h => h⟩
+    intro _ mem
+    obtain ⟨_, eq⟩ := MemInstruction.schrittSpur_aussen mem
+    cases eq
+
+theorem memProgramRegelIsolation (k : Katalog) (code : List MemInstruction)
+    (domain : Annahme.DomaenenPlan) (op : MemInstruction) :
+    Annahme.RegelIsolation (memProgram k code) domain op := by
+  intro t c s u next w p trace rule execute
+  have step : op.step k.plattform.ziel c s w [p] u := rule
+  obtain ⟨rfl, _⟩ := MemInstruction.vollzugGenau step execute
+  refine ⟨fun _ _ mem => (List.not_mem_nil mem).elim, ?_⟩
+  intro _ mem
+  obtain ⟨_, eq⟩ := MemInstruction.schrittSpur_aussen mem
+  cases eq
+
 def MemKostenAussage (form : MemForm) : Prop :=
   ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →
     ∀ t c s w middle next p trace, op.step k.plattform.ziel c s w [p] middle →
       FuehrtSchrittAus (memUnit k op).einrichtung t c s middle p trace next →
-      trace = ⟨[], []⟩ ∧ (memUnit k op).stotterLaenge op = 0
+      trace = op.schrittSpur s c ∧ (memUnit k op).stotterLaenge op = 0
 
 def MemSchrankenAussage : Prop := ∀ k op, (memUnit k op).schranken = .leer
 def MemEtikettenAussage : Prop := ∀ k op, (memUnit k op).etiketten = .leer
@@ -127,8 +148,8 @@ def MemErfuellbarNach (form : MemForm) (precedes : List MemInstruction → MemIn
     BezeichnetMem k scope text (memUnit k op) form ∧ MemParse text tree ∧
     elaborateMem scope tree = some op ∧ E.system.IErreichbar (I.start E start).2 s ∧
     E.system.kopf s entryContext = some op ∧ op.evaluate k.plattform.ziel s entryContext = some next ∧
-    E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) ∧
-    E.system.ImplSchritt entryContext s () [plan] (next.advance entryContext s)
+    E.system.ISchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s) ∧
+    E.system.ImplSchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s)
 
 def MemErfuellbarAussage (form : MemForm) : Prop := MemErfuellbarNach form (fun _ _ => True)
 

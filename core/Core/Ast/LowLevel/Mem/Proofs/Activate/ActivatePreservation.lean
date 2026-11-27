@@ -25,21 +25,23 @@ theorem memErhaltungActivate (form : MemForm) : MemErhaltungAussage form := by
   · intro t s c w plans u head gut ideal
     obtain ⟨frame, evaluate, planEq, hu⟩ := ideal
     subst u
-    exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq,
-      MemInstruction.activateVollzug k.plattform.ziel op frame t c s⟩
+    exact ⟨op.schrittPlan s c, op.schrittSpur s c, frame.advance c s, planEq, op.vollzug frame t c s⟩
 
-theorem memRegelSicherActivate (form : MemForm) : MemRegelSicherAussage form := by
-  intro k scope tree op _
+theorem MemInstruction.regelSicher (k : Katalog) (op : MemInstruction) :
+    Gabbro.Core.Sicherheit.RegelSicher (memSafetyUnit k op) op := by
   intro H ρ t c w vor zwischen nach plan spur head impl execute
-  obtain ⟨spurEq, nextEq⟩ := MemInstruction.activateVollzugGenau (target := k.plattform.ziel) (w := w) impl execute
+  obtain ⟨spurEq, nextEq⟩ := MemInstruction.vollzugGenau (target := k.plattform.ziel) (w := w) impl execute
   obtain ⟨frame, _, planEq, _⟩ := impl
   subst zwischen
   cases (List.cons.inj planEq).1
   subst spur
   subst nach
-  have ohneAbsturz : ¬ Absturz (⟨[], []⟩ : SchrittSpur Nat UInt8) := List.not_mem_nil
+  have ohneAbsturz : ¬ Absturz (op.schrittSpur vor c) := by
+    intro mem
+    obtain ⟨_, eq⟩ := MemInstruction.schrittSpur_aussen mem
+    cases eq
   have wirkungen : NeueWirkungen vor (frame.advance c vor)
-      (⟨[], []⟩ : SchrittSpur Nat UInt8) [] :=
+      (op.schrittSpur vor c) [] :=
     Or.inr ⟨ohneAbsturz, (List.append_nil _).symm⟩
   refine ⟨⟨?_, [], wirkungen, ?_⟩, ?_, ?_, fun ordered => ordered, ?_, ?_⟩
   · intro i actor access recorded _
@@ -54,47 +56,25 @@ theorem memRegelSicherActivate (form : MemForm) : MemRegelSicherAussage form := 
     cases declared
   · intro _ l changeOwner
     exact (changeOwner rfl).elim
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
-  · exact ⟨fun _ mem => (List.not_mem_nil mem).elim, [], wirkungen,
-      fun _ mem => (List.not_mem_nil mem).elim⟩
+  · refine ⟨?_, [], wirkungen, fun _ mem => (List.not_mem_nil mem).elim⟩
+    intro event mem
+    obtain ⟨_, rfl⟩ := MemInstruction.schrittSpur_aussen mem
+    exact ⟨fun _ eq => nomatch eq, fun _ commit => nomatch commit.1⟩
+  · refine ⟨?_, [], wirkungen, fun _ mem => (List.not_mem_nil mem).elim⟩
+    intro event mem _ commit
+    obtain ⟨_, rfl⟩ := MemInstruction.schrittSpur_aussen mem
+    exact nomatch commit.1
 
-theorem activateRegelAntwortSicher (form : MemForm) : MemRegelAntwortSicherAussage form := by
-  intro k scope tree op _
-  constructor
-  · intro t c w vor zwischen nach p trace _ impl execute befugt
-    obtain ⟨_, nextEq⟩ := MemInstruction.activateVollzugGenau (target := k.plattform.ziel)
-      (w := w) impl execute
-    obtain ⟨frame, _, _, rfl⟩ := impl
-    subst nach
-    exact befugt
-  · intro t c s w middle next p trace impl execute
-    obtain ⟨rfl, rfl⟩ := MemInstruction.activateVollzugGenau (target := k.plattform.ziel)
-      (w := w) impl execute
-    exact ⟨fun _ => List.not_mem_nil, execute.1.verbraucht⟩
-
-theorem memAussenLokalActivateUnit (k : Katalog) (op : MemInstruction) :
-    Annahme.AussenLokal (memUnit k op) := by
-  refine ⟨zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_aus_kontext
-  intro run t s c w spur s' step
-  cases step with
-  | kontext _ _ regel execute =>
-      obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-      cases (List.cons.inj planEq).1
-      obtain ⟨rfl, rfl⟩ := MemInstruction.activateGenauInternal execute
-      exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-        (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+theorem memRegelSicherActivate (form : MemForm) : MemRegelSicherAussage form :=
+  fun k _ _ op _ => op.regelSicher k
 
 theorem memAussenLokalActivate (form : MemForm) : MemAussenLokalAussage form := by
   intro k scope tree op _
-  exact memAussenLokalActivateUnit k op
+  exact memProgramAussenLokal k [op]
 
 theorem memKostenActivate (form : MemForm) : MemKostenAussage form := by
   intro k scope tree op _
   intro t c s w middle next p trace impl execute
-  obtain ⟨_, _, hp, _⟩ := impl
-  cases (List.cons.inj hp).1
-  exact ⟨(MemInstruction.activateGenauInternal execute).1, rfl⟩
+  exact ⟨(MemInstruction.vollzugGenau impl execute).1, rfl⟩
 
 end Gabbro.Core.Ast.LowLevel

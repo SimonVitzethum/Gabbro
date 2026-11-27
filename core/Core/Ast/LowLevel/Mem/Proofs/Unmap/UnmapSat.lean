@@ -261,33 +261,20 @@ theorem memProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
   refine ⟨⟨hwf, ?_, ⟨Aussen.zulassung_m2 k.plattform, ?_⟩, memProgramFlussLokal k code, ?_, ?_, ?_⟩, ?_, ?_⟩
   · intro i c s u w P hideal
     simp only [E, memProgram, MemInstruction.rule, MemInstruction.step] at hideal
-    have hP : P = plan := by
-      rcases hideal with ⟨frame, _, hP, _⟩
-      simpa using hP
+    obtain ⟨_, _, hP, _⟩ := hideal
+    have hPlan := (List.cons.inj hP).1
     subst P
     rw [Annahme.Befugt]
-    have hfuss : plan.fuss = [] := rfl
-    have hlesen : plan.lesen = [] := rfl
+    have hfuss : (i.schrittPlan s c).fuss = [] := rfl
+    have hlesen : (i.schrittPlan s c).lesen = [] := rfl
     rw [hfuss, hlesen]
     constructor
     · intro x hx; cases hx
     · intro l hl; cases hl
-  · apply aussen_gueltig_aus_kontext
-    intro run t s c w spur s' step
-    cases step with
-    | kontext _ _ regel execute =>
-        obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-        cases (List.cons.inj planEq).1
-        obtain ⟨rfl, rfl⟩ := unmapMemGenauInternal execute
-        exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-          (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
+  · exact (memProgramAussenLokal _ code).2
   · exact schrankenLokal_leer rfl rfl rfl
   · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-    obtain ⟨_, _, planEq, _⟩ := himpl
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, _⟩ := unmapMemGenauInternal haus
-    exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+  · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation _ code _ i⟩
   · intro run conforms
     change (∀ pred ∈ (E.quelltabellen.klauseln).voraus, _) ∧
       (∀ _ : I.Schnitt E run, ∀ pred ∈ (E.quelltabellen.klauseln).invariant, _) ∧

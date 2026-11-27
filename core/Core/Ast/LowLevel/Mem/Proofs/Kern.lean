@@ -35,7 +35,7 @@ theorem memErhaltungKern (form : MemForm) : MemErhaltungAussage form := memErhal
 theorem memRegelSicherKern (form : MemForm) : MemRegelSicherAussage form := memRegelSicherActivate form
 
 theorem memRegelAntwortSicherKern (form : MemForm) : MemRegelAntwortSicherAussage form :=
-  activateRegelAntwortSicher form
+  memRegelAntwortSicher form
 
 theorem memAussenLokalKern (form : MemForm) : MemAussenLokalAussage form := memAussenLokalActivate form
 

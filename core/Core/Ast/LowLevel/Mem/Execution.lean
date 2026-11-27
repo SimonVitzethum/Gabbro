@@ -65,7 +65,7 @@ namespace MemInstruction
 
 private theorem graphEreignisse_schrittSpur (op : MemInstruction) (s : MemState) (c : Kontext) :
     (op.schrittPlan s c).aktion.graphEreignisse (op.schrittSpur s c).aussen = [] := by
-  cases h : op.abschluss s c <;> simp only [schrittPlan, schrittSpur, h] <;> rfl
+  cases h : op.abschluss s c <;> simp only [schrittPlan, schrittSpur, h, Option.elim, Option.map, Option.toList] <;> rfl
 
 theorem vollzug (op : MemInstruction) (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
     FuehrtSchrittAus memSetup t c s (frame.advance c s) (op.schrittPlan s c)
@@ -75,9 +75,9 @@ theorem vollzug (op : MemInstruction) (frame : MemFrame) (t : Nat) (c : Kontext)
   · intro l hl
     cases hl
   · cases h : op.abschluss s c with
-    | none => simpa only [schrittPlan, schrittSpur, h] using
+    | none => simpa only [schrittPlan, schrittSpur, h, Option.elim, Option.map, Option.toList] using
         (FuehrtAus.intern (e := memSetup) (t := t) (c := c) (s := s) (u := frame.advance c s))
-    | some token => simpa only [schrittPlan, schrittSpur, h] using
+    | some token => simpa only [schrittPlan, schrittSpur, h, Option.elim, Option.map, Option.toList] using
         (FuehrtAus.ruecknahmeAbschliessen (e := memSetup) (t := t) (c := c) (s := s)
           (u := frame.advance c s) token)
   · rw [graphEreignisse_schrittSpur]
@@ -94,16 +94,16 @@ theorem vollzugGenau {target} {op : MemInstruction} {t : Nat} {c : Kontext}
     cases h : op.abschluss s c with
     | none =>
       have step : FuehrtAus memSetup t c s u .intern locks trace.aussen v := by
-        simpa only [schrittPlan, h] using action
-      generalize hs : trace.aussen = events at step
+        simpa only [schrittPlan, h, Option.elim] using action
+      generalize trace.aussen = events at step
       cases step
-      exact ⟨rfl, hs.trans (by simp only [schrittSpur, h]; rfl), rfl⟩
+      exact ⟨rfl, by simp only [schrittSpur, h, Option.map, Option.toList], rfl⟩
     | some token =>
       have step : FuehrtAus memSetup t c s u (.ruecknahmeAbschliessen token) locks trace.aussen v := by
-        simpa only [schrittPlan, h] using action
-      generalize hs : trace.aussen = events at step
+        simpa only [schrittPlan, h, Option.elim] using action
+      generalize trace.aussen = events at step
       cases step
-      exact ⟨rfl, hs.trans (by simp only [schrittSpur, h]; rfl), rfl⟩
+      exact ⟨rfl, by simp only [schrittSpur, h, Option.map, Option.toList], rfl⟩
   rw [effect.1, effect.2.1, graphEreignisse_schrittSpur] at memory
   have empty : Speicherfolge s.initial (.kontext c) s.graph [] trace.speicher next.graph := memory
   have unchanged : ∀ {events graph},
@@ -122,10 +122,10 @@ theorem schrittSpur_aussen {op : MemInstruction} {s : MemState} {c : Kontext} {e
     (mem : e ∈ (op.schrittSpur s c).aussen) :
     ∃ token, e = .ruecknahmeAbgeschlossen s.epoche token := by
   cases h : op.abschluss s c with
-  | none => exact (List.not_mem_nil (by simpa only [schrittSpur, h] using mem)).elim
+  | none => exact (List.not_mem_nil (by simpa only [schrittSpur, h, Option.map, Option.toList] using mem)).elim
   | some token =>
     have hmem : e ∈ [Ereignis.ruecknahmeAbgeschlossen s.epoche token] := by
-      simpa only [schrittSpur, h] using mem
+      simpa only [schrittSpur, h, Option.map, Option.toList] using mem
     exact ⟨token, List.mem_singleton.mp hmem⟩
 
 end MemInstruction

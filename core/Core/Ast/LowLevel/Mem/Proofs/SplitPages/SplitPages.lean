@@ -62,87 +62,6 @@ theorem splitPagesHeadSingleton (target : ZielDaten) (op : MemInstruction)
     simp only [hs, hpc, List.getElem?_cons_zero, Option.bind_eq_bind, Option.bind_some,
       he, reduceIte]
 
-private theorem memImplTransfer {target : ZielDaten} {op : MemInstruction} {c : Kontext}
-    {s : MemState} {w : PUnit} {plans : List Plan} {u : MemState}
-    (h : (MemInstruction.rule target op).impl c s w plans u) :
-    ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s := by
-  change ∃ frame, op.evaluate target s c = some frame ∧ plans = [plan] ∧ u = frame.advance c s at h
-  cases he : op.evaluate target s c with
-  | none =>
-    obtain ⟨frame, hf, _, _⟩ := h
-    rw [he] at hf
-    cases hf
-  | some frame =>
-    obtain ⟨frame', hf, hp, hu⟩ := h
-    rw [he] at hf
-    cases hf
-    exact ⟨frame, rfl, hp, hu⟩
-
-private theorem memVollzug (frame : MemFrame) (t : Nat) (c : Kontext) (s : MemState) :
-    FuehrtSchrittAus memSetup t c s (frame.advance c s) plan ⟨[], []⟩ (frame.advance c s) := by
-  refine ⟨?_, ?_, [], frame.advance c s, ?_, ?_, rfl⟩
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · intro l hl
-    simp only [plan] at hl
-    cases hl
-  · change FuehrtAus memSetup t c s (frame.advance c s) .intern [] [] (frame.advance c s)
-    exact FuehrtAus.intern
-  · change Speicherfolge s.initial (.kontext c) s.graph [] [] (frame.advance c s).graph
-    exact Speicherfolge.nil _
-
-private theorem memGenauInternal {t : Nat} {c : Kontext} {s u : MemState}
-    {trace : SchrittSpur Nat UInt8} {next : MemState}
-    (execute : FuehrtSchrittAus memSetup t c s u plan trace next) :
-    trace = ⟨[], []⟩ ∧ next = u := by
-  obtain ⟨rahmen, _, _, _, action, memory, nextEq⟩ := execute
-  cases trace with
-  | mk events outside =>
-    cases action
-    simp only [plan, List.nil_append, schreibEreignisse, List.map_nil, List.filter_nil, List.append_nil] at memory
-    have unchanged : ∀ {recorded graph},
-        Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
-          recorded = [] ∧ graph = s.graph := by
-      intro _ _ run
-      cases run
-      exact ⟨rfl, rfl⟩
-    have hmem := unchanged memory
-    rw [hmem.1]
-    rw [hmem.2, ← rahmen.graph] at nextEq
-    exact ⟨rfl, nextEq⟩
-
-private theorem memAbgleich (k : Katalog) (op : MemInstruction) :
-    I.RegelAbgleich (memUnit k op) op := by
-  intro hw t c w s u s' i stepPlan spur related normal ready head impl execute
-  obtain ⟨protocol, frames⟩ := related
-  change s.lokal = i.lokal at frames
-  change { s with lokal := i.lokal } = i at protocol
-  rw [← frames] at protocol
-  subst i
-  obtain ⟨frame, evaluate, planEq, hu⟩ := memImplTransfer (target := k.plattform.ziel) (w := w) impl
-  subst u
-  exact Or.inl ⟨s', .kontext normal ready ⟨op, head, ⟨frame, evaluate, planEq, rfl⟩⟩ execute,
-    I.ProtokollBezug.refl _, rfl⟩
-
-private theorem memKomponierbar (k : Katalog) (op : MemInstruction) :
-    I.RegelKomponierbar (memUnit k op).einrichtung (memUnit k op).system op := by
-  intro t s c w plans u head gut ideal
-  obtain ⟨frame, evaluate, planEq, hu⟩ := memImplTransfer (target := k.plattform.ziel) (w := w) ideal
-  subst u
-  exact ⟨plan, ⟨[], []⟩, frame.advance c s, planEq, memVollzug frame t c s⟩
-
-private theorem memProgramAussenLokal (k : Katalog) (code : List MemInstruction) :
-    Annahme.AussenLokal (memProgram k code) := by
-  refine ⟨Aussen.zulassung_m2 _, ?_⟩
-  apply aussen_gueltig_aus_kontext
-  intro run t s c w spur s' step
-  cases step with
-  | kontext _ _ regel execute =>
-    obtain ⟨_, _, frame, _, planEq, rfl⟩ := regel
-    cases (List.cons.inj planEq).1
-    obtain ⟨rfl, rfl⟩ := memGenauInternal execute
-    exact ⟨⟨fun _ mem => (List.not_mem_nil mem).elim, [],
-      (List.append_nil _).symm, fun _ mem => (List.not_mem_nil mem).elim⟩, fun h => h⟩
-
 theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
     (hwf : KatalogWohlgeformt k) : Annahme.Akzeptiert (memProgram k code) := by
   refine ⟨?_, ?_, ?_⟩
@@ -158,11 +77,7 @@ theorem splitPagesProgramAkzeptiert (k : Katalog) (code : List MemInstruction)
       · intro l hl; cases hl
     · exact schrankenLokal_leer rfl rfl rfl
     · exact Gabbro.Core.Annahme.abschnittWartefrei_ohne_blockade _ fun _ _ _ hb => hb
-    · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun s c i _ t c' sv u sv' w qq spur himpl haus => ?_⟩
-      obtain ⟨_, _, planEq, _⟩ := himpl
-      cases (List.cons.inj planEq).1
-      obtain ⟨rfl, _⟩ := memGenauInternal haus
-      exact Gabbro.Core.Annahme.spurRespektiert_leer _ _ _
+    · refine ⟨Gabbro.Core.Maschine.eineTabelle_akzeptiert, fun _ _ i _ => memProgramRegelIsolation k code _ i⟩
   · intro rho lauf
     refine ⟨?_, ?_, ?_⟩
     · intro p hp; cases hp

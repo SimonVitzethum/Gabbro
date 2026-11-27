@@ -56,8 +56,8 @@ def FlushNarrowJointAussage : Prop :=
     token.nurRechte = true ∧ token ∈ (s.lokal entryContext).verengt ∧
     next.result = some .«protected» ∧ token ∉ next.verengt ∧
     (∀ t ∈ next.verengt, ∀ pg, token.contains pg → ¬ t.contains pg) ∧
-    E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) ∧
-    E.system.ImplSchritt entryContext s () [plan] (next.advance entryContext s)
+    E.system.ISchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s) ∧
+    E.system.ImplSchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s)
 
 /-- **Joint satisfiability of the completion of a narrowing with a wider cached cell.** The prefix
     creates a space, maps a frame with `[read, write]`, fills a translation of the page into the cache,
@@ -96,8 +96,8 @@ def FlushNarrowWideJointAussage : Prop :=
     op.evaluate k.plattform.ziel s' entryContext = some next ∧
     next.result = some .«protected» ∧ token ∉ next.verengt ∧
     (∀ t ∈ next.verengt, ∀ pg, token.contains pg → ¬ t.contains pg) ∧
-    E.system.ISchritt entryContext s' () [plan] (next.advance entryContext s') ∧
-    E.system.ImplSchritt entryContext s' () [plan] (next.advance entryContext s')
+    E.system.ISchritt entryContext s' () [op.schrittPlan s' entryContext] (next.advance entryContext s') ∧
+    E.system.ImplSchritt entryContext s' () [op.schrittPlan s' entryContext] (next.advance entryContext s')
 
 def ActivateJointAussage : Prop :=
   MemErfuellbarNach .activateSpace fun «prefix» op =>
