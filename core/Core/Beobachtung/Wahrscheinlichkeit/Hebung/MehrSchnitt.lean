@@ -126,7 +126,8 @@ theorem schnittIndex_stimmtÜberein (B : Zufallsbindung)
       have hprev : StimmenBis E ρ₁ ρ₂ u :=
         ⟨fun m hm => h.1 m (Nat.le_trans hm (Nat.le_succ u)),
          fun t ht => h.2 t (Nat.lt_trans ht (Nat.lt_succ_self u))⟩
-      have hi := ih hprev
+      have hi : ziehungenBis B ρ₁ u = ziehungenBis B ρ₂ u := by
+        simpa only [schnittIndex] using ih hprev
       have hspur : ρ₁.zeit.spur u = ρ₂.zeit.spur u := h.2 u (Nat.lt_succ_self u)
       simp only [schnittIndex, ziehungenBis, hi, antwortenBei, hspur]
 
