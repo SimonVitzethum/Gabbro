@@ -187,10 +187,22 @@ theorem zustandsBedarf_anhaengen (a b : Fragment) (s : Zustand)
     · exact kopf_anhaengen_hinten a b s c cmd hle head
     · exact guard_zustandImModul a.code.length c s cmd op args g
 
-/-- Folding modules by concatenation: the accumulator's code is a prefix and the remaining
-    modules are appended after it. -/
-def verknuepfteAb (ms : List Modul) (acc : Fragment) : Fragment :=
-  ms.foldl (fun a m => a.anhaengen m.fragment) acc
+/-- The synthesized boundary instruction has no guard, so every guarded head still belongs
+    to the standalone fragment at the same position. -/
+theorem zustandsBedarf_bindefragment (m : Modul) (rest : List Modul) (s : Zustand)
+    (op : PartielleOperation) (args : Operanden op)
+    (need : zustandsBedarf (m.bindefragment (hatFortsetzung rest)) s op args) :
+    zustandsBedarf m.fragment s op args := by
+  obtain ⟨c, b, head, guard⟩ := need
+  have lookup : (m.bindefragment (hatFortsetzung rest)).code[(s.lokal c).pc]? = some b := by
+    unfold kopf at head
+    split at head <;> try contradiction
+    split at head <;> try contradiction
+    split at head <;> first | exact head | contradiction
+  rcases bindefragment_befehl m rest (s.lokal c).pc b lookup with input | ⟨rfl, _, _⟩
+  · rw [kopf_gleich_am_pc _ _ s c (lookup.trans input.symm)] at head
+    exact ⟨c, b, head, guard⟩
+  · cases guard
 
 /-- At an empty code list no context has a head. -/
 theorem kopf_nil (s : Zustand) (c : Kontext) : kopf [] s c = none := by
@@ -216,18 +228,20 @@ theorem kopf_leer (s : Zustand) (c : Kontext) : kopf Fragment.leer.code s c = no
     that module. -/
 theorem zustandsBedarf_foldl (ms : List Modul) (acc : Fragment) (s : Zustand)
     (op : PartielleOperation) (args : Operanden op)
-    (need : zustandsBedarf (verknuepfteAb ms acc) s op args) :
+    (need : zustandsBedarf ((bindefragmente ms).foldl Fragment.anhaengen acc) s op args) :
     zustandsBedarf acc s op args ∨
       ∃ m ∈ ms, ∃ s' : Zustand, zustandsBedarf m.fragment s' op args := by
   induction ms generalizing acc s with
   | nil => exact Or.inl need
   | cons m rest ih =>
-    change zustandsBedarf (verknuepfteAb rest (acc.anhaengen m.fragment)) s op args at need
-    rcases ih (acc.anhaengen m.fragment) s need with hacc | hrest
-    · rcases zustandsBedarf_anhaengen acc m.fragment s op args hacc with hacc' | hm
+    let bound := m.bindefragment (hatFortsetzung rest)
+    change zustandsBedarf ((bindefragmente rest).foldl Fragment.anhaengen (acc.anhaengen bound))
+      s op args at need
+    rcases ih (acc.anhaengen bound) s need with hacc | hrest
+    · rcases zustandsBedarf_anhaengen acc bound s op args hacc with hacc' | hm
       · exact Or.inl hacc'
       · rcases hm with ⟨s', needm⟩
-        exact Or.inr ⟨m, List.mem_cons_self, s', needm⟩
+        exact Or.inr ⟨m, List.mem_cons_self, s', zustandsBedarf_bindefragment m rest s' op args needm⟩
     · rcases hrest with ⟨m', hm', s', needm'⟩
       exact Or.inr ⟨m', List.mem_cons_of_mem _ hm', s', needm'⟩
 

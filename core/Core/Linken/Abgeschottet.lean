@@ -65,33 +65,21 @@ theorem bindefragment_laenge (m : Modul) (weiter : Bool) :
       first | rfl | simp only [Modul.bindefragment, Modul.fragment, Fragment.anhaengen,
         Fragment.einzel, List.length_append, List.length_cons, List.length_nil])
 
-/-- Every emitted static target stays in its module, except for the library terminator
-    synthesized at the last slot. That instruction can only enter an immediate successor
-    with a first instruction. The input seal still applies to all input targets. -/
-theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool)
-    (sealed : modulAbgeschottet m letzter = true) (pos : Nat) (b : Befehl)
+/-- The bound layout preserves each instruction except for the generated library transfer. -/
+theorem bindefragment_befehl (m : Modul) (rest : List Modul) (pos : Nat) (b : Befehl)
     (atPos : (m.bindefragment (hatFortsetzung rest)).code[pos]? = some b) :
-    sprungZielInnen pos m.fragment.code.length b = true ∨
+    m.fragment.code[pos]? = some b ∨
       (b = .springe 1 ∧ pos + 1 = m.fragment.code.length ∧
         ∃ tree next tail, m.inhalt = .bibliothek tree ∧ rest = next :: tail ∧
           next.fragment.code.isEmpty = false) := by
-  have checked (input : m.fragment.code[pos]? = some b) :
-      sprungZielInnen pos m.fragment.code.length b = true := by
-    unfold modulAbgeschottet at sealed
-    rw [Bool.and_eq_true] at sealed
-    have all := sealed.1
-    have ht := (List.all_eq_true.mp all) pos
-      (List.mem_range.mpr (List.getElem?_eq_some_iff.mp input).1)
-    simpa only [input] using ht
   cases hnext : hatFortsetzung rest with
   | false =>
     rw [hnext] at atPos
-    exact Or.inl (checked atPos)
+    exact Or.inl atPos
   | true =>
     cases hm : m.inhalt with
     | roh p | quelle _ _ | mitInvarianten _ =>
       apply Or.inl
-      apply checked
       simpa only [Modul.fragment, Modul.bindefragment, hm] using atPos
     | bibliothek tree =>
       let code := (unitBody tree.2).code
@@ -104,7 +92,6 @@ theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool
       rw [emitted] at atPos
       by_cases inside : pos < code.length
       · apply Or.inl
-        apply checked
         rw [original, List.getElem?_append_left inside]
         exact (List.getElem?_append_left inside).symm.trans atPos
       · have bound := (List.getElem?_eq_some_iff.mp atPos).1
@@ -124,6 +111,25 @@ theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool
             | false => rfl
             | true => rw [hempty] at hnext
                       cases hnext
+
+/-- Every emitted static target stays in its module, except for the library terminator
+    synthesized at the last slot. That instruction can only enter an immediate successor
+    with a first instruction. The input seal still applies to all input targets. -/
+theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool)
+    (sealed : modulAbgeschottet m letzter = true) (pos : Nat) (b : Befehl)
+    (atPos : (m.bindefragment (hatFortsetzung rest)).code[pos]? = some b) :
+    sprungZielInnen pos m.fragment.code.length b = true ∨
+      (b = .springe 1 ∧ pos + 1 = m.fragment.code.length ∧
+        ∃ tree next tail, m.inhalt = .bibliothek tree ∧ rest = next :: tail ∧
+          next.fragment.code.isEmpty = false) := by
+  rcases bindefragment_befehl m rest pos b atPos with input | bridge
+  · apply Or.inl
+    unfold modulAbgeschottet at sealed
+    rw [Bool.and_eq_true] at sealed
+    have ht := (List.all_eq_true.mp sealed.1) pos
+      (List.mem_range.mpr (List.getElem?_eq_some_iff.mp input).1)
+    simpa only [input] using ht
+  · exact Or.inr bridge
 
 /-- Composition from sealed parts up to the guard transfer: with accepted parts, a
     frame-only linked program and every guard use of the linked whole satisfied, the
