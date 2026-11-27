@@ -97,7 +97,6 @@ theorem invariantenBein_nichtVakuum :
   have hz : E.laden start (H.lade E.bild) = some z := by
     dsimp [E, H, elaborierenMitInvarianten, Fragment.einheit, Umgebung.referenz]
     rw [Ast.Semantik.laden, if_pos ⟨rfl, rfl⟩]
-    rfl
   have atStart : ρ.zeit.zustand 0 = E.laden start (H.lade E.bild) := by
     rw [← hstart]
     exact run.2.2.2
