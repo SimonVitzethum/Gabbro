@@ -133,7 +133,7 @@ theorem quellladen_handoff_single_encard (P : Plattform) (u : UnitMitSchranken)
 /-- STATIC CONSISTENCY, FIRST HALF. A layout returned by the target table always
     carries a strictly positive checked byte width: the accepted widths are
     8, 16, 32 and 64 bits. This is the only width a view may contribute. -/
-theorem layout_positive_bytes (target : ZielDaten) (written : WrittenType) (shape : Layout)
+theorem layout_positive_bytes (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (shape : Gabbro.Core.Ast.LowLevel.Layout)
     (h : Gabbro.Core.Ast.LowLevel.layout target written = some shape) : 0 < shape.bytes := by
   cases written with
   | integer signed width range =>
@@ -143,7 +143,7 @@ theorem layout_positive_bytes (target : ZielDaten) (written : WrittenType) (shap
         injection h with hs
         subst shape
         simp only [List.mem_cons, List.mem_singleton] at cond
-        rcases cond.1 with rfl | rfl | rfl | rfl <;> norm_num
+        rcases cond.1 with rfl | rfl | rfl | rfl <;> decide
       · cases h
   | _ =>
       simp only [Gabbro.Core.Ast.LowLevel.layout] at h
@@ -152,24 +152,24 @@ theorem layout_positive_bytes (target : ZielDaten) (written : WrittenType) (shap
 /-- STATIC CONSISTENCY, SECOND HALF. For a fixed target and written type the
     layout is a function: two successful resolutions give the same shape, hence
     the same width. No second width can be smuggled in for the same type. -/
-theorem layout_unique (target : ZielDaten) (written : WrittenType) (s t : Layout)
+theorem layout_unique (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (s t : Gabbro.Core.Ast.LowLevel.Layout)
     (hs : Gabbro.Core.Ast.LowLevel.layout target written = some s)
     (ht : Gabbro.Core.Ast.LowLevel.layout target written = some t) : s = t := by
   rw [hs] at ht
   exact Option.some.inj ht
 
-theorem layout_bytes_unique (target : ZielDaten) (written : WrittenType) (s t : Layout)
+theorem layout_bytes_unique (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (s t : Gabbro.Core.Ast.LowLevel.Layout)
     (hs : Gabbro.Core.Ast.LowLevel.layout target written = some s)
     (ht : Gabbro.Core.Ast.LowLevel.layout target written = some t) : s.bytes = t.bytes :=
-  congrArg Layout.bytes (layout_unique target written s t hs ht)
+  congrArg Gabbro.Core.Ast.LowLevel.Layout.bytes (layout_unique target written s t hs ht)
 
 /-- Inverting a successful `.view` initializer: the loader's own `layout` and
     `fits` checks passed, so the width it wrote into the value is positive. -/
 theorem view_value_layout (target : ZielDaten) (slot : Nat) (extent : Strecke)
-    (written : WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
     (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value target slot extent
         (.view written valid) = some value) :
-    ∃ shape : Layout, Gabbro.Core.Ast.LowLevel.layout target written = some shape ∧
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout target written = some shape ∧
       shape.fits extent ∧ 0 < shape.bytes := by
   unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value at yields
   cases hlayout : Gabbro.Core.Ast.LowLevel.layout target written with
@@ -205,10 +205,10 @@ theorem quellanschluss_view_handoff (P : Plattform) (u : UnitMitSchranken)
     (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
     (geladen : (einheitVon P u.baum).laden a p = some s)
     (slot : Nat) {extent : Strecke} (grant : a.regions[slot]? = some extent)
-    (written : WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
     (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel slot extent
         (.view written valid) = some value) :
-    ∃ shape : Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
       0 < shape.bytes ∧
       ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? = some (.region slot 0) ∧
       extent.enthaelt ⟨extent.von, extent.von + shape.bytes⟩ := by
@@ -228,10 +228,10 @@ theorem quellanschluss_view_b21 (P : Plattform) (u : UnitMitSchranken)
     (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
     (geladen : (einheitVon P u.baum).laden a p = some s)
     {extent : Strecke} (grant : a.regions = [extent])
-    (written : WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
     (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel 0 extent
         (.view written valid) = some value) :
-    ∃ shape : Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
       0 < shape.bytes ∧
       ((handoffBooking shape.bytes a.regions s.buchung).umfang 0)[0]? = some (.region 0 0) ∧
       (LebendeZellen { s with buchung := handoffBooking shape.bytes a.regions s.buchung }).encard =
@@ -256,13 +256,13 @@ theorem quellanschluss_view_getrennt (P : Plattform) (a : AussenStart)
     (disjoint : a.regions.Pairwise Strecke.getrennt)
     {i j : Nat} {left right : Strecke} (distinct : i ≠ j)
     (li : a.regions[i]? = some left) (lj : a.regions[j]? = some right)
-    (written : WrittenType) (valid : written.valid [])
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid [])
     (vi vj : Gabbro.Core.Ast.Dynamisch)
     (yi : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel i left
         (.view written valid) = some vi)
     (yj : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel j right
         (.view written valid) = some vj) :
-    ∃ shape : Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
       Strecke.getrennt ⟨left.von, left.von + shape.bytes⟩
         ⟨right.von, right.von + shape.bytes⟩ := by
   obtain ⟨shape, hlayout, fi, positive⟩ := view_value_layout P.ziel i left written valid vi yi
@@ -283,45 +283,45 @@ theorem quellanschluss_view_getrennt (P : Plattform) (a : AussenStart)
     take its width from the chosen type's layout (`layout_bytes_unique` rules
     out a second width for one fixed type). -/
 theorem source_region_zwei_breiten :
-    ∃ extent : Strecke, ∃ s₁ s₂ : Layout,
+    ∃ extent : Strecke, ∃ s₁ s₂ : Gabbro.Core.Ast.LowLevel.Layout,
       Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 8 none) = some s₁ ∧
       Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 16 none) = some s₂ ∧
       s₁.fits extent ∧ s₂.fits extent ∧ s₁.bytes ≠ s₂.bytes ∧
       (∃ v₁ : Gabbro.Core.Ast.Dynamisch,
         Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-          (.view (.integer false 8 none) (by norm_num [WrittenType.valid, WrittenType.storage])) =
+          (.view (.integer false 8 none) (by decide)) =
             some v₁) ∧
       (∃ v₂ : Gabbro.Core.Ast.Dynamisch,
         Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-          (.view (.integer false 16 none) (by norm_num [WrittenType.valid, WrittenType.storage])) =
+          (.view (.integer false 16 none) (by decide)) =
             some v₂) := by
   let extent : Strecke := ⟨0x1000, 0x2000⟩
-  let s₁ : Layout :=
+  let s₁ : Gabbro.Core.Ast.LowLevel.Layout :=
     ⟨.integer false 8 none, 1, 1, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
-  let s₂ : Layout :=
+  let s₂ : Gabbro.Core.Ast.LowLevel.Layout :=
     ⟨.integer false 16 none, 2, 2, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
   have hlayout₁ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 8 none) =
       some s₁ := by rfl
   have hlayout₂ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 16 none) =
       some s₂ := by rfl
   have fits₁ : s₁.fits extent := by
-    constructor <;> norm_num [s₁, extent]
+    constructor <;> decide
   have fits₂ : s₂.fits extent := by
-    constructor <;> norm_num [s₂, extent]
+    constructor <;> decide
   have yield₁ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 8 none) (by norm_num [WrittenType.valid, WrittenType.storage])) =
+      (.view (.integer false 8 none) (by decide)) =
       some ⟨.regionView (.integer false 8 none).type,
         ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
     simp [hlayout₁, fits₁]
   have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
-      (.view (.integer false 16 none) (by norm_num [WrittenType.valid, WrittenType.storage])) =
+      (.view (.integer false 16 none) (by decide)) =
       some ⟨.regionView (.integer false 16 none).type,
         ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
     simp [hlayout₂, fits₂]
   refine ⟨extent, s₁, s₂, hlayout₁, hlayout₂, fits₁, fits₂, ?_, ?_, ?_⟩
-  · norm_num [s₁, s₂]
+  · decide
   · exact ⟨_, yield₁⟩
   · exact ⟨_, yield₂⟩
 
