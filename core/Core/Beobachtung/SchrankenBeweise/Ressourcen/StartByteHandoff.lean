@@ -51,23 +51,24 @@ theorem handoffBooking_byte_encard {L Wert Raum Lok Grund : Type}
         by_contra hs
         have gnil : regions[slot]? = none := List.getElem?_eq_none (Nat.le_of_not_gt hs)
         have hlen : (handoffCells 1 regions slot).length = 0 := by
-          simp? [handoffCells, gnil]
+          simp only [handoffCells, gnil, List.length_nil]
         omega
       let i : Fin regions.length := ⟨slot, hslot⟩
       have g := List.getElem?_eq_getElem (l := regions) hslot
       have hlen : (handoffCells 1 regions slot).length = foot i := by
-        simp? [handoffCells, g, foot, i]
-      have hoff : offset < foot i := by simpa [hlen] using h.2
+        simp only [handoffCells, g, Nat.div_one, List.length_map, List.length_range,
+          List.get_eq_getElem, foot, i]
+      have hoff : offset < foot i := hlen ▸ h.2
       exact ⟨⟨i, ⟨offset, hoff⟩⟩, rfl⟩
     · rintro ⟨⟨i, d⟩, hp⟩
       have hfst : i.val = slot := congrArg Prod.fst hp
       have hsnd : d.val = offset := congrArg Prod.snd hp
       subst slot
       subst offset
-      have g := List.getElem?_eq_getElem (l := regions) i.isLt
       have hlen : (handoffCells 1 regions i.val).length = foot i := by
-        simp? [handoffCells, g, foot]
-      exact ⟨live i.val i.isLt, by simpa [hlen] using d.isLt⟩
+        simp only [handoffCells, Fin.is_lt, getElem?_pos, Nat.div_one, List.length_map,
+          List.length_range, List.get_eq_getElem, foot]
+      exact ⟨live i.val i.isLt, hlen.symm ▸ d.isLt⟩
   have card : Fintype.card idx = handoffByteFootprint regions := by
     dsimp [idx]
     rw [Fintype.card_sigma]
