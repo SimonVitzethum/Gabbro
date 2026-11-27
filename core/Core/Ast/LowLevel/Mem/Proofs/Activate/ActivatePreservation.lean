@@ -59,7 +59,11 @@ theorem MemInstruction.regelSicher (k : Katalog) (op : MemInstruction) :
   · refine ⟨?_, [], wirkungen, fun _ mem => (List.not_mem_nil mem).elim⟩
     intro event mem
     obtain ⟨_, rfl⟩ := MemInstruction.schrittSpur_aussen mem
-    exact ⟨fun _ eq => nomatch eq, fun _ commit => nomatch commit.1⟩
+    constructor
+    · intro _ eq
+      cases eq
+    · intro _ commit
+      cases commit.1
   · refine ⟨?_, [], wirkungen, fun _ mem => (List.not_mem_nil mem).elim⟩
     intro event mem _ commit
     obtain ⟨_, rfl⟩ := MemInstruction.schrittSpur_aussen mem

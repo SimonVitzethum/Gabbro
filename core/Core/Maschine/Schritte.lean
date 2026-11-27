@@ -36,13 +36,14 @@ theorem sperr_schritt_erfuellbar (c d : Kontext) :
     * `beende`: end the acting thread (the form records its outcome in its own status);
     * `wechsle kern kind`: run the running context `kind` on the core `kern`, which the acting context
       holds or which is idle (a core start).
-    The last four are the interrupt-control actions (MK-20): a form step of the matching class plans
-    exactly one of them, and the machine applies the named per-core effect, pending send or routing:
+    The interrupt-control actions (MK-20) are planned by the matching form class:
     * `maskiere vektor aus`: set the mask bit of `vektor` to `aus` on every core running the acting
       context (vacuous when it runs nowhere);
     * `prioritaet grenze`: set the priority threshold to `grenze` on the same cores;
     * `sende vektor kern`: append the raised vector for the target core to the software queue;
-    * `leite leitung kern prioritaet`: map the line to its target core and priority. -/
+    * `leite leitung kern prioritaet`: map the line to its target core and priority.
+
+    A memory form plans `ruecknahmeAbschliessen` when its revocation guard permits completion. -/
 inductive Aktion (L Bedingung : Type) where
   | intern
   | warte (b : Bedingung)
