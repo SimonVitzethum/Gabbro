@@ -144,4 +144,109 @@ theorem Hebebuendel.praefixAntworten_leer {B : Zufallsbindung} {S : Scheduler}
     · change ¬ istZufallsfrage B antwort.question = true at zufall
       simp only [if_neg zufall, reduceCtorEq] at test
 
+/-- Install an exchange response in one object's body at one commit cut. The policy still commits
+    all questions against the same complete snapshot at that cut. Other cuts retain the base policy. -/
+def austauschUmgebung (k : Katalog) (h : Umgebung) (t : Nat) (objekt : Objekt)
+    (body : List UInt8) : Umgebung :=
+  let sicht := fun u verlauf =>
+    let basis := h.politik.sicht u verlauf
+    if u = t then
+      { basis with objects := Function.update basis.objects objekt { basis.objects objekt with body } }
+    else basis
+  { h with politik :=
+      { h.politik with sicht,
+        antwort := fun u verlauf q =>
+          if u = t then atomar k.plattform (sicht u verlauf) q else h.politik.antwort u verlauf q } }
+
+theorem austauschUmgebung_hardware (hardware : Hardware k h) (t : Nat) (objekt : Objekt)
+    (body : List UInt8) : Hardware k (austauschUmgebung k h t objekt body) := by
+  refine { hardware with antwort := ?_ }
+  intro u verlauf q selected
+  unfold austauschUmgebung
+  by_cases cut : u = t
+  · simp only [if_pos cut]
+  · simpa only [if_neg cut] using hardware.antwort u verlauf q selected
+
+/-- A draw becomes an ordinary machine arrival at a pending exchange. Only the targeted object's
+    body changes in the commit snapshot. The catalogue computes origin and the entire revalidation
+    footprint, and the machine still appends its usual RC11 event. The schedule is reused verbatim. -/
+theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform : run.konform k h)
+    (zeile : ZufallszeileZugelassen k B) (q : FrageEreignis) (frage : Zufallsfrage B q.question)
+    (pending : q ∈ s.fragen) (epoche : s.epoche ≤ q.cut) (gestellt : q.cut ≤ t)
+    (einmal : ∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance)
+    (delivery : (run.angebot t).delivery q.question.endpoint = true)
+    (supported : k.plattform.operationAngeboten q.question = true)
+    (valid : q.question.zugriffe.all ((h.politik.sicht t s.verlauf).gueltig q.question.endpoint) = true)
+    (ready : ((h.politik.sicht t s.verlauf).objects q.question.objekt).ready = true)
+    (konsistent : s.graph.graph.Konsistent) (vollstaendig : s.graph.graph.Vollstaendig)
+    (code : Fin B.quelle.anz → List UInt8) (band : Band) (index : Nat) :
+    let body := code (Ziehung B.quelle band index)
+    let h' := austauschUmgebung k h t q.question.objekt body
+    let run' := { run with politik := h'.politik }
+    let sicht := h'.politik.sicht t s.verlauf
+    ∃ a spur s', Hardware k h' ∧ run'.konform k h' ∧
+      ZufallszeileZugelassen k B ∧ a.zu q ∧
+      AntwortSchritt e k run' t a s spur s' ∧
+      a.reply = ⟨sicht.herkunft q.question.objekt,
+        q.question.zugriffe.map (fun z => sicht.herkunft z.handle.origin.object),
+        .ok (.exchanged B.kennung body)⟩ := by
+  dsimp only
+  let body := code (Ziehung B.quelle band index)
+  let h' := austauschUmgebung k h t q.question.objekt body
+  let run' := { run with politik := h'.politik }
+  let basis := h.politik.sicht t s.verlauf
+  let sicht := h'.politik.sicht t s.verlauf
+  obtain ⟨tag, operation⟩ := zufallsfrage_exchange frage
+  have marke : tag = B.kennung := by
+    simp only [Zufallsfrage, istZufallsfrage, operation, Bool.and_eq_true, beq_iff_eq] at frage
+    exact frage.2
+  have selected : k.enthaelt (.endpoint q.question.endpoint) := (konform.2 t).2.2.2.1 _ delivery
+  have sichtbar : sicht =
+      { basis with objects := Function.update basis.objects q.question.objekt
+        { basis.objects q.question.objekt with body } } := by
+    simp only [sicht, h', austauschUmgebung, if_pos rfl, basis]
+  have objekt (o : Objekt) : (sicht.objects o).generation = (basis.objects o).generation ∧
+      (sicht.objects o).alive = (basis.objects o).alive := by
+    rw [sichtbar]
+    by_cases gleich : o = q.question.objekt
+    · subst o
+      simp only [Function.update_self, and_self]
+    · simp only [Function.update_of_ne gleich, and_self]
+  have gueltig (z : Zugriff) : sicht.gueltig q.question.endpoint z =
+      basis.gueltig q.question.endpoint z := by
+    have kanaele : sicht.channels = basis.channels := by rw [sichtbar]
+    simp only [AussenSicht.gueltig, AussenSicht.herkunft, kanaele, (objekt _).1, (objekt _).2]
+  have valid' : q.question.zugriffe.all (sicht.gueltig q.question.endpoint) = true := by
+    rw [funext gueltig]
+    exact valid
+  have rdy : (sicht.objects q.question.objekt).ready = true := by
+    simpa only [sichtbar, Function.update_self] using ready
+  have antwortBody : (sicht.objects q.question.objekt).body = body := by
+    simp only [sichtbar, Function.update_self]
+  let reply : Antwort := ⟨sicht.herkunft q.question.objekt,
+    q.question.zugriffe.map (fun z => sicht.herkunft z.handle.origin.object),
+    .ok (.exchanged B.kennung body)⟩
+  have hw' := austauschUmgebung_hardware hardware t q.question.objekt body
+  have commit : run'.politik.antwort t s.verlauf q.question = .antwort reply := by
+    change h'.politik.antwort t s.verlauf q.question = _
+    rw [hw'.antwort t s.verlauf q.question selected]
+    change atomar k.plattform sicht q.question = _
+    have wartet : sicht.wartet k.plattform q.question = false := by
+      simp only [AussenSicht.wartet, operation]
+    have erfolg : sicht.erfolg k.plattform q.question = .ok (.exchanged B.kennung body) := by
+      simp only [AussenSicht.erfolg, operation, marke, Frage.objekt] at antwortBody ⊢
+      rw [antwortBody]
+    simp only [atomar, supported, valid', wartet, rdy, erfolg, Bool.not_true, Bool.false_eq_true,
+      ↓reduceIte, reply, Frage.objekt]
+  let a : AntwortEreignis := ⟨t, q.context, q.questionInstance, q.question, reply⟩
+  have zu : a.zu q := ⟨gestellt, rfl, rfl, rfl⟩
+  have offered : s.AntwortAngeboten k run' t a :=
+    ⟨rfl, ⟨delivery, commit⟩, selected, ⟨q, pending, epoche, zu⟩, einmal⟩
+  let label := aussenEtikett e (.antwort a)
+  obtain ⟨g', schritt⟩ := Speicher.Zustand.schritt_ohne_lesen konsistent vollstaendig
+    (SpeicherAkteur.aussen : SpeicherAkteur Ort) label id
+  refine ⟨a, ⟨[(.aussen, label)], [.antwort a]⟩, { s.antwort a with graph := g' },
+    hw', ⟨rfl, konform.2⟩, zeile, zu, ?_, rfl⟩
+  exact ⟨offered, rfl, .cons (.ohne (Or.inl rfl)) schritt (.nil _), rfl⟩
+
 end Gabbro.Core.Beobachtung
