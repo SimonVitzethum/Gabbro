@@ -144,16 +144,17 @@ theorem Hebebuendel.praefixAntworten_leer {B : Zufallsbindung} {S : Scheduler}
     · change ¬ istZufallsfrage B antwort.question = true at zufall
       simp only [if_neg zufall, reduceCtorEq] at test
 
+private def austauschSicht (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) : AussenSicht :=
+  let neu : ObjektSicht := { (basis.objects objekt) with body := body }
+  { basis with objects := Function.update basis.objects objekt neu }
+
 /-- Install an exchange response in one object's body at one commit cut. The policy still commits
     all questions against the same complete snapshot at that cut. Other cuts retain the base policy. -/
 def austauschUmgebung (k : Katalog) (h : Umgebung) (t : Nat) (objekt : Objekt)
     (body : List UInt8) : Umgebung :=
   let sicht := fun u verlauf =>
     let basis := h.politik.sicht u verlauf
-    if u = t then
-      { basis with objects := Function.update basis.objects objekt
-          ({ basis.objects objekt with body := body }) }
-    else basis
+    if u = t then austauschSicht basis objekt body else basis
   { h with politik :=
       { h.politik with sicht := sicht,
         antwort := fun u verlauf q =>
@@ -202,13 +203,11 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     simp only [Zufallsfrage, istZufallsfrage, operation, Bool.and_eq_true, beq_iff_eq] at frage
     exact frage.2
   have selected : k.enthaelt (.endpoint q.question.endpoint) := (konform.2 t).2.2.2.1 _ delivery
-  have sichtbar : sicht =
-      { basis with objects := Function.update basis.objects q.question.objekt
-          ({ basis.objects q.question.objekt with body := body }) } := by
+  have sichtbar : sicht = austauschSicht basis q.question.objekt body := by
     simp only [sicht, h', austauschUmgebung, if_pos rfl, basis]
   have objekt (o : Objekt) : (sicht.objects o).generation = (basis.objects o).generation ∧
       (sicht.objects o).alive = (basis.objects o).alive := by
-    rw [sichtbar]
+    rw [sichtbar, austauschSicht]
     by_cases gleich : o = q.question.objekt
     · subst o
       simp only [Function.update_self, and_self]
@@ -221,9 +220,9 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     rw [funext gueltig]
     exact valid
   have rdy : (sicht.objects q.question.objekt).ready = true := by
-    simpa only [sichtbar, Function.update_self] using ready
+    simpa only [sichtbar, austauschSicht, Function.update_self] using ready
   have antwortBody : (sicht.objects q.question.objekt).body = body := by
-    simp only [sichtbar, Function.update_self]
+    simp only [sichtbar, austauschSicht, Function.update_self]
   let reply : Antwort := ⟨sicht.herkunft q.question.objekt,
     q.question.zugriffe.map (fun z => sicht.herkunft z.handle.origin.object),
     .ok (.exchanged B.kennung body)⟩
