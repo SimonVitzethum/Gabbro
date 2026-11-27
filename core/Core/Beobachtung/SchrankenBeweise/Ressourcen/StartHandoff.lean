@@ -142,6 +142,7 @@ theorem layout_positive_bytes (target : ZielDaten) (written : Gabbro.Core.Ast.Wr
       · rename_i cond
         injection h with hs
         subst shape
+        change 0 < width / 8
         have widths : width = 8 ∨ width = 16 ∨ width = 32 ∨ width = 64 := by
           simpa using cond.1
         rcases widths with rfl | rfl | rfl | rfl <;> decide
@@ -312,10 +313,8 @@ theorem source_region_zwei_breiten
     ⟨.integer false 8 none, 1, 1, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
   let s₂ : Gabbro.Core.Ast.LowLevel.Layout :=
     ⟨.integer false 16 none, 2, 2, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
-  have hlayout₁ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 8 none) =
-      some s₁ := by rfl
-  have hlayout₂ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 16 none) =
-      some s₂ := by rfl
+  have hlayout₁ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₁ = some s₁ := by rfl
+  have hlayout₂ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₂ = some s₂ := by rfl
   have fits₁ : s₁.fits extent := by
     constructor <;> decide
   have fits₂ : s₂.fits extent := by
