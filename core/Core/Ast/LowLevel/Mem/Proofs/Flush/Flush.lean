@@ -226,4 +226,40 @@ private theorem flushMeaning : FlushMeaningAussage := by
 theorem flush_aussage : FlushAussage :=
   ⟨memObligationsKern_alle .flushSpace, flushMeaning, flushJointAussage⟩
 
+/-- A successful completion selects the full token from the named pre-state binding. The result
+    retains only the frames or the protection outcome, and all bindings of that token are removed. -/
+theorem MemInstruction.flushToken {target : ZielDaten} {s : MemState} {c : Kontext}
+    {name : Identifier} {next : MemFrame}
+    (eval : (MemInstruction.flushSpace name).evaluate target s c = some next) :
+    ∃ token,
+      ((s.lokal c).marken.find? (fun p => p.1.val == name.val)).map Prod.snd = some token ∧
+      next.result = some (if token.nurRechte then .«protected»
+        else .frames (token.frames target.seitengranule)) ∧
+      ∀ bound ∈ next.marken, bound.2 ≠ token := by
+  cases found : (s.lokal c).marken.find? (fun p => p.1.val == name.val) with
+  | none =>
+    simp only [MemInstruction.evaluate, found, Option.bind_eq_bind, Option.bind_none] at eval
+    cases eval
+  | some bound =>
+    obtain ⟨boundName, token⟩ := bound
+    cases spaceAt : (s.lokal c).spaces[token.raum]? with
+    | none =>
+      simp only [MemInstruction.evaluate, found, spaceAt, Option.bind_eq_bind,
+        Option.bind_some, Option.bind_none] at eval
+      cases eval
+    | some space =>
+      have removed (bound : Identifier × Zuruecknahme)
+          (mem : bound ∈ (s.lokal c).marken.filter
+            (fun p => p.1.val != name.val && p.2 != token)) : bound.2 ≠ token := by
+        have different := (Bool.and_eq_true_iff.mp (List.mem_filter.mp mem).2).2
+        intro same
+        rw [same, bne_self_eq_false] at different
+        cases different
+      refine ⟨token, rfl, ?_⟩
+      cases kind : token.nurRechte <;>
+        simp only [MemInstruction.evaluate, found, spaceAt, Option.bind_eq_bind, Option.bind_some,
+          Option.pure_def, kind, Bool.false_eq_true, ↓reduceIte] at eval ⊢ <;>
+        split at eval
+      all_goals first | (cases eval; exact ⟨rfl, removed⟩) | cases eval
+
 end Gabbro.Core.Ast.LowLevel
