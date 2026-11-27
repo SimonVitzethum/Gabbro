@@ -147,7 +147,8 @@ theorem Hebebuendel.praefixAntworten_leer {B : Zufallsbindung} {S : Scheduler}
 
 end Replay
 
-private def austauschSicht (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) : AussenSicht :=
+/-- Replace only the body of the selected object in the commit snapshot. -/
+@[expose] def austauschSicht (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) : AussenSicht :=
   let neu : ObjektSicht := { (basis.objects objekt) with body := body }
   { basis with objects := Function.update basis.objects objekt neu }
 

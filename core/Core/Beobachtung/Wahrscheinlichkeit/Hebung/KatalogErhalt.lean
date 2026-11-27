@@ -12,54 +12,48 @@ namespace Gabbro.Core.Beobachtung
 
 open Gabbro.Core.Katalog Gabbro.Core.Maschine
 
-/-- Replace only the body of one object in an outside snapshot: the audit cut update of
-    the band-selected exchange arrival, stated on the snapshot itself. -/
-def austauschSichtOeffentlich (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) : AussenSicht :=
-  let neu : ObjektSicht := { (basis.objects objekt) with body := body }
-  { basis with objects := Function.update basis.objects objekt neu }
-
 /- The body change leaves every other object field, both handle tables and the device
    phases untouched. -/
 
 theorem austauschSicht_felder (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) (o : Objekt) :
-    ((austauschSichtOeffentlich basis objekt body).objects o).generation = (basis.objects o).generation ∧
-    ((austauschSichtOeffentlich basis objekt body).objects o).alive = (basis.objects o).alive ∧
-    ((austauschSichtOeffentlich basis objekt body).objects o).ready = (basis.objects o).ready ∧
-    ((austauschSichtOeffentlich basis objekt body).objects o).registers = (basis.objects o).registers := by
+    ((austauschSicht basis objekt body).objects o).generation = (basis.objects o).generation ∧
+    ((austauschSicht basis objekt body).objects o).alive = (basis.objects o).alive ∧
+    ((austauschSicht basis objekt body).objects o).ready = (basis.objects o).ready ∧
+    ((austauschSicht basis objekt body).objects o).registers = (basis.objects o).registers := by
   by_cases h : o = objekt
   · subst o
-    simp only [austauschSichtOeffentlich, Function.update_self]
+    simp only [austauschSicht, Function.update_self]
     exact ⟨trivial, trivial, trivial, trivial⟩
-  · simp only [austauschSichtOeffentlich, Function.update_of_ne h]
+  · simp only [austauschSicht, Function.update_of_ne h]
     exact ⟨trivial, trivial, trivial, trivial⟩
 
 theorem austauschSicht_body_gleich (basis : AussenSicht) (objekt o : Objekt) (body : List UInt8)
     (h : o = objekt) :
-    ((austauschSichtOeffentlich basis objekt body).objects o).body = body := by
+    ((austauschSicht basis objekt body).objects o).body = body := by
   subst o
-  simp only [austauschSichtOeffentlich, Function.update_self]
+  simp only [austauschSicht, Function.update_self]
 
 theorem austauschSicht_body_verschieden (basis : AussenSicht) (objekt o : Objekt) (body : List UInt8)
     (h : o ≠ objekt) :
-    ((austauschSichtOeffentlich basis objekt body).objects o).body = (basis.objects o).body := by
-  simp only [austauschSichtOeffentlich, Function.update_of_ne h]
+    ((austauschSicht basis objekt body).objects o).body = (basis.objects o).body := by
+  simp only [austauschSicht, Function.update_of_ne h]
 
 theorem austauschSicht_herkunft (basis : AussenSicht) (objekt : Objekt) (body : List UInt8) (o : Objekt) :
-    (austauschSichtOeffentlich basis objekt body).herkunft o = basis.herkunft o := by
+    (austauschSicht basis objekt body).herkunft o = basis.herkunft o := by
   obtain ⟨hgen, _, _, _⟩ := austauschSicht_felder basis objekt body o
   simp only [AussenSicht.herkunft, hgen]
 
 theorem austauschSicht_gueltig (basis : AussenSicht) (objekt : Objekt) (body : List UInt8)
     (endpoint : Endpunkt) (z : Zugriff) :
-    (austauschSichtOeffentlich basis objekt body).gueltig endpoint z = basis.gueltig endpoint z := by
+    (austauschSicht basis objekt body).gueltig endpoint z = basis.gueltig endpoint z := by
   obtain ⟨hgen, halive, _, _⟩ := austauschSicht_felder basis objekt body z.handle.origin.object
-  have kanaele : (austauschSichtOeffentlich basis objekt body).channels = basis.channels := rfl
+  have kanaele : (austauschSicht basis objekt body).channels = basis.channels := rfl
   simp only [AussenSicht.gueltig, AussenSicht.herkunft]
   rw [kanaele, hgen, halive]
 
 theorem austauschSicht_wartet (p : Plattform) (basis : AussenSicht) (objekt : Objekt)
     (body : List UInt8) (q : Frage) :
-    (austauschSichtOeffentlich basis objekt body).wartet p q = basis.wartet p q := by
+    (austauschSicht basis objekt body).wartet p q = basis.wartet p q := by
   cases op : q.operation with
   | waitRegister offset expected =>
       obtain ⟨_, _, hready, hregs⟩ := austauschSicht_felder basis objekt body q.handle.origin.object
@@ -89,7 +83,7 @@ theorem koerperEmpfindlich_false_of_not_true {op : AussenOperation}
 
 theorem austauschSicht_erfolg_unempfindlich (p : Plattform) (basis : AussenSicht) (objekt : Objekt)
     (body : List UInt8) (q : Frage) (hsens : koerperEmpfindlich q.operation = false) :
-    (austauschSichtOeffentlich basis objekt body).erfolg p q = basis.erfolg p q := by
+    (austauschSicht basis objekt body).erfolg p q = basis.erfolg p q := by
   cases op : q.operation with
   | read | firmware | exchange =>
       simp only [koerperEmpfindlich, op] at hsens
@@ -97,8 +91,8 @@ theorem austauschSicht_erfolg_unempfindlich (p : Plattform) (basis : AussenSicht
   | write bytes =>
       simp only [AussenSicht.erfolg, op]
   | resolve name =>
-      have namen : (austauschSichtOeffentlich basis objekt body).names = basis.names := rfl
-      have kanaele : (austauschSichtOeffentlich basis objekt body).channels = basis.channels := rfl
+      have namen : (austauschSicht basis objekt body).names = basis.names := rfl
+      have kanaele : (austauschSicht basis objekt body).channels = basis.channels := rfl
       simp only [AussenSicht.erfolg, op, namen]
       cases n : basis.names q.handle.origin.object name with
       | none => simp only [n]
@@ -114,7 +108,7 @@ theorem austauschSicht_erfolg_unempfindlich (p : Plattform) (basis : AussenSicht
 
 theorem austauschSicht_erfolg_sensibel (p : Plattform) (basis : AussenSicht) (objekt : Objekt)
     (body : List UInt8) (q : Frage) (hsens : koerperEmpfindlich q.operation = true) :
-    (austauschSichtOeffentlich basis objekt body).erfolg p q =
+    (austauschSicht basis objekt body).erfolg p q =
       let alt := if q.handle.origin.object = objekt then body
         else (basis.objects q.handle.origin.object).body
       match q.operation with
@@ -126,19 +120,19 @@ theorem austauschSicht_erfolg_sensibel (p : Plattform) (basis : AussenSicht) (ob
   | read =>
       simp only [AussenSicht.erfolg, op]
       by_cases hobj : q.handle.origin.object = objekt
-      · simp only [hobj, ite_true, austauschSichtOeffentlich, Function.update_self]
+      · simp only [hobj, ite_true, austauschSicht, Function.update_self]
       · simp only [hobj, ite_false]
         rw [austauschSicht_body_verschieden basis objekt q.handle.origin.object body hobj]
   | firmware service bytes =>
       simp only [AussenSicht.erfolg, op]
       by_cases hobj : q.handle.origin.object = objekt
-      · simp only [hobj, ite_true, austauschSichtOeffentlich, Function.update_self]
+      · simp only [hobj, ite_true, austauschSicht, Function.update_self]
       · simp only [hobj, ite_false]
         rw [austauschSicht_body_verschieden basis objekt q.handle.origin.object body hobj]
   | exchange bytes =>
       simp only [AussenSicht.erfolg, op]
       by_cases hobj : q.handle.origin.object = objekt
-      · simp only [hobj, ite_true, austauschSichtOeffentlich, Function.update_self]
+      · simp only [hobj, ite_true, austauschSicht, Function.update_self]
       · simp only [hobj, ite_false]
         rw [austauschSicht_body_verschieden basis objekt q.handle.origin.object body hobj]
   | write bytes | resolve name | registerRead offset | registerWrite offset value
@@ -165,7 +159,7 @@ theorem atomar_vonSicht {p : Plattform} {s t : AussenSicht} {q : Frage}
     nonrandom policy and its band measure are unaffected by the overwrite. -/
 theorem atomar_austauschSicht_verschieden {p : Plattform} {basis : AussenSicht} {objekt : Objekt}
     {body : List UInt8} {q : Frage} (hd : q.handle.origin.object ≠ objekt) :
-    atomar p (austauschSichtOeffentlich basis objekt body) q = atomar p basis q := by
+    atomar p (austauschSicht basis objekt body) q = atomar p basis q := by
   apply atomar_vonSicht
   · intro o
     exact austauschSicht_herkunft basis objekt body o
@@ -189,18 +183,9 @@ theorem atomar_austauschSicht_verschieden {p : Plattform} {basis : AussenSicht} 
     · exact austauschSicht_erfolg_unempfindlich p basis objekt body q
         (koerperEmpfindlich_false_of_not_true hsens)
 
-/-- The form in which the lift uses the law: a nonrandom question disjoint from the draw keeps
-    its decision. The nonrandom premise is the lift's own restriction; the equality itself only
-    needs the disjointness above. -/
-theorem atomar_austauschSicht_nichtZufall {B : Zufallsbindung} {p : Plattform} {basis : AussenSicht}
-    {objekt : Objekt} {body : List UInt8} {q : Frage}
-    (hd : q.handle.origin.object ≠ objekt) (_ : ¬ Zufallsfrage B q) :
-    atomar p (austauschSichtOeffentlich basis objekt body) q = atomar p basis q :=
-  atomar_austauschSicht_verschieden hd
-
 theorem atomar_austauschSicht_unempfindlich {p : Plattform} {basis : AussenSicht} {objekt : Objekt}
     {body : List UInt8} {q : Frage} (hsens : koerperEmpfindlich q.operation = false) :
-    atomar p (austauschSichtOeffentlich basis objekt body) q = atomar p basis q := by
+    atomar p (austauschSicht basis objekt body) q = atomar p basis q := by
   apply atomar_vonSicht
   · intro o
     exact austauschSicht_herkunft basis objekt body o
@@ -209,6 +194,22 @@ theorem atomar_austauschSicht_unempfindlich {p : Plattform} {basis : AussenSicht
   · exact austauschSicht_wartet p basis objekt body q
   · exact (austauschSicht_felder basis objekt body q.handle.origin.object).2.2.1
   · exact austauschSicht_erfolg_unempfindlich p basis objekt body q hsens
+
+/-- The actual draw policy keeps a selected question's decision when the body update
+    cannot affect that question. This also holds at every cut other than the draw cut. -/
+theorem austauschUmgebung_antwort_unveraendert {k : Katalog} {h : Umgebung}
+    (hardware : Hardware k h) (t u : Nat) (history : AussenVerlauf)
+    (objekt : Objekt) (body : List UInt8) (q : Frage)
+    (selected : k.enthaelt (.endpoint q.endpoint))
+    (keineWirkung : q.handle.origin.object ≠ objekt ∨ koerperEmpfindlich q.operation = false) :
+    (austauschUmgebung k h t objekt body).politik.antwort u history q =
+      h.politik.antwort u history q := by
+  by_cases cut : u = t
+  · subst u
+    simp only [austauschUmgebung, if_pos rfl]
+    rw [hardware.antwort t history q selected]
+    exact keineWirkung.elim atomar_austauschSicht_verschieden atomar_austauschSicht_unempfindlich
+  · simp only [austauschUmgebung, if_neg cut]
 
 /-- Rewrite the body payload of a successful result, leaving errors untouched. -/
 def wertBody (op : AussenOperation) (body : List UInt8) (v : AussenWert) : AussenWert :=
@@ -233,25 +234,25 @@ def antwortBody (q : Frage) (body : List UInt8) (a : Antwort) : Antwort :=
     `exchange`. Register reads/writes, writes, name resolution and waits cannot see the body. -/
 theorem atomar_austauschSicht_sichtbar {p : Plattform} {basis : AussenSicht} {objekt : Objekt}
     {body : List UInt8} {q : Frage} (hobj : q.handle.origin.object = objekt) :
-    atomar p (austauschSichtOeffentlich basis objekt body) q =
+    atomar p (austauschSicht basis objekt body) q =
       match atomar p basis q with
       | .antwort a => .antwort (antwortBody q body a)
       | .warten => .warten := by
   have herkunft : ∀ o : Objekt,
-      (austauschSichtOeffentlich basis objekt body).herkunft o = basis.herkunft o :=
+      (austauschSicht basis objekt body).herkunft o = basis.herkunft o :=
     fun o => austauschSicht_herkunft basis objekt body o
   have gueltig : ∀ z : Zugriff,
-      (austauschSichtOeffentlich basis objekt body).gueltig q.endpoint z = basis.gueltig q.endpoint z :=
+      (austauschSicht basis objekt body).gueltig q.endpoint z = basis.gueltig q.endpoint z :=
     fun z => austauschSicht_gueltig basis objekt body q.endpoint z
-  have wartetNeu : (austauschSichtOeffentlich basis objekt body).wartet p q = basis.wartet p q :=
+  have wartetNeu : (austauschSicht basis objekt body).wartet p q = basis.wartet p q :=
     austauschSicht_wartet p basis objekt body q
-  have gueltigNeu : q.zugriffe.all ((austauschSichtOeffentlich basis objekt body).gueltig q.endpoint) =
+  have gueltigNeu : q.zugriffe.all ((austauschSicht basis objekt body).gueltig q.endpoint) =
       q.zugriffe.all (basis.gueltig q.endpoint) := by
     rw [funext gueltig]
-  have readyNeu : ((austauschSichtOeffentlich basis objekt body).objects q.handle.origin.object).ready =
+  have readyNeu : ((austauschSicht basis objekt body).objects q.handle.origin.object).ready =
       (basis.objects q.handle.origin.object).ready :=
     (austauschSicht_felder basis objekt body q.handle.origin.object).2.2.1
-  have erfolgNeu : (austauschSichtOeffentlich basis objekt body).erfolg p q =
+  have erfolgNeu : (austauschSicht basis objekt body).erfolg p q =
       erfolgBody q.operation body (basis.erfolg p q) := by
     by_cases hsens : koerperEmpfindlich q.operation = true
     · have sichtbar := austauschSicht_erfolg_sensibel p basis objekt body q hsens
