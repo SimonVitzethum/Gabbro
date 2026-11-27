@@ -85,7 +85,7 @@ theorem koerperEmpfindlich_false_of_not_true {op : AussenOperation}
     (h : ¬ koerperEmpfindlich op = true) : koerperEmpfindlich op = false := by
   cases b : koerperEmpfindlich op with
   | true => exact (h b).elim
-  | false => exact b
+  | false => rfl
 
 theorem austauschSicht_erfolg_unempfindlich (p : Plattform) (basis : AussenSicht) (objekt : Objekt)
     (body : List UInt8) (q : Frage) (hsens : koerperEmpfindlich q.operation = false) :
@@ -105,6 +105,7 @@ theorem austauschSicht_erfolg_unempfindlich (p : Plattform) (basis : AussenSicht
       | some h =>
           obtain ⟨hgen, halive, _, _⟩ := austauschSicht_felder basis objekt body h.origin.object
           simp only [n, kanaele, AussenSicht.herkunft, hgen, halive]
+          rfl
   | registerRead offset | waitRegister offset _ =>
       obtain ⟨_, _, _, hregs⟩ := austauschSicht_felder basis objekt body q.handle.origin.object
       simp only [AussenSicht.erfolg, op, Plattform.registerWert, hregs]
@@ -263,16 +264,16 @@ theorem atomar_austauschSicht_sichtbar {p : Plattform} {basis : AussenSicht} {ob
       cases op : q.operation with
       | read | firmware | exchange =>
           simp only [koerperEmpfindlich, op] at hsens
-          cases hsens
+          exact (hsens trivial).elim
       | write bytes | resolve name | registerRead offset | registerWrite offset value
       | waitRegister offset expected =>
-          simp only [erfolgBody, wertBody, op]
+          cases h : basis.erfolg p q <;> simp only [h, erfolgBody, wertBody, op]
   cases offered : p.operationAngeboten q <;>
     cases valid : q.zugriffe.all (basis.gueltig q.endpoint) <;>
     cases wait : basis.wartet p q <;>
     cases ready : (basis.objects q.handle.origin.object).ready <;>
     simp only [atomar, offered, gueltigNeu, valid, wartetNeu, wait, readyNeu, ready,
-      Bool.not_false, Bool.not_true, Bool.false_eq_true, ite_true, ite_false, antwortBody] <;>
-    simp only [funext herkunft, erfolgNeu]
+      Bool.not_false, Bool.not_true, Bool.false_eq_true, ite_true, ite_false, antwortBody, erfolgBody] <;>
+    simp only [funext herkunft, erfolgNeu, erfolgBody]
 
 end Gabbro.Core.Beobachtung
