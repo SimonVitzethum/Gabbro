@@ -100,30 +100,30 @@ theorem basisUnit_occurrence (f : BasisForm) :
     registered base family are aggregate, record, variant, text and option forms. None of them is a
     member of `BasisForm`, so this certificate does not claim to cover them. -/
 theorem basisForm_nicht_arrayValue (f : BasisForm) : basisFormConstructor f ≠ ``Expr.arrayValue := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_arrayIndex (f : BasisForm) : basisFormConstructor f ≠ ``Expr.arrayIndex := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_tupleValue (f : BasisForm) : basisFormConstructor f ≠ ``Expr.tupleValue := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_tupleField (f : BasisForm) : basisFormConstructor f ≠ ``Expr.tupleField := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_recordValue (f : BasisForm) : basisFormConstructor f ≠ ``Expr.recordValue := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_recordField (f : BasisForm) : basisFormConstructor f ≠ ``Expr.recordField := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_variantValue (f : BasisForm) : basisFormConstructor f ≠ ``Expr.variantValue := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_textLiteral (f : BasisForm) : basisFormConstructor f ≠ ``Expr.textLiteral := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_textConcat (f : BasisForm) : basisFormConstructor f ≠ ``Expr.textConcat := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_textIndex (f : BasisForm) : basisFormConstructor f ≠ ``Expr.textIndex := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_substring (f : BasisForm) : basisFormConstructor f ≠ ``Expr.substring := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_textLength (f : BasisForm) : basisFormConstructor f ≠ ``Expr.textLength := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 theorem basisForm_nicht_optionIsSome (f : BasisForm) : basisFormConstructor f ≠ ``Expr.optionIsSome := by
-  cases f <;> simp only [basisFormConstructor, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
+  cases f <;> simp only [basisFormConstructor, ne_eq, Lean.Name.str.injEq, String.reduceEq, and_false, not_false_eq_true]
 
 end Gabbro.Core.Ziel.Korrektheit
