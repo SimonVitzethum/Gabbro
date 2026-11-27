@@ -233,4 +233,132 @@ theorem katalogPolitikNI_erfuellbar :
   · intro h
     cases h
 
+/-- The narrowest sufficient relation on two physical commit snapshots at one real cut: every
+    public question receives the same TOTAL atomic decision. It is stated on the total snapshot,
+    not on a projection of a filtered history: a high answer in that history may revoke a public
+    handle, and a low projection hides handles behind `sichtbar`. -/
+def OeffentlicheAntwortKopplung (E : Etiketten Objekt) (p : Plattform)
+    (s₁ s₂ : AussenSicht) : Prop :=
+  ∀ q, oeffentlich (E.frage q) = true → atomar p s₁ q = atomar p s₂ q
+
+/-- For the named `cProcess` row the relation holds at the witness's real commit snapshots: a
+    public question never reaches the one classified object, so its total decision agrees although
+    the two high bodies differ. -/
+theorem ni_oeffentlicheAntwortKopplung (b₁ b₂ : List UInt8) :
+    OeffentlicheAntwortKopplung niEtiketten Plattform.x86_64 (niSicht b₁) (niSicht b₂) := by
+  intro q niedrig
+  exact atomar_niedrig_gleich b₁ b₂ q niedrig
+
+private def niOeffentlichesObjekt : Objekt := ⟨.hosted, 2⟩
+
+private def niOeffentlicherHandle : Handle :=
+  ⟨0, ⟨niOeffentlichesObjekt, 0⟩, [.read]⟩
+
+private def niOeffentlicheFrage : Frage :=
+  ⟨.hosted, niOeffentlicherHandle, [], .read⟩
+
+private theorem niOeffentlicherHandle_oeffentlich :
+    oeffentlich (niEtiketten.frage niOeffentlicheFrage) = true := by
+  cases h : oeffentlich (niEtiketten.frage niOeffentlicheFrage)
+  · exfalso
+    obtain ⟨teil, klasse | ⟨zugriff, mem, klasse⟩⟩ :=
+      (Etiketten.frage_hoch_iff niEtiketten niOeffentlicheFrage).1 h
+    · simpa [niEtiketten, Etiketten.leer] using klasse
+    · have zug : zugriff = ⟨niOeffentlicherHandle, .read⟩ := by
+        simpa only [niOeffentlicheFrage, Frage.zugriffe, AussenOperation.required,
+          List.mem_singleton] using mem
+      subst zugriff
+      simp [niEtiketten, niObjekt, niOeffentlicherHandle, niOeffentlichesObjekt] at klasse
+  · rfl
+
+/-- The public cProcess object is live and readable; its body is carried by `body`. -/
+private def niSichtOeffenMit (body : List UInt8) : AussenSicht :=
+  { niSicht [] with
+    objects := fun o =>
+      if o = niOeffentlichesObjekt then ⟨0, true, true, body, fun _ => 0⟩
+      else (niSicht []).objects o
+    channels := fun e i =>
+      if e = .hosted ∧ i = 0 then some niOeffentlicherHandle
+      else (niSicht []).channels e i }
+
+private def niSichtRevokation : AussenSicht := niSichtOeffenMit [1]
+
+private theorem atomar_niOeffen (body : List UInt8) :
+    atomar Plattform.x86_64 (niSichtOeffenMit body) niOeffentlicheFrage =
+      .antwort ⟨⟨niOeffentlichesObjekt, 0⟩, [⟨niOeffentlichesObjekt, 0⟩], .ok (.data body)⟩ := by
+  rfl
+
+/-- A high answer to the classified question in the TOTAL history: the filter drops it. -/
+private def hatHoheAntwort (history : AussenVerlauf) : Bool :=
+  history.any fun entry =>
+    match entry.2 with
+    | .antwort q _ => q == niFrage
+    | .frage _ => false
+
+private theorem hatHoheAntwort_niedrig (history : AussenVerlauf) :
+    hatHoheAntwort (niedrigerVerlauf niEtiketten history) = false := by
+  cases h : hatHoheAntwort (niedrigerVerlauf niEtiketten history)
+  · rfl
+  · exfalso
+    unfold hatHoheAntwort at h
+    obtain ⟨entry, mem, wirkt⟩ := List.any_eq_true.mp h
+    unfold niedrigerVerlauf at mem
+    have gefiltert := (List.mem_filter.mp mem).2
+    rcases entry with ⟨t, ereignis⟩
+    cases ereignis with
+    | frage q => simp at wirkt
+    | antwort q a =>
+        have gleich : q = niFrage := beq_iff_eq.mp wirkt
+        subst q
+        change oeffentlich (niEtiketten.frage niFrage) = true at gefiltert
+        rw [frage_hoch] at gefiltert
+        cases gefiltert
+
+private def niUmgebungAuf : Umgebung :=
+  Umgebung.referenz Plattform.x86_64.katalog 1 (fun _ _ => niSichtOeffenMit [])
+
+private def niUmgebungZu : Umgebung :=
+  Umgebung.referenz Plattform.x86_64.katalog 1
+    (fun _ history => if hatHoheAntwort history then niSichtRevokation else niSichtOeffenMit [])
+
+private theorem niUmgebungAuf_hardware : Hardware Plattform.x86_64.katalog niUmgebungAuf := by
+  exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
+
+private theorem niUmgebungZu_hardware : Hardware Plattform.x86_64.katalog niUmgebungZu := by
+  exact Umgebung.referenz_hardware _ _ _ (Plattform.katalog_wohlgeformt _) (Nat.zero_lt_succ 0)
+
+private theorem niUmgebungen_projektionGleich :
+    politikProjektion niEtiketten niUmgebungAuf.politik =
+      politikProjektion niEtiketten niUmgebungZu.politik := by
+  unfold politikProjektion
+  apply Prod.ext
+  · funext t history
+    have h := hatHoheAntwort_niedrig history
+    simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
+  · apply Prod.ext
+    · funext t history q
+      have h := hatHoheAntwort_niedrig history
+      simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, h]
+    · funext t history e phase
+      rfl
+
+/-- Equal total low projections do not give the relation at a real commit, even under the pinned
+    cProcess catalogue row: a high answer in the total history changes a public object's body at
+    the commit, an effect the low filter cannot see. This is the exact failing implication. -/
+theorem projektionGleich_ohne_antwortKopplung :
+    ∃ (h₁ h₂ : Umgebung) (t : Nat) (history : AussenVerlauf) (q : Frage),
+      Hardware Plattform.x86_64.katalog h₁ ∧ Hardware Plattform.x86_64.katalog h₂ ∧
+      politikProjektion niEtiketten h₁.politik = politikProjektion niEtiketten h₂.politik ∧
+      oeffentlich (niEtiketten.frage q) = true ∧
+      atomar Plattform.x86_64 (h₁.politik.sicht t history) q ≠
+        atomar Plattform.x86_64 (h₂.politik.sicht t history) q := by
+  let history : AussenVerlauf := [(0, .antwort niFrage (niAntwort []))]
+  have hhoch : hatHoheAntwort history = true := by
+    simp only [history, hatHoheAntwort, List.any_cons, List.any_nil, Bool.or_false]
+    exact beq_iff_eq.mpr rfl
+  refine ⟨niUmgebungAuf, niUmgebungZu, 0, history, niOeffentlicheFrage,
+    niUmgebungAuf_hardware, niUmgebungZu_hardware, niUmgebungen_projektionGleich,
+    niOeffentlicherHandle_oeffentlich, ?_⟩
+  simp [niUmgebungAuf, niUmgebungZu, Umgebung.referenz, hhoch, niSichtRevokation, atomar_niOeffen]
+
 end Gabbro.Core.Beobachtung
