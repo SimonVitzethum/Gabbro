@@ -114,8 +114,8 @@ theorem Befehl.vollzug_genau (b : Befehl)
     rw [hakt] at action
     cases action
     rw [hleer.1, hleer.2] at memory
-    simp only [schreibEreignisse, List.filter_nil, List.map_nil, List.nil_append, List.append_nil,
-      List.map_nil] at memory
+    simp only [schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil,
+      List.nil_append, List.append_nil] at memory
     have unchanged : ∀ {recorded graph},
         Speicherfolge s.initial (.kontext c) s.graph [] recorded graph →
           recorded = [] ∧ graph = s.graph := by
@@ -157,8 +157,8 @@ theorem Befehl.vollzug_genau_privat (b : Befehl) (h : b.Privat)
     exact ⟨rfl, rfl⟩
   have hsp : spur.speicher = [] ∧ s'.graph = s.graph := by
     rw [hsperren, hlesen, hfuss, haussen] at mem
-    simp only [schreibEreignisse, List.filter_nil, List.map_nil, List.nil_append, List.append_nil,
-      List.map_nil] at mem
+    simp only [schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil,
+      List.nil_append, List.append_nil] at mem
     exact unchanged mem
   have haus : spur.aussen = [] := haussen
   have hgraph : s'.graph = (b.nach c s).graph := hsp.2.trans rahmen.graph.symm

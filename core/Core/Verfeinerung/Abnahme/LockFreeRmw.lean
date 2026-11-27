@@ -108,7 +108,7 @@ theorem rmwZeugeKonfiguration :
   have aus : FuehrtSchrittAus rmwZeugeEinheitWert.einrichtung 0 eintritt Leerzustand u plan spur s' := by
     refine ⟨rahmen, liest, [], u, .intern, ?_, rfl⟩
     simpa only [plan, SchrittSpur.speicher, spur, SchrittPlan.lesen, SchrittPlan.fuss,
-      SchrittPlan.schreibt, SchrittPlan.modus, SchrittPlan.wert, schreibEreignisse,
+      SchrittPlan.schreibt, SchrittPlan.modus, SchrittPlan.wert, schreibEreignisse, Aktion.graphEreignisse,
       List.filter_nil, List.map_nil, List.nil_append, List.append_nil] using folge
   have impl : rmwZeugeRegelWert.impl eintritt Leerzustand () [plan] u := by
     refine ⟨gelesen, ?_, rfl⟩
@@ -173,7 +173,7 @@ theorem rmwZeuge_nichtRegelSimulation : ¬ RegelSimulation rmwZeugeEinheitWert (
       rw [planPrivat, aussenLeer] at ausIdeal
       rcases ausIdeal with ⟨_, _, _, _, aus, folge, _⟩
       cases aus
-      simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, List.filter_nil,
+      simp only [Gabbro.Core.Ast.Semantik.plan, schreibEreignisse, Aktion.graphEreignisse, List.filter_nil,
         List.map_nil, List.nil_append, List.append_nil] at folge
       generalize hg : i'.graph = endGraph at folge
       generalize ht : spur.speicher = trace at folge
