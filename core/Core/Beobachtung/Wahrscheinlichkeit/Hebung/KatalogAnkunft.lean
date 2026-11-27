@@ -151,10 +151,11 @@ def austauschUmgebung (k : Katalog) (h : Umgebung) (t : Nat) (objekt : Objekt)
   let sicht := fun u verlauf =>
     let basis := h.politik.sicht u verlauf
     if u = t then
-      { basis with objects := Function.update basis.objects objekt { basis.objects objekt with body } }
+      { basis with objects := Function.update basis.objects objekt
+          ({ basis.objects objekt with body := body }) }
     else basis
   { h with politik :=
-      { h.politik with sicht,
+      { h.politik with sicht := sicht,
         antwort := fun u verlauf q =>
           if u = t then atomar k.plattform (sicht u verlauf) q else h.politik.antwort u verlauf q } }
 
@@ -203,7 +204,7 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
   have selected : k.enthaelt (.endpoint q.question.endpoint) := (konform.2 t).2.2.2.1 _ delivery
   have sichtbar : sicht =
       { basis with objects := Function.update basis.objects q.question.objekt
-        { basis.objects q.question.objekt with body } } := by
+          ({ basis.objects q.question.objekt with body := body }) } := by
     simp only [sicht, h', austauschUmgebung, if_pos rfl, basis]
   have objekt (o : Objekt) : (sicht.objects o).generation = (basis.objects o).generation ∧
       (sicht.objects o).alive = (basis.objects o).alive := by
