@@ -244,7 +244,7 @@ theorem e4_sperrAus {t c s u next} {a : SperrAktion}
     exact fun _ h => (List.not_mem_nil h).elim
   · rw [hp]
     exact .sperre hs (fun _ => trivial)
-  · simpa only [hr, hw, schreibEreignisse, List.filter_nil, List.map_nil, List.append_nil]
+  · simpa only [hr, hw, schreibEreignisse, Aktion.graphEreignisse, List.filter_nil, List.map_nil, List.append_nil]
       using hm
 
 theorem e4_frame (s : Zustand Unit Unit Unit Unit Bool Unit) :
