@@ -140,7 +140,7 @@ theorem linke_klassenrein {plan : Bauplan} {frag : Fragment} (h : linke plan = s
     simp only [bauplanOk, Bool.and_eq_true] at hok
     tauto
   exact verknuepfte_klassenrein plan fun m hm =>
-    m.klassenrein_aus_quelle (List.all_eq_true.mp hquellen m hm)
+    List.all_eq_true.mp hquellen m hm
 
 /-- An empty list is the only list with `isEmpty`. -/
 theorem isEmpty_eq_nil {α : Type} {l : List α} (h : l.isEmpty = true) : l = [] := by
