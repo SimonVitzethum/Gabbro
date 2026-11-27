@@ -11,12 +11,10 @@
   probability, and the proved non-degeneracy witness (a fair coin with an event
   strictly inside `(0, 1)`).
 
-  Form-independence: no Ast inductive is touched. A random draw reaches the machine as
-  an ordinary catalogue answer: the question is an `.exchange` on the binding's
-  endpoint with the binding's tag, and the reply carries the drawn outcome as a
-  register value. The future `random` source form (`planned.probability.draw`)
-  elaborates to exactly such a question; its registry entry then pins this file's
-  `Zufallsfrage` shape. Until then, `Zufallsbindung` is the model-side anchor.
+  A binding marks an `.exchange` on its endpoint and tag. The pinned replay
+  specifies a register-valued reply, while the catalogue commits an exchange
+  with a byte response. `Hebung.KatalogAnkunft` proves the incompatibility and
+  constructs the snapshot-backed exchange arrival using the existing forms.
 -/
 module
 
@@ -112,8 +110,8 @@ def Zufallsfrage (B : Zufallsbindung) (q : Frage) : Prop :=
 def ZufallszeileZugelassen (k : Katalog) (B : Zufallsbindung) : Prop :=
   k.enthaelt (.zufall B.quelle.id)
 
-/-- The answer carrying the drawn outcome `o`: the origin is witnessed by the caller
-    (from their snapshot), no generation is invented here. -/
+/-- The register encoding required by the pinned replay. Its incompatibility with marked
+    exchange arrivals is proved in `Hebung.KatalogAnkunft`. -/
 def ZiehungsAntwort (h : Herkunft) (o : Nat) : Antwort :=
   ⟨h, [], .ok (.register o)⟩
 

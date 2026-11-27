@@ -27,10 +27,10 @@
     properties. Every per-form statement quantifies over bundles hypothetically, so
     all obligations stay independent for parallel proof.
 
-  The existence proof is the model-side Ionescu-Tulcea construction: given a
-  scheduler, replay the machine deterministically, consuming band draws in trace
-  order. That construction is causal by construction, which is why `KausalReplay`
-  is a bundle field rather than a separate theorem.
+  `Hebung.ZiehungsMass` constructs the product measure. `Hebung.KatalogAnkunft`
+  shows that the pinned register encoding excludes marked replies from every
+  replay of this bundle, and gives the corresponding exchange arrival with a
+  band-dependent commit snapshot.
 -/
 module
 

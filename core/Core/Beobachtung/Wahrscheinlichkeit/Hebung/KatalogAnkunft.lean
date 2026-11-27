@@ -170,9 +170,11 @@ theorem austauschUmgebung_hardware (hardware : Hardware k h) (t : Nat) (objekt :
 
 /-- A draw becomes an ordinary machine arrival at a pending exchange. Only the targeted object's
     body changes in the commit snapshot. The catalogue computes origin and the entire revalidation
-    footprint, and the machine still appends its usual RC11 event. The schedule is reused verbatim. -/
+    footprint, and the machine still appends its usual RC11 event. The schedule is reused verbatim.
+    The draw index is already visible at the end of this cut. -/
 theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform : run.konform k h)
-    (zeile : ZufallszeileZugelassen k B) (q : FrageEreignis) (frage : Zufallsfrage B q.question)
+    (zeile : ZufallszeileZugelassen k B ∧ zufallGesetz k.plattform B.quelle.id = some B.quelle)
+    (q : FrageEreignis) (frage : Zufallsfrage B q.question)
     (pending : q ∈ s.fragen) (epoche : s.epoche ≤ q.cut) (gestellt : q.cut ≤ t)
     (einmal : ∀ a ∈ s.antworten, a.questionInstance ≠ q.questionInstance)
     (delivery : (run.angebot t).delivery q.question.endpoint = true)
@@ -180,13 +182,13 @@ theorem zufallsAnkunft {B : Zufallsbindung} (hardware : Hardware k h) (konform :
     (valid : q.question.zugriffe.all ((h.politik.sicht t s.verlauf).gueltig q.question.endpoint) = true)
     (ready : ((h.politik.sicht t s.verlauf).objects q.question.objekt).ready = true)
     (konsistent : s.graph.graph.Konsistent) (vollstaendig : s.graph.graph.Vollstaendig)
-    (code : Fin B.quelle.anz → List UInt8) (band : Band) (index : Nat) :
+    (code : Fin B.quelle.anz → List UInt8) (band : Band) (index : Fin (t + 1)) :
     let body := code (Ziehung B.quelle band index)
     let h' := austauschUmgebung k h t q.question.objekt body
     let run' := { run with politik := h'.politik }
     let sicht := h'.politik.sicht t s.verlauf
     ∃ a spur s', Hardware k h' ∧ run'.konform k h' ∧
-      ZufallszeileZugelassen k B ∧ a.zu q ∧
+      (ZufallszeileZugelassen k B ∧ zufallGesetz k.plattform B.quelle.id = some B.quelle) ∧ a.zu q ∧
       AntwortSchritt e k run' t a s spur s' ∧
       a.reply = ⟨sicht.herkunft q.question.objekt,
         q.question.zugriffe.map (fun z => sicht.herkunft z.handle.origin.object),
@@ -302,7 +304,8 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
   · intro band draw
     let code : Fin B.quelle.anz → List UInt8 := fun v => if v.val = 0 then [] else [1]
     obtain ⟨a, spur, s', hw, konform, _, zu, schritt, reply⟩ :=
-      zufallsAnkunft fair.hardware fair.konform zeile q marker pending (Nat.le_refl _) (Nat.zero_le _)
+      zufallsAnkunft fair.hardware fair.konform ⟨zeile, zufallGesetz_nationaleMuenze _⟩
+        q marker pending (Nat.le_refl _) (Nat.zero_le _)
         (fun _ mem => (List.not_mem_nil mem).elim) delivery rfl valid ready
         Speicher.Zustand.leer_konsistent Speicher.Zustand.leer_vollstaendig code band 0
     refine ⟨_, _, a, spur, s', hw, konform, rfl, zu, schritt, ?_⟩
@@ -311,7 +314,8 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
       rw [draw]
       cases bit <;> rfl
     rw [reply]
-    simp only [austauschUmgebung, austauschSicht, if_true, snapshot, q, Frage.objekt, handle, obj,
+    simp only [austauschUmgebung, austauschSicht, if_true, h, Umgebung.referenz, snapshot, q,
+      Frage.objekt, handle, obj,
       Frage.zugriffe, List.map_cons, List.map_nil, AussenSicht.herkunft, Function.update_self, body, B]
 
 end Gabbro.Core.Beobachtung
