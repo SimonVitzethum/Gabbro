@@ -46,6 +46,9 @@ def mehrSchnittUmgebung (k : Katalog) (h : Umgebung) (plan : SchnittPlan) : Umge
 
 /-- The shared policy is governed by the same rows: at an unscheduled cut it equals the
     base answer and sight, at a scheduled cut it is atomic by construction. -/
+theorem mehrSchnittUmgebung_sicht (k : Katalog) (h : Umgebung) (plan : SchnittPlan) :
+    (mehrSchnittUmgebung k h plan).politik.sicht = mehrSchnittSicht h.politik.sicht plan := rfl
+
 theorem mehrSchnittUmgebung_hardware (hardware : Hardware k h) (plan : SchnittPlan) :
     Hardware k (mehrSchnittUmgebung k h plan) := by
   refine { hardware with antwort := ?_ }

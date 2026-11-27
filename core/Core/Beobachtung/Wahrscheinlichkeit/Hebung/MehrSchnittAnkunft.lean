@@ -62,10 +62,9 @@ private theorem mehrSchnittPlan_erfolg {B : Zufallsbindung}
   have basis : atomar p (h.politik.sicht u verlauf) q =
       .antwort ⟨(h.politik.sicht u verlauf).herkunft objekt,
         q.zugriffe.map (fun z => (h.politik.sicht u verlauf).herkunft z.handle.origin.object),
-        .ok (.exchanged tag (h.politik.sicht u verlauf).objects objekt |>.body)⟩ := by
+        .ok (.exchanged tag ((h.politik.sicht u verlauf).objects objekt).body)⟩ := by
     have warte : (h.politik.sicht u verlauf).wartet p q = false := by
-      rw [operation]
-      simp only [AussenSicht.wartet]
+      simp only [AussenSicht.wartet, operation]
     have rdy : ((h.politik.sicht u verlauf).objects q.handle.origin.object).ready = true := by
       rw [hobj]
       exact ready
@@ -92,8 +91,8 @@ private theorem mehrSchnittPlan_commit {B : Zufallsbindung}
         q.zugriffe.map (fun z => (h.politik.sicht u verlauf).herkunft z.handle.origin.object),
         .ok (.exchanged tag body)⟩ := by
   rw [(mehrSchnittUmgebung_hardware hardware plan).antwort u verlauf q selected]
-  simpa only [mehrSchnittUmgebung] using
-    (mehrSchnittPlan_erfolg code objekt plan body hplan operation supported valid ready hobj)
+  rw [mehrSchnittUmgebung_sicht]
+  exact mehrSchnittPlan_erfolg code objekt plan body hplan operation supported valid ready hobj
 
 /-- Turn an already-installed policy's commit at a pending question into an admitted
     machine arrival. This is the arrival half of `KatalogAnkunft.zufallsAnkunft`, used
@@ -109,7 +108,8 @@ private theorem zufallsAnkunftBeiPolitik {k : Katalog} {h : Umgebung} {run : HwL
     (konsistent : s.graph.graph.Konsistent) (vollstaendig : s.graph.graph.Vollstaendig)
     (reply : Antwort)
     (commit : h.politik.antwort u s.verlauf q.question = .antwort reply) :
-    ∃ a spur s', AntwortSchritt e k run u a s spur s' ∧ a.reply = reply := by
+    ∃ a spur s', a.question = q.question ∧ AntwortSchritt e k run u a s spur s' ∧
+      a.reply = reply := by
   let a : AntwortEreignis := ⟨u, q.context, q.questionInstance, q.question, reply⟩
   have zu : a.zu q := ⟨gestellt, rfl, rfl, rfl⟩
   have offered : s.AntwortAngeboten k run u a := by
@@ -120,7 +120,7 @@ private theorem zufallsAnkunftBeiPolitik {k : Katalog} {h : Umgebung} {run : HwL
   let label := aussenEtikett e (.antwort a)
   obtain ⟨g', schritt⟩ := Speicher.Zustand.schritt_ohne_lesen konsistent vollstaendig
     (SpeicherAkteur.aussen : SpeicherAkteur Ort) label id
-  refine ⟨a, ⟨[(.aussen, label)], [.antwort a]⟩, { s.antwort a with graph := g' }, ?_, rfl⟩
+  refine ⟨a, ⟨[(.aussen, label)], [.antwort a]⟩, { s.antwort a with graph := g' }, rfl, ?_, rfl⟩
   exact ⟨offered, rfl, .cons (.ohne (Or.inl rfl)) schritt (.nil _), rfl⟩
 
 /-- Pack a shared-policy arrival as `Teilbuendel`'s checked draw step at the chosen index. -/
@@ -156,12 +156,13 @@ private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     dsimp only [reply]
     exact mehrSchnittPlan_commit code objekt hardware plan body hplan selected operation supported
       valid ready hobj
-  obtain ⟨a, spur, s', schritt, areply⟩ := zufallsAnkunftBeiPolitik konform pending epoche gestellt
-    einmal delivery selected konsistent vollstaendig reply commit
+  obtain ⟨a, spur, s', hquestion, schritt, areply⟩ := zufallsAnkunftBeiPolitik
+    (e := E.einrichtung) konform pending epoche gestellt einmal delivery selected
+    konsistent vollstaendig reply commit
   refine ⟨a, spur, s', ?_, ?_⟩
   · dsimp only [IstZufallsAnkunftSchritt]
     refine ⟨a, spur, s, s', rfl, rfl, ?_, reply.origin, reply.checkedObjects, body, ?_, hbody, ?_⟩
-    · simpa only [a] using marker
+    · simpa only [hquestion] using marker
     · rw [areply]
       rfl
     · exact ⟨run, schritt⟩
@@ -172,8 +173,15 @@ theorem zweiZiehungsSchnitte_mass (Q : Zufallsquelle) (a0 a1 : Fin Q.anz) :
     bandMass Q {band : Band | Ziehung Q band 0 = a0 ∧ Ziehung Q band 1 = a1} =
       Q.gesetz a0 * Q.gesetz a1 := by
   let Z : Zylinder Q := ⟨[(0, a0), (1, a1)]⟩
-  have mass := bandMass_zylinder Q Z (by decide : ((0, a0) :: [(1, a1)] : List (Nat × Fin Q.anz)).map Prod.fst |>.Nodup)
+  have hnodup : (Z.pfad.map Prod.fst).Nodup := by
+    simp [Z]
+  have mass := bandMass_zylinder Q Z hnodup
+  have hmenge : {band : Band | Ziehung Q band 0 = a0 ∧ Ziehung Q band 1 = a1} =
+      {band : Band | ∀ p ∈ Z.pfad, band Q.id p.1 % Q.anz = p.2.val} := by
+    ext band
+    simp [Z, Ziehung, Fin.ext_iff]
+  rw [hmenge]
   simpa only [Z, ZylinderGewicht, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil,
-    mul_one, List.mem_cons, List.not_mem_nil, or_false, forall_eq, Ziehung] using mass
+    mul_one] using mass
 
 end Gabbro.Core.Beobachtung
