@@ -31,14 +31,16 @@ def niFrage : Frage := niKanal.frage niHandle [7]
 def niSicht (body : List UInt8) : AussenSicht :=
   { AussenSicht.leer with
     objects := fun o => if o = niObjekt then ⟨0, true, true, body, fun _ => 0⟩
-      else AussenSicht.leer.objects o }
+      else AussenSicht.leer.objects o
+    channels := fun e i => if e = .cProcess ∧ i = 0 then some niHandle else none }
 
 def niAntwort (body : List UInt8) : Antwort :=
   ⟨⟨niObjekt, 0⟩, [⟨niObjekt, 0⟩], .ok (.exchanged [7] body)⟩
 
 private theorem frage_hoch : oeffentlich (niEtiketten.frage niFrage) = false :=
   (Etiketten.frage_hoch_iff niEtiketten niFrage).2
-    ⟨7, Or.inr ⟨⟨niHandle, .invoke⟩, by simp [niFrage, FremdKanal.frage, Frage.zugriffe],
+    ⟨7, Or.inr ⟨⟨niHandle, .invoke⟩, by
+        simp [niFrage, FremdKanal.frage, Frage.zugriffe, AussenOperation.required],
       by simp [niEtiketten, niHandle, niObjekt]⟩⟩
 
 private theorem exchange_angebot : Plattform.x86_64.operationAngeboten niFrage = true :=
@@ -46,7 +48,10 @@ private theorem exchange_angebot : Plattform.x86_64.operationAngeboten niFrage =
 
 private theorem atomar_exchange (body : List UInt8) :
     atomar Plattform.x86_64 (niSicht body) niFrage = .antwort (niAntwort body) := by
-  rfl
+  simp [atomar, niFrage, niKanal, niHandle, niObjekt, niSicht, niAntwort,
+    FremdKanal.frage, Frage.zugriffe, AussenOperation.required,
+    Plattform.operationAngeboten, AussenSicht.gueltig, AussenSicht.herkunft,
+    AussenSicht.wartet, AussenSicht.erfolg, AussenSicht.leer]
 
 private theorem keine_niObjekt (q : Frage) (niedrig : oeffentlich (niEtiketten.frage q) = true) :
     ∀ a ∈ q.zugriffe, a.handle.origin.object ≠ niObjekt := by
@@ -85,7 +90,7 @@ private theorem map_herkunft_gleich (b₁ b₂ : List UInt8) (l : List Zugriff)
   | cons a l ih =>
       simp only [List.map_cons]
       rw [herkunft_gleich b₁ b₂ (keine a List.mem_cons_self)]
-      exact ih (fun b hb => keine b (List.mem_cons_of_mem a hb))
+      rw [ih (fun b hb => keine b (List.mem_cons_of_mem a hb))]
 
 private theorem wartet_gleich (b₁ b₂ : List UInt8) (q : Frage)
     (hne : q.handle.origin.object ≠ niObjekt) :
@@ -95,7 +100,7 @@ private theorem wartet_gleich (b₁ b₂ : List UInt8) (q : Frage)
 private theorem erfolg_gleich (b₁ b₂ : List UInt8) (q : Frage)
     (hne : q.handle.origin.object ≠ niObjekt) :
     (niSicht b₁).erfolg Plattform.x86_64 q = (niSicht b₂).erfolg Plattform.x86_64 q := by
-  simp [AussenSicht.erfolg, AussenSicht.herkunft, niSicht, hne,
+  simp [AussenSicht.erfolg, AussenSicht.herkunft, AussenSicht.leer, niSicht, hne,
     Plattform.registerWert, Plattform.geraet]
 
 private theorem bereit_gleich (b₁ b₂ : List UInt8) {o : Objekt} (h : o ≠ niObjekt) :
@@ -124,8 +129,8 @@ private theorem sicht_gleich (b₁ b₂ : List UInt8) :
   · funext o
     by_cases h : o = niObjekt
     · subst o
-      simp [niEtiketten, niSicht]
-    · simp [niEtiketten, niSicht, h]
+      simp [niEtiketten, niSicht, oeffentlich, sichtbar]
+    · simp [niEtiketten, niSicht, oeffentlich, sichtbar, h]
   · apply Prod.ext
     · funext e i
       rfl
@@ -154,7 +159,7 @@ private theorem projektion_gleich (b₁ b₂ : List UInt8) :
       · have niedrig : oeffentlich (niEtiketten.frage q) = true := by
           cases h : oeffentlich (niEtiketten.frage q) <;> simp_all
         simp only [sichtbar, niedrig, Bool.false_eq_true, ↓reduceIte]
-        exact atomar_niedrig_gleich b₁ b₂ q niedrig
+        exact congrArg some (atomar_niedrig_gleich b₁ b₂ q niedrig)
     · funext t history e phase
       rfl
 
