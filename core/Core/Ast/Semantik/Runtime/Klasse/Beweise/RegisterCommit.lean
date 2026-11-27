@@ -240,11 +240,13 @@ private theorem fuehrtAus_aussen {L Ort Wert Raum Lok Grund Bedingung : Type} [D
     {p : SchrittPlan L Ort Wert Bedingung} {sperren : List (Speicher.Etikett Ort Wert)}
     {ereignisse : List Ereignis} {v : Maschine.Zustand L Ort Wert Raum Lok Grund}
     (e : Einrichtung L Ort Wert Raum Lok Grund Bedingung)
-    (action : FuehrtAus e t c s u p.aktion sperren ereignisse v) :
+    (action : FuehrtAus e t c s u p.aktion sperren ereignisse v)
+    (noCompletion : ∀ token, p.aktion ≠ .ruecknahmeAbschliessen token) :
     ereignisse = [] ∨ ∃ q : Frage, ereignisse = [.frage (s.stelleFrage t c q)] ∧ p.aktion = .frage q := by
   generalize hA : p.aktion = a at action
   cases action with
   | frage q => exact Or.inr ⟨q, rfl, by simpa using hA⟩
+  | ruecknahmeAbschliessen token => exact (noCompletion token hA).elim
   | _ => exact Or.inl rfl
 
 /-- The outside record and the new effects of one class step. The record is empty, or one question with
@@ -263,8 +265,17 @@ private theorem klassen_spur {ι : Type} (E : Klasseneinheit ι) (f : ι) (F : S
     rw [nach_eq]
     change v.buchung.wirkungen = vor.buchung.wirkungen
     rw [fuehrtAus_buchung E.einrichtung action, wirkungen_gleich F c vor zwischen plan step]
+  have noCompletion : ∀ token, plan.aktion ≠ .ruecknahmeAbschliessen token := by
+    intro token eq
+    rcases klassen_aktion step with still | ⟨_, _, lock⟩ | ⟨_, question, _⟩
+    · rw [eq] at still
+      exact still
+    · rw [eq] at lock
+      cases lock
+    · rw [eq] at question
+      cases question
   constructor
-  · rcases fuehrtAus_aussen E.einrichtung action with leer | ⟨q, geformt, hA⟩
+  · rcases fuehrtAus_aussen E.einrichtung action noCompletion with leer | ⟨q, geformt, hA⟩
     · exact Or.inl leer
     · exact Or.inr ⟨q, geformt, (frage_aktion_befugt step hA).2⟩
   · exact wirkungen
