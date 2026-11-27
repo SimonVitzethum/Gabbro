@@ -130,4 +130,211 @@ theorem quellladen_handoff_single_encard (P : Plattform) (u : UnitMitSchranken)
   exact handoffBooking_single_encard s bytes extent
     (geladeneRegion_lebt_leer P u a p geladen 0 within).1
 
+/-- STATIC CONSISTENCY, FIRST HALF. A layout returned by the target table always
+    carries a strictly positive checked byte width: the accepted widths are
+    8, 16, 32 and 64 bits. This is the only width a view may contribute. -/
+theorem layout_positive_bytes (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (shape : Gabbro.Core.Ast.LowLevel.Layout)
+    (h : Gabbro.Core.Ast.LowLevel.layout target written = some shape) : 0 < shape.bytes := by
+  cases written with
+  | integer signed width range =>
+      simp only [Gabbro.Core.Ast.LowLevel.layout] at h
+      split at h
+      · rename_i cond
+        injection h with hs
+        subst shape
+        change 0 < width / 8
+        have widths : width = 8 ∨ width = 16 ∨ width = 32 ∨ width = 64 := by
+          simpa using cond.1
+        rcases widths with rfl | rfl | rfl | rfl <;> decide
+      · cases h
+  | _ =>
+      simp only [Gabbro.Core.Ast.LowLevel.layout] at h
+      cases h
+
+/-- STATIC CONSISTENCY, SECOND HALF. For a fixed target and written type the
+    layout is a function: two successful resolutions give the same shape, hence
+    the same width. No second width can be smuggled in for the same type. -/
+theorem layout_unique (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (s t : Gabbro.Core.Ast.LowLevel.Layout)
+    (hs : Gabbro.Core.Ast.LowLevel.layout target written = some s)
+    (ht : Gabbro.Core.Ast.LowLevel.layout target written = some t) : s = t := by
+  rw [hs] at ht
+  exact Option.some.inj ht
+
+theorem layout_bytes_unique (target : ZielDaten) (written : Gabbro.Core.Ast.WrittenType) (s t : Gabbro.Core.Ast.LowLevel.Layout)
+    (hs : Gabbro.Core.Ast.LowLevel.layout target written = some s)
+    (ht : Gabbro.Core.Ast.LowLevel.layout target written = some t) : s.bytes = t.bytes :=
+  congrArg Gabbro.Core.Ast.LowLevel.Layout.bytes (layout_unique target written s t hs ht)
+
+/-- Inverting a successful `.view` initializer: the loader's own `layout` and
+    `fits` checks passed, so the width it wrote into the value is positive. -/
+theorem view_value_layout (target : ZielDaten) (slot : Nat) (extent : Strecke)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value target slot extent
+        (.view written valid) = some value) :
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout target written = some shape ∧
+      shape.fits extent ∧ 0 < shape.bytes := by
+  unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value at yields
+  cases hlayout : Gabbro.Core.Ast.LowLevel.layout target written with
+  | none => simp [hlayout] at yields
+  | some shape =>
+      by_cases fits : shape.fits extent
+      · exact ⟨shape, rfl, fits, layout_positive_bytes target written shape hlayout⟩
+      · simp [hlayout, fits] at yields
+
+/-- The logical boot cell of a grant is present exactly when one complete cell
+    of the checked width fits into the physical extent. -/
+theorem handoffBooking_zero_booked_iff {bytes : Nat} (positive : 0 < bytes)
+    {regions : List Strecke} {booking : Sicherheit.Buchung Zelle} {slot : Nat} {extent : Strecke}
+    (grant : regions[slot]? = some extent) :
+    ((handoffBooking bytes regions booking).umfang slot)[0]? = some (.region slot 0) ↔
+      bytes ≤ extent.bis - extent.von := by
+  rw [handoffBooking_lookup bytes regions booking grant]
+  constructor
+  · intro h
+    have h1 : 1 ≤ (extent.bis - extent.von) / bytes := h
+    have hmul : 1 * bytes ≤ extent.bis - extent.von := (Nat.le_div_iff_mul_le positive).mp h1
+    simpa using hmul
+  · intro h
+    have hmul : 1 * bytes ≤ extent.bis - extent.von := by simpa using h
+    have hdiv : 1 ≤ (extent.bis - extent.von) / bytes := (Nat.le_div_iff_mul_le positive).mpr hmul
+    exact lt_of_lt_of_le Nat.zero_lt_one hdiv
+
+/-- THE B21 SOURCE CONNECTION. A successful source view of a granted region
+    fixes its positive width; at that width slot 0 of the handoff booking holds
+    the logical cell `.region slot 0`, whose physical subinterval lies inside
+    the grant. The width comes from the loader's layout, never from outside. -/
+theorem quellanschluss_view_handoff (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s)
+    (slot : Nat) {extent : Strecke} (grant : a.regions[slot]? = some extent)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel slot extent
+        (.view written valid) = some value) :
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+      0 < shape.bytes ∧ s.rechte.lebt slot = true ∧
+      ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? = some (.region slot 0) ∧
+      extent.enthaelt ⟨extent.von, extent.von + shape.bytes⟩ := by
+  obtain ⟨shape, hlayout, fits, positive⟩ :=
+    view_value_layout P.ziel slot extent written valid value yields
+  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le' fits.2
+  have within : slot < a.regions.length := (List.getElem?_eq_some_iff.mp grant).1
+  have live : s.rechte.lebt slot = true :=
+    (geladeneRegion_lebt_leer P u a p geladen slot within).1
+  have booked : ((handoffBooking shape.bytes a.regions s.buchung).umfang slot)[0]? =
+      some (.region slot 0) := (handoffBooking_zero_booked_iff positive grant).mpr len
+  have inside : extent.enthaelt
+      ⟨extent.von + 0 * shape.bytes, extent.von + (0 + 1) * shape.bytes⟩ :=
+    handoffBooking_inside (booking := s.buchung) positive grant booked
+  exact ⟨shape, hlayout, positive, live, booked, by simpa using inside⟩
+
+/-- The same connection at the boot slot, with the exact finite B21 count. The
+    count is positive because the checked width fits at least one cell. -/
+theorem quellanschluss_view_b21 (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s)
+    {extent : Strecke} (grant : a.regions = [extent])
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid []) (value : Gabbro.Core.Ast.Dynamisch)
+    (yields : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel 0 extent
+        (.view written valid) = some value) :
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+      0 < shape.bytes ∧
+      ((handoffBooking shape.bytes a.regions s.buchung).umfang 0)[0]? = some (.region 0 0) ∧
+      (LebendeZellen { s with buchung := handoffBooking shape.bytes a.regions s.buchung }).encard =
+        ((extent.bis - extent.von) / shape.bytes : Nat) ∧
+      1 ≤ ((extent.bis - extent.von) / shape.bytes : Nat) := by
+  have grant0 : a.regions[0]? = some extent := by rw [grant]; rfl
+  obtain ⟨shape, hlayout, fits, positive⟩ :=
+    view_value_layout P.ziel 0 extent written valid value yields
+  have len : shape.bytes ≤ extent.bis - extent.von := Nat.le_sub_of_add_le' fits.2
+  have booked : ((handoffBooking shape.bytes a.regions s.buchung).umfang 0)[0]? =
+      some (.region 0 0) := (handoffBooking_zero_booked_iff positive grant0).mpr len
+  have count := quellladen_handoff_single_encard P u a p geladen shape.bytes grant
+  have hmul : 1 * shape.bytes ≤ extent.bis - extent.von := by simpa using len
+  have hdiv : 1 ≤ (extent.bis - extent.von) / shape.bytes :=
+    (Nat.le_div_iff_mul_le positive).mpr hmul
+  exact ⟨shape, hlayout, positive, booked, count, hdiv⟩
+
+/-- Two distinct granted regions viewed at the same type use the same checked
+    width, and their logical boot cells occupy disjoint physical storage. -/
+theorem quellanschluss_view_getrennt (P : Plattform) (a : AussenStart)
+    (s : Zustand Nat Zelle Int Nat Rahmen PUnit)
+    (disjoint : a.regions.Pairwise Strecke.getrennt)
+    {i j : Nat} {left right : Strecke} (distinct : i ≠ j)
+    (li : a.regions[i]? = some left) (lj : a.regions[j]? = some right)
+    (written : Gabbro.Core.Ast.WrittenType) (valid : written.valid [])
+    (vi vj : Gabbro.Core.Ast.Dynamisch)
+    (yi : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel i left
+        (.view written valid) = some vi)
+    (yj : Gabbro.Core.Ast.LowLevel.RegionInitializer.value P.ziel j right
+        (.view written valid) = some vj) :
+    ∃ shape : Gabbro.Core.Ast.LowLevel.Layout, Gabbro.Core.Ast.LowLevel.layout P.ziel written = some shape ∧
+      Strecke.getrennt ⟨left.von, left.von + shape.bytes⟩
+        ⟨right.von, right.von + shape.bytes⟩ := by
+  obtain ⟨shape, hlayout, fi, positive⟩ := view_value_layout P.ziel i left written valid vi yi
+  obtain ⟨shapeJ, hlayoutJ, fj, _⟩ := view_value_layout P.ziel j right written valid vj yj
+  have eq : shape = shapeJ := layout_unique P.ziel written shape shapeJ hlayout hlayoutJ
+  subst shapeJ
+  have bookedI : ((handoffBooking shape.bytes a.regions s.buchung).umfang i)[0]? =
+      some (.region i 0) := (handoffBooking_zero_booked_iff positive li).mpr (Nat.le_sub_of_add_le' fi.2)
+  have bookedJ : ((handoffBooking shape.bytes a.regions s.buchung).umfang j)[0]? =
+      some (.region j 0) := (handoffBooking_zero_booked_iff positive lj).mpr (Nat.le_sub_of_add_le' fj.2)
+  have sep := handoffBooking_disjoint (booking := s.buchung) positive disjoint distinct
+    li lj bookedI bookedJ
+  exact ⟨shape, hlayout, by simpa using sep⟩
+
+/-- CHECKED COUNTEREXAMPLE. The width is not a property of the region alone:
+    one admitted extent admits two distinct written types with different byte
+    widths, and the loader accepts a view of each. This is why the booking must
+    take its width from the chosen type's layout (`layout_bytes_unique` rules
+    out a second width for one fixed type). -/
+theorem written_8_16_valid :
+    (Gabbro.Core.Ast.WrittenType.integer false 8 none : Gabbro.Core.Ast.WrittenType).valid [] ∧
+    (Gabbro.Core.Ast.WrittenType.integer false 16 none : Gabbro.Core.Ast.WrittenType).valid [] := by
+  constructor
+  · change 1 ≤ (8 : Nat) ∧ 8 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ 0 ≤ 255 ∧ (255 : Int) ≤ 255
+    omega
+  · change 1 ≤ (16 : Nat) ∧ 16 ≤ 64 ∧ (0 : Int) ≤ 0 ∧ 0 ≤ 65535 ∧ (65535 : Int) ≤ 65535
+    omega
+
+theorem source_region_zwei_breiten
+    (valid₁ : (Gabbro.Core.Ast.WrittenType.integer false 8 none : Gabbro.Core.Ast.WrittenType).valid [])
+    (valid₂ : (Gabbro.Core.Ast.WrittenType.integer false 16 none : Gabbro.Core.Ast.WrittenType).valid []) :
+    ∃ extent : Strecke, ∃ s₁ s₂ : Gabbro.Core.Ast.LowLevel.Layout,
+      Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 8 none) = some s₁ ∧
+      Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel (.integer false 16 none) = some s₂ ∧
+      s₁.fits extent ∧ s₂.fits extent ∧ s₁.bytes ≠ s₂.bytes ∧
+      (∃ v₁ : Gabbro.Core.Ast.Dynamisch,
+        Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
+          (.view (.integer false 8 none) valid₁) = some v₁) ∧
+      (∃ v₂ : Gabbro.Core.Ast.Dynamisch,
+        Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
+          (.view (.integer false 16 none) valid₂) = some v₂) := by
+  let extent : Strecke := ⟨0x1000, 0x2000⟩
+  let w₁ : Gabbro.Core.Ast.WrittenType := .integer false 8 none
+  let w₂ : Gabbro.Core.Ast.WrittenType := .integer false 16 none
+  let s₁ : Gabbro.Core.Ast.LowLevel.Layout :=
+    ⟨.integer false 8 none, 1, 1, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
+  let s₂ : Gabbro.Core.Ast.LowLevel.Layout :=
+    ⟨.integer false 16 none, 2, 2, Gabbro.Core.Ast.LowLevel.ByteOrder.ofTarget Plattform.x86_64.ziel⟩
+  have hlayout₁ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₁ = some s₁ := by rfl
+  have hlayout₂ : Gabbro.Core.Ast.LowLevel.layout Plattform.x86_64.ziel w₂ = some s₂ := by rfl
+  have fits₁ : s₁.fits extent := by
+    constructor <;> decide
+  have fits₂ : s₂.fits extent := by
+    constructor <;> decide
+  have yield₁ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
+      (.view w₁ valid₁) =
+      some ⟨.regionView w₁.type, ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
+    unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
+    simp [hlayout₁, fits₁, s₁]
+  have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
+      (.view w₂ valid₂) =
+      some ⟨.regionView w₂.type, ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
+    unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
+    simp [hlayout₂, fits₂, s₂]
+  refine ⟨extent, s₁, s₂, hlayout₁, hlayout₂, fits₁, fits₂, ?_, ?_, ?_⟩
+  · decide
+  · exact ⟨_, yield₁⟩
+  · exact ⟨_, yield₂⟩
+
 end Gabbro.Core.Beobachtung
