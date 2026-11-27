@@ -37,13 +37,19 @@ theorem folgeHw_konform (h : Umgebung) (s : AussenStart) (zul : folgeEinheit.Zul
 def folgeSchritt (b : Befehl) (s : Zustand) : Zustand :=
   b.maschinennach eintritt s (b.nach eintritt s)
 
-def folgeZustand (s : AussenStart) : Nat → Zustand
-  | 0 => (I.start folgeEinheit s).2
-  | 1 => folgeSchritt (.definiere mainName [] none 0 3 false [] none) (folgeZustand s 0)
-  | 2 => folgeSchritt (.springe 1) (folgeZustand s 1)
-  | 3 => folgeSchritt (.rufe mainName [] none) (folgeZustand s 2)
-  | 4 => folgeSchritt (.blockEnde 0) (folgeZustand s 3)
-  | _ + 5 => folgeSchritt .rueckVoid (folgeZustand s 4)
+def folgeZustand (s : AussenStart) (t : Nat) : Zustand :=
+  let boot := (I.start folgeEinheit s).2
+  let library := folgeSchritt (.definiere mainName [] none 0 3 false [] none) boot
+  let caller := folgeSchritt (.springe 1) library
+  let callee := folgeSchritt (.rufe mainName [] none) caller
+  let returnPoint := folgeSchritt (.blockEnde 0) callee
+  match t with
+  | 0 => boot
+  | 1 => library
+  | 2 => caller
+  | 3 => callee
+  | 4 => returnPoint
+  | _ + 5 => folgeSchritt .rueckVoid returnPoint
 
 def folgeSpur : Nat → Option (SchrittWahl PUnit × SchrittSpur Zelle Int)
   | t => if t < 5 then some (.kontext eintritt (), ⟨[], []⟩) else none
@@ -70,12 +76,12 @@ theorem folge_fertig (h : Umgebung) (s : AussenStart) (k t : Nat) :
       (folgeHw h k)) t (folgeZustand s 5) := by
   intro event next step
   cases step with
-  | kontext _ _ regel _ =>
-    rename_i c _
+  | kontext _ bereit regel aus =>
+    rename_i _ _ _ c _
     obtain ⟨b, head, _⟩ := regel
     by_cases hc : c = eintritt
     · subst c
-      have absent : folgeEinheit.system.kopf (folgeZustand s 5) eintritt = none := rfl
+      have absent : folgeEinheit.system.kopf (folgeZustand s 5) eintritt = none := by rfl
       rw [absent] at head
       cases head
     · have rest : (folgeZustand s 5).status c = .ruht := by
@@ -87,6 +93,8 @@ theorem folge_fertig (h : Umgebung) (s : AussenStart) (k t : Nat) :
   | antwort _ reply =>
     obtain ⟨offered, _, _, _⟩ := reply
     obtain ⟨q, hmem, _, _⟩ := offered.2.2.2.1
+    have empty : (folgeZustand s 5).fragen = [] := by rfl
+    rw [empty] at hmem
     exact List.not_mem_nil hmem
   | interrupt _ enters =>
     obtain ⟨_, _, _, _, _, haus, _, _, _, _, _⟩ := enters
@@ -102,11 +110,11 @@ def folgeZeit (h : Umgebung) (s : AussenStart) (k : Nat) (assigned : s.assignmen
   takt t := by
     have dispatch := folge_dispatch s k assigned
     match t with
-    | 0 => exact .schritt rfl (folge_tat h s k 0 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
-    | 1 => exact .schritt rfl (folge_tat h s k 1 _ (Or.inl rfl) rfl rfl dispatch)
-    | 2 => exact .schritt rfl (folge_tat h s k 2 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
-    | 3 => exact .schritt rfl (folge_tat h s k 3 _ (Or.inl rfl) rfl rfl dispatch)
-    | 4 => exact .schritt rfl (folge_tat h s k 4 _ (Or.inr (Or.inl rfl)) rfl rfl dispatch)
+    | 0 => exact .schritt rfl (folge_tat h s k 0 _ (Or.inl rfl) (by rfl) (by rfl) (by exact dispatch))
+    | 1 => exact .schritt rfl (folge_tat h s k 1 _ (Or.inl rfl) (by rfl) (by rfl) (by exact dispatch))
+    | 2 => exact .schritt rfl (folge_tat h s k 2 _ (Or.inr (Or.inl rfl)) (by rfl) (by rfl) (by exact dispatch))
+    | 3 => exact .schritt rfl (folge_tat h s k 3 _ (Or.inl rfl) (by rfl) (by rfl) (by exact dispatch))
+    | 4 => exact .schritt rfl (folge_tat h s k 4 _ (Or.inl rfl) (by rfl) (by rfl) (by exact dispatch))
     | n + 5 =>
       exact .wartet (if_neg (by omega)) rfl (folge_fertig h s k (n + 5))
 
@@ -138,10 +146,11 @@ theorem folgeaufruf_erfuellbar :
   let ρ : I.Lauf folgeEinheit := ⟨s, h, folgeHw h k, zeit.erlaubePausen pause, fun _ => none⟩
   refine ⟨ρ, ⟨hardware, folgeHw_konform h s zul k assigned, zul, rfl,
     zeit.erlaubePausen_maximal pause _ (fun _ => rfl), fun _ _ h => nomatch h⟩,
-    ?_, ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro t ht
     exact if_pos ht
   · intro t ht
     exact if_neg (Nat.not_lt.mpr ht)
+  all_goals rfl
 
 end Gabbro.Core.Linken
