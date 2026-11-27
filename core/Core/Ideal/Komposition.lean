@@ -76,6 +76,26 @@ def Fortschritt : Prop :=
   ∀ k h hw t s c, hw.konform k h → s.SpeicherGut → s.status c = .laeuft →
     (∃ kern, (s.kerne kern).laeuft = some c) → FortschrittAm e Sy k hw t s c
 
+/-- Determinacy and progress of the ideal machine depend only on the heads, completion,
+    blocking, and the ideal projection of each rule. -/
+theorem bestimmt_fortschritt_iff (Sy' : MaschinenSystem L Ort Wert Raum Lok Grund Bedingung Wahl ι)
+    (kopf : Sy.kopf = Sy'.kopf) (fertig : Sy.fertig = Sy'.fertig)
+    (blockiert : Sy.blockiert = Sy'.blockiert)
+    (ideal : ∀ i, (Sy.regel i).ideal = (Sy'.regel i).ideal) :
+    (Bestimmt e Sy ↔ Bestimmt e Sy') ∧ (Fortschritt e Sy ↔ Fortschritt e Sy') := by
+  have idealSchritt : ∀ c s w plans u, Sy.ISchritt c s w plans u ↔ Sy'.ISchritt c s w plans u := by
+    intro c s w plans u
+    simp only [System.ISchritt, kopf, ideal]
+  have schritt : ∀ k hw t s w s', Schritt e Sy k hw t s w s' ↔ Schritt e Sy' k hw t s w s' := by
+    intro k hw t s w s'
+    constructor <;> intro h <;> cases h with
+    | kontext noCrash ready rule run =>
+      exact .kontext noCrash ready (by simpa only [idealSchritt] using rule) run
+    | antwort noCrash arrives => exact .antwort noCrash arrives
+    | interrupt noCrash enters => exact .interrupt noCrash enters
+    | absturz crash => exact .absturz crash
+  constructor <;> simp only [Bestimmt, Fortschritt, FortschrittAm, schritt, fertig, blockiert, idealSchritt]
+
 /-- **`I.Fortschritt` from the form-level `IFortschritt` and a composable step at every form.** The form-level
     property supplies "finished / step / blocked"; the protocol supplies the crash alternative and the step through
     the machine frame. It lets a caller reuse a form-level progress theorem (e.g. `system_fortschritt` of a
