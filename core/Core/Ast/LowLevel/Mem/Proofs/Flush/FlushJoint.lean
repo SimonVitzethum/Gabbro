@@ -389,7 +389,7 @@ theorem memFlushFreigabe_erfuellbar :
   refine ⟨_, flushCode, flushEnv, flushStart, hw, 8, flushS4, flushF5, flushName, token,
     Umgebung.referenz_fair _ 2 _ (Plattform.katalog_wohlgeformt .x86_64) (by decide),
     flushZul, memProgramAkzeptiert _, flushReach, flushHead4, key, rfl, ?_⟩
-  have steps := memFlushAbschluss rfl ⟨0, rfl, rfl, flushS4status⟩ flushHead4 flushF5eq
+  have steps := memFlushAbschluss (hw := hw) (t := 8) rfl ⟨0, rfl, rfl, flushS4status⟩ flushHead4 flushF5eq
   simpa only [MemInstruction.schrittSpur, ← flushOp, key, Option.map, Option.toList] using steps
 
 end Gabbro.Core.Ast.LowLevel
