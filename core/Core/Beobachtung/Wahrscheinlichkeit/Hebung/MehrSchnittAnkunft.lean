@@ -238,7 +238,8 @@ theorem zweiZiehungsSchnitte_erfuellbar
   have konform' : run.konform k (mehrSchnittUmgebung k h plan) := by
     refine ⟨rfl, ?_⟩
     intro i
-    simpa only [run, mehrSchnittUmgebung] using fair.gueltig i
+    change AngebotGueltig k h (runBase.angebot i) (runBase.interruptUrsprung i)
+    exact fair.gueltig i
   have delivery0 : (run.angebot 0).delivery q0.question.endpoint = true := by
     change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
     decide
@@ -251,28 +252,32 @@ theorem zweiZiehungsSchnitte_erfuellbar
     (fair.gueltig 1).2.2.2.1 _ delivery1
   have valid0 : q0.question.zugriffe.all
       ((h.politik.sicht 0 s0.verlauf).gueltig q0.question.endpoint) = true := by
+    change q0.question.zugriffe.all (snapshot.gueltig .cProcess) = true
     simp only [q0, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
       AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
       ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
   have valid1 : q1.question.zugriffe.all
       ((h.politik.sicht 1 s1.verlauf).gueltig q1.question.endpoint) = true := by
+    change q1.question.zugriffe.all (snapshot.gueltig .cProcess) = true
     simp only [q1, Frage.zugriffe, List.all_cons, AussenOperation.required, snapshot,
       AussenSicht.gueltig, handle, obj, AussenSicht.herkunft, Function.update_self,
       ↓reduceIte, and_self, BEq.rfl, List.mem_singleton, decide_true, Bool.and_self, List.all_nil]
   have ready0 : ((h.politik.sicht 0 s0.verlauf).objects obj).ready = true := by
+    change (snapshot.objects obj).ready = true
     simp only [snapshot, Function.update_self]
   have ready1 : ((h.politik.sicht 1 s1.verlauf).objects obj).ready = true := by
+    change (snapshot.objects obj).ready = true
     simp only [snapshot, Function.update_self]
   have hz0 : Ziehung B.quelle band 0 = (⟨0, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    simp only [Ziehung, band, B, Nat.zero_mod]
+    simp only [Ziehung, band, B, muenzQuelle, Nat.zero_mod]
   have hz1 : Ziehung B.quelle band 1 = (⟨1, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    simp only [Ziehung, band, B, Nat.mod_eq_of_lt]
+    simp only [Ziehung, band, B, muenzQuelle, Nat.mod_eq_of_lt]
   have hbodies : body0 ≠ body1 := by
     dsimp only [body0, body1]
     rw [hz0, hz1]
-    simp only [code, ↓reduceIte]
+    decide
   have step0 := mehrSchnitt_checkedStep (B := B) code obj k h plan band 0 E hkatalog.symm 0
     s0 q0 run fair.hardware konform' List.mem_cons_self (Nat.zero_le _) (Nat.le_refl _)
     (fun _ mem => (List.not_mem_nil mem).elim) delivery0 selected0
