@@ -463,7 +463,7 @@ theorem quellladen_handoff_single_encard (P : Plattform) (u : UnitMitSchranken)
     (LebendeZellen { s with buchung := handoffBooking bytes a.regions s.buchung }).encard =
       ((extent.bis - extent.von) / bytes : Nat) := by
   rw [grant]
-  have within : 0 < a.regions.length := by rw [grant]; decide
+  have within : 0 < a.regions.length := by rw [grant]; exact Nat.zero_lt_succ 0
   exact handoffBooking_single_encard s bytes extent
     (geladeneRegion_lebt_leer P u a p geladen 0 within).1
 
