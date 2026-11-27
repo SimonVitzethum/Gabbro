@@ -83,7 +83,7 @@ def variantZeugnisLabels : List Identifier := variantLabels [variantZeugnisMembe
 
 def variantZeugnisPayloads : List (Option (Ty .value)) := variantPayloads [variantZeugnisMember]
 
-def variantZeugnisIndex : Fin variantZeugnisPayloads.length := ⟨0, by decide⟩
+def variantZeugnisIndex : Fin variantZeugnisPayloads.length := ⟨0, Nat.zero_lt_succ 0⟩
 
 def variantZeugnisTyp : Ty .value :=
   variantSchemaType variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads
@@ -119,12 +119,22 @@ def variantZeugnisEinheit : Ast.Unit :=
       (by
         intro m belongs
         rcases List.mem_cons.mp belongs with rfl | empty
-        · exact ⟨(directName_of_singleton (name := variantZeugnisLabel) rfl).1,
-            by decide, by intro t ht; exact (List.not_mem_nil ht).elim⟩
+        · refine ⟨(directName_of_singleton (name := variantZeugnisLabel) rfl).1, ?_,
+            fun _ member => (List.not_mem_nil member).elim⟩
+          change ['a'] ≠ ['_']
+          intro equal
+          have code := congrArg Char.toNat (List.cons.inj equal).1
+          change (97 : Nat) = 95 at code
+          omega
         · exact (List.not_mem_nil empty).elim)
       (by change [variantZeugnisLabel.val].Nodup; exact List.nodup_singleton _)
+  have ordinary : basisName.val ≠ "mut".toList := by
+    intro equal
+    have length := congrArg List.length equal
+    change (1 : Nat) = 3 at length
+    omega
   let body : BracedBlock none variantZeugnisScope :=
-    .braces (.step (.letValue basisName (by decide) variantZeugnisArgumente.expression) .done)
+    .braces (.step (.letValue basisName ordinary variantZeugnisArgumente.expression) .done)
   let main : Decl variantZeugnisScope variantZeugnisScope :=
     .function Ast.Semantik.mainName Ast.Semantik.mainName_direct [] none
       (fun _ h => (List.not_mem_nil h).elim) none body List.nodup_nil (fun h => by cases h) none
