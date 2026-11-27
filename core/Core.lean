@@ -382,6 +382,7 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasis
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasisRegistry
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegAggregate
+public import Core.Ziel.Korrektheit.Beweise2.FormBelegDatensatz
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar

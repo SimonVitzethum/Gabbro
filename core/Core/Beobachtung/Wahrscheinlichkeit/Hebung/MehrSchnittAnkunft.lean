@@ -145,7 +145,7 @@ private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     (ready : ((h.politik.sicht u s.verlauf).objects objekt).ready = true)
     (hobj : q.question.handle.origin.object = objekt) :
     ∃ a spur s',
-      IstZufallsAnkunftSchritt B code b E u index (some s)
+      IstZufallsAnkunftSchritt B code b E run u index (some s)
         (some (SchrittWahl.antwort (Wahl := Wahl) a, spur), some s') ∧
       (some (SchrittWahl.antwort (Wahl := Wahl) a, spur) :
         Option (SchrittWahl Wahl × SchrittSpur Ort Wert)) ≠ none := by
@@ -165,8 +165,9 @@ private theorem mehrSchnitt_checkedStep {B : Zufallsbindung}
     · simpa only [hquestion] using marker
     · rw [areply]
     · rw [hk] at schritt
-      exact ⟨run, schritt⟩
-  · simp
+      exact schritt
+  · intro empty
+    cases empty
 
 /-- The two-position cylinder of the two draw cuts has exactly the product measure. -/
 theorem zweiZiehungsSchnitte_mass (Q : Zufallsquelle) (a0 a1 : Fin Q.anz) :
@@ -174,12 +175,12 @@ theorem zweiZiehungsSchnitte_mass (Q : Zufallsquelle) (a0 a1 : Fin Q.anz) :
       Q.gesetz a0 * Q.gesetz a1 := by
   let Z : Zylinder Q := ⟨[(0, a0), (1, a1)]⟩
   have hnodup : (Z.pfad.map Prod.fst).Nodup := by
-    simp [Z]
+    simp? [Z]
   have mass := bandMass_zylinder Q Z hnodup
   have hmenge : {band : Band | Ziehung Q band 0 = a0 ∧ Ziehung Q band 1 = a1} =
       {band : Band | ∀ p ∈ Z.pfad, band Q.id p.1 % Q.anz = p.2.val} := by
     ext band
-    simp [Z, Ziehung, Fin.ext_iff]
+    simp? [Z, Ziehung, Fin.ext_iff]
   rw [hmenge]
   simpa only [Z, ZylinderGewicht, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil,
     mul_one] using mass
@@ -205,9 +206,9 @@ theorem zweiZiehungsSchnitte_erfuellbar
         body0 ≠ body1 ∧ plan 0 = some (obj, body0) ∧ plan 1 = some (obj, body1) ∧
         Hardware k (mehrSchnittUmgebung k h plan) ∧
         run.konform k (mehrSchnittUmgebung k h plan) ∧
-        IstZufallsAnkunftSchritt B code band E 0 0 (some s0)
+        IstZufallsAnkunftSchritt B code band E run 0 0 (some s0)
           (some (SchrittWahl.antwort (Wahl := Wahl) a0, spur0), some s0') ∧
-        IstZufallsAnkunftSchritt B code band E 1 1 (some s1)
+        IstZufallsAnkunftSchritt B code band E run 1 1 (some s1)
           (some (SchrittWahl.antwort (Wahl := Wahl) a1, spur1), some s1') := by
   dsimp only
   let B : Zufallsbindung := ⟨muenzQuelle, .cProcess, []⟩
@@ -240,12 +241,19 @@ theorem zweiZiehungsSchnitte_erfuellbar
     intro i
     change AngebotGueltig k h (runBase.angebot i) (runBase.interruptUrsprung i)
     exact fair.gueltig i
+  have endpoint : Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen := by
+    apply List.mem_append_right
+    apply List.mem_cons_of_mem
+    apply List.mem_append_left
+    apply List.mem_append_left
+    apply List.mem_map_of_mem
+    exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
   have delivery0 : (run.angebot 0).delivery q0.question.endpoint = true := by
     change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
-    decide
+    exact decide_eq_true endpoint
   have delivery1 : (run.angebot 1).delivery q1.question.endpoint = true := by
     change decide (Zeile.endpoint .cProcess ∈ Plattform.x86_64.zeilen) = true
-    decide
+    exact decide_eq_true endpoint
   have selected0 : k.enthaelt (.endpoint q0.question.endpoint) :=
     (fair.gueltig 0).2.2.2.1 _ delivery0
   have selected1 : k.enthaelt (.endpoint q1.question.endpoint) :=
@@ -270,14 +278,15 @@ theorem zweiZiehungsSchnitte_erfuellbar
     simp only [snapshot, Function.update_self]
   have hz0 : Ziehung B.quelle band 0 = (⟨0, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    decide
+    rfl
   have hz1 : Ziehung B.quelle band 1 = (⟨1, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    decide
+    rfl
   have hbodies : body0 ≠ body1 := by
     dsimp only [body0, body1]
     rw [hz0, hz1]
-    decide
+    intro same
+    cases same
   have step0 := mehrSchnitt_checkedStep (B := B) code obj k h plan band 0 E hkatalog.symm 0
     s0 q0 run fair.hardware konform' List.mem_cons_self (Nat.zero_le _) (Nat.le_refl _)
     (fun _ mem => (List.not_mem_nil mem).elim) delivery0 selected0
