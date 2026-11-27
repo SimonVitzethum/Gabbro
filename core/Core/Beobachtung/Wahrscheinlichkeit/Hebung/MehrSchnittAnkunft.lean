@@ -270,10 +270,10 @@ theorem zweiZiehungsSchnitte_erfuellbar
     simp only [snapshot, Function.update_self]
   have hz0 : Ziehung B.quelle band 0 = (⟨0, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    simp only [Ziehung, band, B, muenzQuelle, Nat.zero_mod]
+    decide
   have hz1 : Ziehung B.quelle band 1 = (⟨1, by decide⟩ : Fin B.quelle.anz) := by
     apply Fin.ext
-    simp only [Ziehung, band, B, muenzQuelle, Nat.mod_eq_of_lt]
+    decide
   have hbodies : body0 ≠ body1 := by
     dsimp only [body0, body1]
     rw [hz0, hz1]
