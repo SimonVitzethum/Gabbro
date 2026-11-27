@@ -49,9 +49,10 @@ theorem konstruierteEinheit_akzeptiert (P : Katalog.Plattform) :
 theorem konstruierteEinheit_quelle_akzeptiert (P : Katalog.Plattform) :
     Annahme.Quelle.Akzeptiert (elaborierenMitInvarianten P konstruierteEinheit) := by
   apply (Annahme.Quelle.akzeptiert_mitInvarianten_iff P konstruierteEinheit).2
-  have basis := trivialUnit_akzeptiert P
-  exact ⟨basis.1, klauselnWahr_aus_pruefeEinheit P konstruierteEinheit
-    (konstruierteEinheit_akzeptiert P), basis.2.2⟩
+  let p := programmMitInvarianten konstruierteEinheit
+  exact ⟨p.lokal_rahmen P trivialUnit_rein,
+    klauselnWahr_aus_pruefeEinheit P konstruierteEinheit (konstruierteEinheit_akzeptiert P),
+    p.waechter_ohne_bedarf P trivialUnit_guard⟩
 
 /-- The constructed predicate is not a tautology: a state whose memory plan holds `1` refutes it. -/
 theorem konstruiertesPraedikat_nichtTrivial :

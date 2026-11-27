@@ -37,20 +37,19 @@ open Gabbro.Core.Katalog
 open Gabbro.Core.Maschine
 open Gabbro.Core.Linken
 
+theorem trivialUnit_guard (b : Ast.Semantik.Befehl)
+    (present : b ∈ (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code) :
+    ∀ frame, b.guard frame = none := by
+  have code : (Ast.Semantik.fragment Ast.Category.unit trivialUnit).code =
+      [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
+  rw [code] at present
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at present
+  rcases present with same | same <;> cases same <;> intro frame <;> rfl
+
 /-- The empty source unit has no clauses and no guarded instruction, so its elaboration is accepted on every
     platform. -/
-theorem trivialUnit_akzeptiert (P : Plattform) :
-    Annahme.Akzeptiert (einheitVon P trivialUnit) := by
-  let p := Ast.Semantik.fragment Ast.Category.unit trivialUnit
-  change Annahme.Akzeptiert (p.einheit P)
-  refine Ast.Semantik.Fragment.akzeptiert_ohne_bedarf p P ?_
-    trivialUnit_rein ?_
-  · rfl
-  · intro b present frame
-    have code : p.code = [Ast.Semantik.Befehl.starte Ast.Semantik.mainName, Ast.Semantik.Befehl.ende] := rfl
-    rw [code] at present
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at present
-    rcases present with same | same <;> cases same <;> rfl
+theorem trivialUnit_akzeptiert (P : Plattform) : Annahme.Akzeptiert (einheitVon P trivialUnit) :=
+  Ast.Semantik.Fragment.akzeptiert_ohne_bedarf _ P rfl trivialUnit_rein trivialUnit_guard
 
 /-- The empty source unit is admitted: its only instructions are `starte` and `ende`. -/
 theorem trivialUnit_zugelassen (P : Plattform) :

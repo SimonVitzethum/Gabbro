@@ -41,10 +41,24 @@ theorem Fragment.lokal_rahmen (p : Fragment) (platform : Plattform)
     obtain ⟨rfl, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _⟩ := i.vollzug_genau_privat (rein i memb) (w := w) himpl haus
     exact spurRespektiert_leer _ _ _
 
+theorem Fragment.waechter_ohne_bedarf (p : Fragment) (platform : Plattform)
+    (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
+    WaechterHalten (p.einheit platform) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro run conforms t op args need
+    obtain ⟨c, b, head, operands⟩ := need
+    rw [guard b (List.mem_of_getElem? (kopf_code head))] at operands
+    cases operands
+  · intro run conforms t waiting
+    obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
+    obtain ⟨_, impossible, _⟩ := blocked c member
+    exact impossible
+  · intro run conforms t l h _ hne
+    exact (hne rfl).elim
+
 theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     (clauses : p.klauseln = .leer) (rein : ∀ b ∈ p.code, b.Privat)
-    (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) :
-    Akzeptiert (p.einheit platform) := by
+    (guard : ∀ b ∈ p.code, ∀ frame, b.guard frame = none) : Akzeptiert (p.einheit platform) := by
   let E := p.einheit platform
   refine ⟨p.lokal_rahmen platform rein, ?_, ?_⟩
   · intro run conforms
@@ -54,17 +68,7 @@ theorem Fragment.akzeptiert_ohne_bedarf (p : Fragment) (platform : Plattform)
     rw [clauses]
     exact ⟨fun _ h => (List.not_mem_nil h).elim, fun _ _ h => (List.not_mem_nil h).elim,
       fun _ _ _ h => (List.not_mem_nil h).elim⟩
-  · refine ⟨?_, ?_, ?_⟩
-    · intro run conforms t op args need
-      obtain ⟨c, b, head, operands⟩ := need
-      rw [guard b (List.mem_of_getElem? (kopf_code head))] at operands
-      cases operands
-    · intro run conforms t waiting
-      obtain ⟨contexts, ⟨c, member⟩, blocked⟩ := waiting
-      obtain ⟨_, impossible, _⟩ := blocked c member
-      exact impossible
-    · intro run conforms t l h _ hne
-      exact (hne rfl).elim
+  · exact p.waechter_ohne_bedarf platform guard
 
 theorem environmentUnit_erfuellbar : EnvironmentUnitErfuellbarAussage := by
   let name : Identifier := keywordName 'f' ['w'] (by decide) (by
