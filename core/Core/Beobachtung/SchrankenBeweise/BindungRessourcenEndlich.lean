@@ -444,7 +444,8 @@ theorem handoffBooking_single_encard {L Wert Raum Lok Grund : Type}
       simp only [live, true_and, List.length_map, List.length_range]
       exact ⟨fun h => ⟨⟨offset, h⟩, rfl⟩, by
         rintro ⟨i, hi⟩
-        exact (congrArg Prod.snd hi) ▸ i.isLt⟩
+        have hval : i.val = offset := congrArg Prod.snd hi
+        exact hval ▸ i.isLt⟩
     | succ slot =>
       change (s.rechte.lebt (slot + 1) = true ∧ offset < ([] : List Zelle).length) ↔ _
       refine ⟨fun h => (Nat.not_lt_zero _ h.2).elim, ?_⟩
@@ -452,5 +453,18 @@ theorem handoffBooking_single_encard {L Wert Raum Lok Grund : Type}
       exact (Nat.noConfusion (congrArg Prod.fst hi) : False).elim
   have injective : Function.Injective index := fun _ _ h => Fin.ext (congrArg Prod.snd h)
   rw [range, injective.encard_range, ENat.card_eq_coe_fintype_card, Fintype.card_fin]
+
+/-- Applying the proposed booking to a successful source load with one grant
+    supplies the exact finite start count from the already-live boot slot. -/
+theorem quellladen_handoff_single_encard (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s)
+    (bytes : Nat) {extent : Strecke} (grant : a.regions = [extent]) :
+    (LebendeZellen { s with buchung := handoffBooking bytes a.regions s.buchung }).encard =
+      ((extent.bis - extent.von) / bytes : Nat) := by
+  rw [grant]
+  have within : 0 < a.regions.length := by rw [grant]; decide
+  exact handoffBooking_single_encard s bytes extent
+    (geladeneRegion_lebt_leer P u a p geladen 0 within).1
 
 end Gabbro.Core.Beobachtung
