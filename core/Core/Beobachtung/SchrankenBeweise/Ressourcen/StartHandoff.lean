@@ -323,12 +323,12 @@ theorem source_region_zwei_breiten
       (.view w₁ valid₁) =
       some ⟨.regionView w₁.type, ⟨0, extent.von, 1, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
-    simp [hlayout₁, fits₁]
+    simp [hlayout₁, fits₁, s₁]
   have yield₂ : Gabbro.Core.Ast.LowLevel.RegionInitializer.value Plattform.x86_64.ziel 0 extent
       (.view w₂ valid₂) =
       some ⟨.regionView w₂.type, ⟨0, extent.von, 2, Plattform.x86_64.ziel.big⟩⟩ := by
     unfold Gabbro.Core.Ast.LowLevel.RegionInitializer.value
-    simp [hlayout₂, fits₂]
+    simp [hlayout₂, fits₂, s₂]
   refine ⟨extent, s₁, s₂, hlayout₁, hlayout₂, fits₁, fits₂, ?_, ?_, ?_⟩
   · decide
   · exact ⟨_, yield₁⟩
