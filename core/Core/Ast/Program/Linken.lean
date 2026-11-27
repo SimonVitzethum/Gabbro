@@ -27,14 +27,24 @@ structure Modul where
   exporte : List String
   importe : List String
 
-/-- Elaborate source inputs, preserving every field of the resulting fragment. A library body
-    receives the existing module seal terminator without a synthetic call to `main`. -/
-def Modul.fragment (m : Modul) : Fragment :=
+/-- The linker may continue from a declaration library to a nonempty successor.
+    Standalone fragments use the same instruction slot to stop. -/
+def Modul.bindefragment (m : Modul) (weiter : Bool) : Fragment :=
   match m.inhalt with
   | .roh p => p
   | .quelle category tree => Semantik.fragment category tree
-  | .bibliothek tree => (unitBody tree.2).anhaengen (.einzel .ende)
+  | .bibliothek tree =>
+    (unitBody tree.2).anhaengen (.einzel (if weiter then .springe 1 else .ende))
   | .mitInvarianten u => programmMitInvarianten u
+
+/-- The standalone elaboration, with a stopping library terminator. -/
+def Modul.fragment (m : Modul) : Fragment := m.bindefragment false
+
+theorem Modul.bindefragment_klauseln (m : Modul) (weiter : Bool) :
+    (m.bindefragment weiter).klauseln = m.fragment.klauseln := by
+  cases m with
+  | mk name inhalt exporte importe =>
+    cases inhalt <;> cases weiter <;> rfl
 
 /-- Only the source paths can participate in a successful link. -/
 def Modul.hatQuelle (m : Modul) : Bool :=
@@ -42,8 +52,8 @@ def Modul.hatQuelle (m : Modul) : Bool :=
   | .roh _ => false
   | _ => true
 
-theorem Modul.klassenrein_aus_quelle (m : Modul) (h : m.hatQuelle = true) :
-    m.fragment.KlassenRein := by
+theorem Modul.klassenrein_aus_quelle (m : Modul) (h : m.hatQuelle = true) (weiter : Bool) :
+    (m.bindefragment weiter).KlassenRein := by
   obtain ⟨name, inhalt, exporte, importe⟩ := m
   cases inhalt with
   | roh p => cases h
@@ -52,7 +62,7 @@ theorem Modul.klassenrein_aus_quelle (m : Modul) (h : m.hatQuelle = true) :
     have hbody : (unitBody tree.2).KlassenRein :=
       (Fragment.klassenrein_anhaengen_iff _ _).mp
         ((Fragment.klassenrein_anhaengen_iff _ _).mp (programm_klassenrein tree)).1 |>.1
-    exact (Fragment.klassenrein_anhaengen_iff _ _).mpr
+    cases weiter <;> exact (Fragment.klassenrein_anhaengen_iff _ _).mpr
       ⟨hbody, (Fragment.klassenrein_einzel_iff _).mpr (Or.inl (Or.inl rfl))⟩
   | mitInvarianten u => exact programm_klassenrein u.baum
 
@@ -238,26 +248,36 @@ def bauplanOk (plan : Bauplan) : Bool :=
     definitionenEindeutig plan && aufrufeGedeckt plan && exporteDefiniert plan &&
     annahmenKompatibel plan && kontrollflussAbgeschottet plan
 
-/-- Concatenation of all fragments in plan order. -/
-def verknuepfteFragmente (plan : Bauplan) : Fragment :=
-  plan.module.foldl (fun acc m => acc.anhaengen m.fragment) Fragment.leer
+/-- A continuation has an actual instruction to enter in the immediately following module. -/
+def hatFortsetzung : List Modul → Bool
+  | [] => false
+  | m :: _ => !m.fragment.code.isEmpty
 
-/-- Appending preserves the two classes, so the linked whole is in the two classes once every module's fragment
-    is. -/
+/-- Lay out the plan without changing any module width. The sole generated cross-boundary
+    jump sits in the last slot of a declaration library and lands at offset zero of its
+    nonempty successor. The seal is checked on standalone fragments, so all input
+    instructions still obey the original rules, including jumps to that final slot. -/
+def bindefragmente : List Modul → List Fragment
+  | [] => []
+  | m :: rest => m.bindefragment (hatFortsetzung rest) :: bindefragmente rest
+
+def verknuepfteFragmente (plan : Bauplan) : Fragment :=
+  (bindefragmente plan.module).foldl Fragment.anhaengen Fragment.leer
+
 theorem foldl_anhaengen_klassenrein (acc : Fragment) (ms : List Modul)
-    (hacc : acc.KlassenRein) (hmod : ∀ m ∈ ms, m.fragment.KlassenRein) :
-    (ms.foldl (fun a m => a.anhaengen m.fragment) acc).KlassenRein := by
+    (hacc : acc.KlassenRein) (hmod : ∀ m ∈ ms, m.hatQuelle = true) :
+    ((bindefragmente ms).foldl Fragment.anhaengen acc).KlassenRein := by
   induction ms generalizing acc with
   | nil => exact hacc
   | cons m ms ih =>
       apply ih
-      · exact (Fragment.klassenrein_anhaengen_iff acc m.fragment).mpr
-          ⟨hacc, hmod m List.mem_cons_self⟩
+      · exact (Fragment.klassenrein_anhaengen_iff _ _).mpr
+          ⟨hacc, m.klassenrein_aus_quelle (hmod m List.mem_cons_self) _⟩
       · intro m' hm'
         exact hmod m' (List.mem_cons_of_mem m hm')
 
 theorem verknuepfte_klassenrein (plan : Bauplan)
-    (hmod : ∀ m ∈ plan.module, m.fragment.KlassenRein) :
+    (hmod : ∀ m ∈ plan.module, m.hatQuelle = true) :
     (verknuepfteFragmente plan).KlassenRein :=
   foldl_anhaengen_klassenrein Fragment.leer plan.module Fragment.klassenrein_leer hmod
 
