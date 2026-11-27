@@ -23,7 +23,6 @@ module
 
 public import Core.Ast.Semantik.Runtime.Atom.Klassenrein
 public import Core.Ast.Semantik.Runtime.Atom.Quelle
-public import Core.Ast.Semantik.Runtime.Klasse.Beweise.FrageVollzug
 public import Core.Sicherheit.RegelnErfuellbar
 public import Core.Ast.Semantik.Runtime.UnitInvarianten
 public import Core.Beobachtung.Satz
