@@ -28,6 +28,7 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 open Gabbro.Core.Ast
+open Gabbro.Core.Ast.Surface
 open Gabbro.Core.Ast.Semantik
 open Gabbro.Core.Annahme
 open Gabbro.Core.Katalog
@@ -82,6 +83,8 @@ def variantZeugnisLabels : List Identifier := variantLabels [variantZeugnisMembe
 
 def variantZeugnisPayloads : List (Option (Ty .value)) := variantPayloads [variantZeugnisMember]
 
+def variantZeugnisIndex : Fin variantZeugnisPayloads.length := ⟨0, by decide⟩
+
 def variantZeugnisTyp : Ty .value :=
   variantSchemaType variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads
 
@@ -94,8 +97,7 @@ def variantZeugnisArgumente : VariantValueArgs variantZeugnisScope := by
   let ref : VariantRef variantZeugnisScope variantZeugnisLabels variantZeugnisPayloads :=
     ⟨variantZeugnisName, refSchema, trivial, rfl, rfl,
       by change [variantZeugnisLabel.val].Nodup; exact List.nodup_singleton _⟩
-  let index : Fin variantZeugnisPayloads.length := ⟨0, Nat.zero_lt_succ _⟩
-  have written : variantZeugnisLabels[index.val]? = some variantZeugnisLabel := rfl
+  have written : variantZeugnisLabels[variantZeugnisIndex.val]? = some variantZeugnisLabel := rfl
   have ordinary : ordinaryLocal variantZeugnisLabel :=
     (directName_of_singleton (name := variantZeugnisLabel) rfl).1
   have available : availableCase variantZeugnisScope variantZeugnisLabel := by
@@ -106,8 +108,8 @@ def variantZeugnisArgumente : VariantValueArgs variantZeugnisScope := by
       subst b
       intro same
       cases same
-  exact ⟨variantZeugnisLabels, variantZeugnisPayloads, ref, variantZeugnisLabel, index,
-    written, ordinary, available, .nullary false⟩
+  exact ⟨variantZeugnisLabels, variantZeugnisPayloads, ref, variantZeugnisLabel,
+    variantZeugnisIndex, written, ordinary, available, .nullary false⟩
 
 /-- The variant witness: a tagged declaration and a `main` function whose body binds the variant value.
     Function bodies are appended to the unit's top-level code, so `baueVariante` occurs there directly. -/
@@ -118,7 +120,7 @@ def variantZeugnisEinheit : Ast.Unit :=
         intro m belongs
         rcases List.mem_cons.mp belongs with rfl | empty
         · exact ⟨(directName_of_singleton (name := variantZeugnisLabel) rfl).1,
-            by decide, by trivial⟩
+            by decide, by intro t ht; exact (List.not_mem_nil ht).elim⟩
         · exact (List.not_mem_nil empty).elim)
       (by change [variantZeugnisLabel.val].Nodup; exact List.nodup_singleton _)
   let body : BracedBlock none variantZeugnisScope :=
@@ -126,16 +128,14 @@ def variantZeugnisEinheit : Ast.Unit :=
   let main : Decl variantZeugnisScope variantZeugnisScope :=
     .function Ast.Semantik.mainName Ast.Semantik.mainName_direct [] none
       (fun _ h => (List.not_mem_nil h).elim) none body List.nodup_nil (fun h => by cases h) none
-  ⟨⟨basisName,
-      variantValueType variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads,
-      false, false⟩ :: variantZeugnisScope,
-    .step schema (.step main .done)⟩
+  ⟨variantZeugnisScope, .step schema (.step main .done)⟩
 
 theorem variantZeugnisEinheit_code :
     (fragment Ast.Category.unit variantZeugnisEinheit).code =
       [.definiereVariante variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads,
        .definiere Ast.Semantik.mainName [] none 1 5 false [] none,
-       .baueVariante 0 variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads 0,
+       .baueVariante 0 variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads
+         variantZeugnisIndex,
        .binden basisName 0, .blockEnde 1, .rueckVoid,
        .starte Ast.Semantik.mainName, .ende] := by
   rfl
@@ -147,34 +147,42 @@ def datensatzUnit : DatensatzForm → Ast.Unit
   | .variantValue => variantZeugnisEinheit
 
 /-- Environment admission: the witnesses declare no environment interface. -/
-private theorem zeugnisEnvironmentAllowed (code : List Befehl) (P : Plattform)
-    (hcode : (fragment Ast.Category.unit recordZeugnisEinheit).code = code ∨
-      (fragment Ast.Category.unit variantZeugnisEinheit).code = code) :
-    (match hcode with
-    | Or.inl _ => (fragment Ast.Category.unit recordZeugnisEinheit).environmentAllowed P.katalog
-    | Or.inr _ => (fragment Ast.Category.unit variantZeugnisEinheit).environmentAllowed P.katalog) := by
-  cases hcode with
-  | inl h =>
-      rw [h, recordZeugnisEinheit_code]
-      simp only [Fragment.environmentAllowed, Fragment.environment, List.filterMap_cons,
-        List.filterMap_nil]
-      exact ⟨List.nodup_nil, fun e present => (List.not_mem_nil present).elim⟩
-  | inr h =>
-      rw [h, variantZeugnisEinheit_code]
-      simp only [Fragment.environmentAllowed, Fragment.environment, List.filterMap_cons,
-        List.filterMap_nil]
-      exact ⟨List.nodup_nil, fun e present => (List.not_mem_nil present).elim⟩
+private theorem recordZeugnis_environmentAllowed (P : Plattform) :
+    (fragment Ast.Category.unit recordZeugnisEinheit).environmentAllowed P.katalog := by
+  rw [recordZeugnisEinheit_code]
+  simp only [Fragment.environmentAllowed, Fragment.environment, List.filterMap_cons, List.filterMap_nil]
+  exact ⟨List.nodup_nil, fun e present => (List.not_mem_nil present).elim⟩
+
+private theorem variantZeugnis_environmentAllowed (P : Plattform) :
+    (fragment Ast.Category.unit variantZeugnisEinheit).environmentAllowed P.katalog := by
+  rw [variantZeugnisEinheit_code]
+  simp only [Fragment.environmentAllowed, Fragment.environment, List.filterMap_cons, List.filterMap_nil]
+  exact ⟨List.nodup_nil, fun e present => (List.not_mem_nil present).elim⟩
+
+private theorem recordZeugnis_zugelassen (P : Plattform) :
+    Ast.Semantik.zugelassen P Ast.Category.unit recordZeugnisEinheit := by
+  change (fragment Ast.Category.unit recordZeugnisEinheit).environmentAllowed P.katalog ∧
+    (fragment Ast.Category.unit recordZeugnisEinheit).code.all (Befehl.platformAllowed P) = true
+  refine ⟨recordZeugnis_environmentAllowed P, ?_⟩
+  rw [recordZeugnisEinheit_code]
+  simp only [Befehl.platformAllowed, platformType, tupleType, List.all_cons, List.all_nil,
+    Bool.true_and]
+
+private theorem variantZeugnis_zugelassen (P : Plattform) :
+    Ast.Semantik.zugelassen P Ast.Category.unit variantZeugnisEinheit := by
+  change (fragment Ast.Category.unit variantZeugnisEinheit).environmentAllowed P.katalog ∧
+    (fragment Ast.Category.unit variantZeugnisEinheit).code.all (Befehl.platformAllowed P) = true
+  refine ⟨variantZeugnis_environmentAllowed P, ?_⟩
+  rw [variantZeugnisEinheit_code]
+  simp only [Befehl.platformAllowed, platformType, List.all_cons, List.all_nil, Bool.true_and,
+    List.flatMap_cons, List.flatMap_nil, Option.toList_none, List.nil_append]
 
 theorem datensatzUnit_zugelassen (f : DatensatzForm) (P : Plattform) :
     Ast.Semantik.zugelassen P Ast.Category.unit (datensatzUnit f) := by
-  cases f <;>
-    change (fragment Ast.Category.unit (datensatzUnit f)).environmentAllowed P.katalog ∧
-      (fragment Ast.Category.unit (datensatzUnit f)).code.all (Befehl.platformAllowed P) = true
-  all_goals
-    constructor
-    · exact zeugnisEnvironmentAllowed _ P (Or.inl rfl)
-    · simp only [datensatzUnit, recordZeugnisEinheit_code, Befehl.platformAllowed, platformType,
-        tupleType, List.all_cons, List.all_nil, Bool.true_and]
+  cases f
+  · exact recordZeugnis_zugelassen P
+  · exact recordZeugnis_zugelassen P
+  · exact variantZeugnis_zugelassen P
 
 /-- Every instruction of a witness code is frame-only. -/
 private theorem recordZeugnisEinheit_rein :
@@ -183,7 +191,13 @@ private theorem recordZeugnisEinheit_rein :
   intro b present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
+  all_goals first
+    | exact Or.inl rfl
+    | exact Or.inr (Or.inl rfl)
+    | exact Or.inr (Or.inr (Or.inl rfl))
+    | exact Or.inr (Or.inr (Or.inr (Or.inl rfl)))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))
 
 private theorem variantZeugnisEinheit_rein :
     ∀ b ∈ (fragment Ast.Category.unit variantZeugnisEinheit).code, b.Privat := by
@@ -191,7 +205,13 @@ private theorem variantZeugnisEinheit_rein :
   intro b present
   simp only [List.mem_cons, List.not_mem_nil, or_false] at present
   rcases present with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals first | exact Or.inl rfl | exact Or.inr (Or.inl rfl)
+  all_goals first
+    | exact Or.inl rfl
+    | exact Or.inr (Or.inl rfl)
+    | exact Or.inr (Or.inr (Or.inl rfl))
+    | exact Or.inr (Or.inr (Or.inr (Or.inl rfl)))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+    | exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl))))
 
 theorem datensatzUnit_rein (f : DatensatzForm) :
     ∀ b ∈ (fragment Ast.Category.unit (datensatzUnit f)).code, b.Privat := by
@@ -250,7 +270,8 @@ def datensatzBefehl : DatensatzForm → Befehl
   | .recordValue => .baueRecord 0 RecordExample.name.val [RecordExample.field] [.bool] [0]
   | .recordField => .liesRecordFeld 0 RecordExample.name.val [RecordExample.field] [.bool] 0
   | .variantValue =>
-      .baueVariante 0 variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads 0
+      .baueVariante 0 variantZeugnisName.val variantZeugnisLabels variantZeugnisPayloads
+        variantZeugnisIndex
 
 def datensatzPosition : DatensatzForm → Nat
   | .recordValue => 2
