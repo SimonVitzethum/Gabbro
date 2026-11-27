@@ -149,37 +149,38 @@ theorem bindungSpeicher_quelllauf_erfuellbar :
   exact ⟨P, u, H, ρ, rfl, rfl, akzeptiert, lauf, ⟨_, lauf.2.2.2.trans geladen⟩,
     bindungSpeicher_quelllauf P u rfl rfl lauf⟩
 
-/-- The loader of the source elaboration books no cell: its loaded state has an empty live
-    set, independently of any declared ceiling. This is the exact point where the source
-    path fails to carry an occupied booking. -/
+private theorem quellladen_startzustand (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s) :
+    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
+      (a.assignment 0) P a.regions
+    s = Zustand.start d.lokal d.status d.kerne d.rechte
+      (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
+        (programm u.baum).speicher).initial (.leer (startmedium a)) := by
+  change (laden (programm u.baum).eingang (programm u.baum).eintritte
+    (programm u.baum).speicher P a p) = some s at geladen
+  unfold laden at geladen
+  split at geladen
+  · exact (Option.some.inj geladen).symm
+  · cases geladen
+
+/-- A source load starts with an empty ledger. -/
+theorem laden_buchung_umfang_leer (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s) :
+    s.buchung.umfang = fun _ => [] :=
+  congrArg (fun z => z.buchung.umfang) (quellladen_startzustand P u a p geladen)
+
+/-- A successfully loaded ordinary source unit has no live booked cells. -/
 theorem bindungLadeLeer_quell (P : Plattform) (u : UnitMitSchranken)
     (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
     (geladen : (einheitVon P u.baum).laden a p = some s) :
     LebendeZellen s = ∅ := by
-  change (laden (programm u.baum).eingang (programm u.baum).eintritte
-    (programm u.baum).speicher P a p) = some s at geladen
-  unfold laden at geladen
-  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
-  · rw [if_pos ok] at geladen
-    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
-      (a.assignment 0) P a.regions
-    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
-      d.kerne d.rechte
-        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-          (programm u.baum).speicher).initial (.leer (startmedium a))
-    have hs : s = s0 := by
-      dsimp only [s0]
-      exact (Option.some.inj geladen).symm
-    subst s
-    apply Set.eq_empty_iff_forall_notMem.mpr
-    intro z mem
-    change s0.rechte.lebt z.1 = true ∧ z.2 < (s0.buchung.umfang z.1).length at mem
-    have hleer : s0.buchung.umfang z.1 = [] := rfl
-    rw [hleer] at mem
-    simp only [List.length_nil] at mem
-    exact Nat.not_lt_zero _ mem.2
-  · rw [if_neg ok] at geladen
-    cases geladen
+  apply Set.eq_empty_iff_forall_notMem.mpr
+  intro z mem
+  have hlt : z.2 < (s.buchung.umfang z.1).length := mem.2
+  rw [laden_buchung_umfang_leer P u a p geladen] at hlt
+  exact Nat.not_lt_zero _ hlt
 
 /-- The precise missing connection: the admitted source run's load cut books no cell, so the
     source elaboration cannot exhibit a positive living-cell count there. The positive booked
@@ -202,31 +203,6 @@ theorem bindungSpeicher_quell_lade_leer (P : Plattform) (u : UnitMitSchranken)
    So a granted region slot is live as a right and absent from `buchung.umfang`. The missing
    operation is an addition to the existing booking; `bucheZellen` below supplies it generically. -/
 
-/-- The loader leaves the ledger empty: no region is booked into `buchung.umfang`. This is the
-    exact missing operation for a direct loader connection. -/
-theorem laden_buchung_umfang_leer (P : Plattform) (u : UnitMitSchranken)
-    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
-    (geladen : (einheitVon P u.baum).laden a p = some s) :
-    s.buchung.umfang = fun _ => [] := by
-  change (laden (programm u.baum).eingang (programm u.baum).eintritte
-    (programm u.baum).speicher P a p) = some s at geladen
-  unfold laden at geladen
-  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
-  · rw [if_pos ok] at geladen
-    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
-      (a.assignment 0) P a.regions
-    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
-      d.kerne d.rechte
-        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-          (programm u.baum).speicher).initial (.leer (startmedium a))
-    have hs : s = s0 := by
-      dsimp only [s0]
-      exact (Option.some.inj geladen).symm
-    subst s
-    rfl
-  · rw [if_neg ok] at geladen
-    cases geladen
-
 /-- The checked data of an actually loaded existing region: slot `i` lives (the loader read it
     from `regions.length`) but the ledger still books nothing for it. This is the precise point
     at which the region's checked specification fails to reach the bounded ledger. -/
@@ -235,28 +211,9 @@ theorem geladeneRegion_lebt_leer (P : Plattform) (u : UnitMitSchranken)
     (geladen : (einheitVon P u.baum).laden a p = some s)
     (i : Nat) (hi : i < a.regions.length) :
     s.rechte.lebt i = true ∧ s.buchung.umfang i = [] := by
-  change (laden (programm u.baum).eingang (programm u.baum).eintritte
-    (programm u.baum).speicher P a p) = some s at geladen
-  unfold laden at geladen
-  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
-  · rw [if_pos ok] at geladen
-    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
-      (a.assignment 0) P a.regions
-    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
-      d.kerne d.rechte
-        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
-          (programm u.baum).speicher).initial (.leer (startmedium a))
-    have hs : s = s0 := by
-      dsimp only [s0]
-      exact (Option.some.inj geladen).symm
-    subst s
-    constructor
-    · change d.rechte.lebt i = true
-      dsimp only [d, startdaten]
-      simp [hi]
-    · rfl
-  · rw [if_neg ok] at geladen
-    cases geladen
+  refine ⟨?_, congrFun (laden_buchung_umfang_leer P u a p geladen) i⟩
+  rw [quellladen_startzustand P u a p geladen]
+  exact decide_eq_true hi
 
 /- GENERIC LEDGER CONNECTION. All statements below quantify over an arbitrary state, object and
    list of new cells; none runs a program. A live object is exactly what a checked loaded region
@@ -371,7 +328,7 @@ theorem region_ledger_anschluss (s : Zustand L Ort Wert Raum Lok Grund) (o : Nat
     lebendeZellen_buche_encard s o neu hleb,
     lebendeZellen_buche_encard_le s o neu hleb grenze vor, ?_⟩
   intro i hi
-  simp [bucheZellen, hi]
+  simp only [bucheZellen, if_neg hi]
 
 /-- The connection specialized to an actually loaded region: the checked slot supplies `hleb`
     via `geladeneRegion_lebt_leer`, so the generic bounded-ledger result applies at load. -/
