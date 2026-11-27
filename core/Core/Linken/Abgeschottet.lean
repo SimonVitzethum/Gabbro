@@ -69,7 +69,7 @@ theorem bindefragment_laenge (m : Modul) (weiter : Bool) :
     synthesized at the last slot. That instruction can only enter an immediate successor
     with a first instruction. The input seal still applies to all input targets. -/
 theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool)
-    (seal : modulAbgeschottet m letzter = true) (pos : Nat) (b : Befehl)
+    (sealed : modulAbgeschottet m letzter = true) (pos : Nat) (b : Befehl)
     (atPos : (m.bindefragment (hatFortsetzung rest)).code[pos]? = some b) :
     sprungZielInnen pos m.fragment.code.length b = true ∨
       (b = .springe 1 ∧ pos + 1 = m.fragment.code.length ∧
@@ -77,7 +77,7 @@ theorem bindefragment_sprungziel (m : Modul) (rest : List Modul) (letzter : Bool
           next.fragment.code.isEmpty = false) := by
   have checked (input : m.fragment.code[pos]? = some b) :
       sprungZielInnen pos m.fragment.code.length b = true := by
-    have all := (Bool.and_eq_true.mp seal).1
+    have all := (Bool.and_eq_true.mp sealed).1
     have ht := (List.all_eq_true.mp all) pos
       (List.mem_range.mpr (List.getElem?_eq_some_iff.mp input).1)
     simpa only [input] using ht

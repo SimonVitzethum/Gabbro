@@ -76,8 +76,8 @@ theorem folge_fertig (h : Umgebung) (s : AussenStart) (k t : Nat) :
       (folgeHw h k)) t (folgeZustand s 5) := by
   intro event next step
   cases step with
-  | kontext _ bereit regel aus =>
-    rename_i _ _ _ c _
+  | kontext normal bereit regel aus =>
+    rename_i post plan spur c w
     obtain ⟨b, head, _⟩ := regel
     by_cases hc : c = eintritt
     · subst c
