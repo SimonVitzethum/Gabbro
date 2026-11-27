@@ -313,9 +313,10 @@ theorem zufallsAnkunft_erfuellbar (e : Einrichtung L Ort Wert Raum Lok Grund Bed
     have body : code (Ziehung B.quelle band 0) = if bit then [1] else [] := by
       rw [draw]
       cases bit <;> rfl
-    rw [reply]
+    change code (Ziehung B.quelle band (0 : Fin 2).val) = _ at body
+    rw [reply, body]
     simp only [austauschUmgebung, austauschSicht, if_true, h, Umgebung.referenz, snapshot, q,
       Frage.objekt, handle, obj,
-      Frage.zugriffe, List.map_cons, List.map_nil, AussenSicht.herkunft, Function.update_self, body, B]
+      Frage.zugriffe, List.map_cons, List.map_nil, AussenSicht.herkunft, Function.update_self, B]
 
 end Gabbro.Core.Beobachtung
