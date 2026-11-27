@@ -14,6 +14,7 @@
 module
 
 public import Core.Ziel.Korrektheit.PrueferKlauseln
+public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
 public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenLauf
 public import Core.Maschine.Start
 public import Core.Katalog.Erfuellbar
@@ -33,16 +34,24 @@ def konstruiertesPraedikat : Praedikat :=
 
 /-- The unit declaring exactly that one non-empty invariant. -/
 def konstruierteEinheit : UnitMitInvarianten :=
-  ⟨⟨[], .done⟩, [konstruiertesPraedikat]⟩
+  echteInvariante
 
 /-- The declared list is non-empty, so the leg is not about an empty clause table. -/
 theorem konstruierteEinheit_nichtLeer : konstruierteEinheit.invarianten ≠ [] := by
-  simp [konstruierteEinheit]
+  intro h
+  cases h
 
 /-- The decidable checker accepts the constructed unit. -/
 theorem konstruierteEinheit_akzeptiert (P : Katalog.Plattform) :
     pruefeEinheit (programmMitInvarianten konstruierteEinheit) konstruierteEinheit.invarianten = true := by
   rfl
+
+theorem konstruierteEinheit_quelle_akzeptiert (P : Katalog.Plattform) :
+    Annahme.Quelle.Akzeptiert (elaborierenMitInvarianten P konstruierteEinheit) := by
+  apply (Annahme.Quelle.akzeptiert_mitInvarianten_iff P konstruierteEinheit).2
+  have basis := trivialUnit_akzeptiert P
+  exact ⟨basis.1, klauselnWahr_aus_pruefeEinheit P konstruierteEinheit
+    (konstruierteEinheit_akzeptiert P), basis.2.2⟩
 
 /-- The constructed predicate is not a tautology: a state whose memory plan holds `1` refutes it. -/
 theorem konstruiertesPraedikat_nichtTrivial :
@@ -55,21 +64,21 @@ theorem konstruiertesPraedikat_nichtTrivial :
     the admitted implementation run are hypotheses; the conclusion is the exact clause, with the
     quantification over actual cuts and the hand-off obligation untouched. -/
 theorem invariantenBein_nichtLeer (P : Katalog.Plattform) (u : UnitMitInvarianten)
-    (hnichtleer : u.invarianten ≠ [])
     (ok : pruefeEinheit (programmMitInvarianten u) u.invarianten = true)
-    (zugriff : ZugriffSicherAussage)
     (H : Katalog.Umgebung)
     (ρ : Sicherheit.Lauf ((programmMitInvarianten u).sicherheitsEinheit P))
     (lauf : Maschine.Laeufe (elaborierenMitInvarianten P u) H ρ) :
     InvariantenErhalten ((programmMitInvarianten u).sicherheitsEinheit P) H ρ := by
-  exact (invariantenSicherheit P zugriff u ok H ρ lauf).2.1
+  exact (invariantenSicherheit P zugriffSicherBeweis u ok H ρ lauf).2.1
 
 /-- THE LEG IS CLOSED NON-VACUOUSLY: an admitted run of the constructed unit has a real cut at
     time zero, and the exact clause yields the constructed predicate at that cut. -/
 theorem invariantenBein_nichtVakuum :
     ∃ (H : Katalog.Umgebung)
       (ρ : Sicherheit.Lauf ((programmMitInvarianten konstruierteEinheit).sicherheitsEinheit .x86_64)),
+      Annahme.Quelle.Akzeptiert (elaborierenMitInvarianten .x86_64 konstruierteEinheit) ∧
       Maschine.Laeufe (elaborierenMitInvarianten .x86_64 konstruierteEinheit) H ρ ∧
+      InvariantenErhalten ((programmMitInvarianten konstruierteEinheit).sicherheitsEinheit .x86_64) H ρ ∧
       ∃ (s : Zustand)
         (t : Maschine.Schnitt (elaborierenMitInvarianten .x86_64 konstruierteEinheit) ρ),
         ρ.zeit.zustand t.val = some s ∧ konstruiertesPraedikat.gilt s := by
@@ -80,14 +89,13 @@ theorem invariantenBein_nichtVakuum :
   let hw := Umgebung.referenzLauf P.katalog 2 (fun _ _ => .leer)
   have hwOk : Hardware P.katalog H :=
     Umgebung.referenz_hardware P.katalog 2 (fun _ _ => .leer)
-      (Plattform.katalog_wohlgeformt P) (by decide)
+      (Plattform.katalog_wohlgeformt P) (Nat.zero_lt_succ 1)
   have fair : FairLaeufe P.katalog H hw :=
     Umgebung.referenz_fair P.katalog 2 (fun _ _ => .leer)
-      (Plattform.katalog_wohlgeformt P) (by decide)
+      (Plattform.katalog_wohlgeformt P) (Nat.zero_lt_succ 1)
   obtain ⟨start, zul⟩ := zulStart_erfuellbar hwOk (elaboriert_bild_gueltig P u)
   obtain ⟨ρ, run, hstart, _⟩ := Maschine.fairer_lauf (E := E) zul fair
-  have safe := invariantenBein_nichtLeer P u konstruierteEinheit_nichtLeer
-    (konstruierteEinheit_akzeptiert P) zugriffSicherBeweis H ρ run
+  have safe := invariantenBein_nichtLeer P u (konstruierteEinheit_akzeptiert P) H ρ run
   let d := startdaten (programmMitInvarianten u).eingang (programmMitInvarianten u).eintritte
     (start.assignment 0) P start.regions
   let z : Zustand := Maschine.Zustand.start d.lokal d.status d.kerne d.rechte
@@ -108,12 +116,12 @@ theorem invariantenBein_nichtVakuum :
     change (((u.invarianten.map Praedikat.gilt).map
       (fun gilt => (⟨none, gilt⟩ : Invariante Nat Zustand)))[0]?) =
       some (⟨none, konstruiertesPraedikat.gilt⟩ : Invariante Nat Zustand)
-    simp [u, konstruierteEinheit, konstruiertesPraedikat]
+    rfl
   have writers : ∀ c, z.status c = .laeuft → ¬ z.buchung.schreibt c 0 := by
     intro c _ h
     exact h
   have gilt : konstruiertesPraedikat.gilt z := am.2 0 _ hidx writers
-  refine ⟨H, ρ, run, ?_⟩
+  refine ⟨H, ρ, konstruierteEinheit_quelle_akzeptiert P, run, safe, ?_⟩
   exact ⟨z, cut, at0, gilt⟩
 
 end Gabbro.Core.Ziel.Korrektheit.SicherheitNichtLeer
