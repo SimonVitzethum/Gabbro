@@ -22,7 +22,6 @@ public import Core.Katalog.Start
 public import Core.Maschine.Start
 public import Core.Fortschritt.Saetze
 import Core.Ziel.Korrektheit.Beweise.BildGueltig
-import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
 import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
 
 @[expose] public section
@@ -38,7 +37,7 @@ variable {P : Katalog.Plattform} (rueckkehr :
     ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
       Maschine.Laeufe (einheitVon P t) H ρ →
       Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
-      Maschine.VerdraengungKehrtZurueck (einheitVon P t) ρ)
+      Maschine.VerdraengungKehrtZurueckAbsturzfrei ρ)
 
 include rueckkehr
 
@@ -68,8 +67,8 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
     subst E'
     subst E
     obtain ⟨η, valid, sim, _, zielFX, progress⟩ :=
-      einheitVon_sim_ziel_fortschritt existiert P t run
-        (fun fair => ⟨einheitVon_schedulerFair P t run, rueckkehr t hacc.regeln H ρ' run fair⟩)
+      einheitVon_sim_ziel_fortschritt_absturzfrei existiert P t run
+        (rueckkehr t hacc.regeln H ρ' run)
     refine ⟨⟨einheitVon P t, η⟩, ?_, ?_⟩
     · exact ⟨rfl, valid⟩
     · unfold Ziel.Verfeinert
