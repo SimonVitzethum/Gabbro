@@ -9,6 +9,7 @@
 module
 
 public import Core.Ast.Semantik.Runtime.Unterbrechung.Aussagen
+public import Core.Ast.Semantik.Runtime.Unterbrechung.Quelllauf
 
 @[expose] public section
 
