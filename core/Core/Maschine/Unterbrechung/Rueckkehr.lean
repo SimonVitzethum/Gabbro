@@ -36,6 +36,8 @@ private theorem vollzug_stapel {e : Einrichtung L Ort Wert Raum Lok Grund Beding
   obtain ⟨rahmen, _, _, _, aktion, _, gleich⟩ := vollzug
   rw [gleich]
   have bleibt := congrArg (fun kerne : Kern → KernZustand Raum => (kerne k).stapel) rahmen.kerne
+  generalize plan.aktion = auswahl at aktion
+  generalize spur.aussen = ereignisse at aktion
   cases aktion with
   | @rueckkehr r _ _ _ =>
     change StapelSchritt (s.kerne k) (Function.update u.kerne r (u.kerne r).zurueck k)
@@ -157,6 +159,50 @@ theorem Lauf.gespeicherter_kontext_kehrt_zurueck {ρ : Lauf E} {a b : Nat} {k : 
     rw [gle, List.length_append, List.length_cons] at abgebaut
     omega
   · exact restored
+
+/-- To discharge preemption return, it suffices that every occupied core receiving an
+    interrupt later reaches its old stack depth during the same crash-free interval.
+    An interrupt on another core leaves the dispatch in place at the next cut. -/
+theorem Lauf.verdraengung_kehrt_zurueck_bei_abbau {ρ : Lauf E}
+    (abbau : ∀ {t s k c id spur irq},
+      ρ.zeit.zustand t = some s → (s.kerne k).laeuft = some c → s.status c = .laeuft →
+      ρ.zeit.spur t = some (.interrupt id, spur) → spur.aussen = [.interrupt k irq .handler] →
+      ∃ b u, t + 1 ≤ b ∧ ρ.zeit.zustand b = some u ∧
+        (∀ i, t + 1 ≤ i → i < b → ¬ AbsturzAngeboten E.katalog ρ.hw i) ∧
+        (u.kerne k).stapel.length ≤ (s.kerne k).stapel.length) :
+    VerdraengungKehrtZurueck E ρ := by
+  intro c k t ⟨s, vor, laeuft, aktiv⟩ ⟨id, spur, label⟩
+  have takt := ρ.zeit.takt t
+  rw [vor, label] at takt
+  cases takt with
+  | wartet h _ _ => cases h
+  | schritt h schritt =>
+    cases h
+    cases next : ρ.zeit.zustand (t + 1) with
+    | none => rw [next] at schritt; cases schritt
+    | some s' =>
+      rw [next] at schritt
+      cases schritt with
+      | schritt bewegt =>
+        cases bewegt with
+        | interrupt _ zustellt =>
+          obtain ⟨r, irq, handler, nmi, _, _, _, _, ereignis, _, gleich⟩ := zustellt
+          have kern : s'.kerne k = Function.update s.kerne r ((s.kerne r).unterbrechen handler nmi) k :=
+            congrArg (fun z => z.kerne k) gleich
+          by_cases hk : k = r
+          · subst r
+            rw [Function.update_self] at kern
+            obtain ⟨b, u, ordnung, bis, crashfrei, kurz⟩ := abbau vor laeuft aktiv label ereignis
+            have gespeichert : (s'.kerne k).stapel =
+                [] ++ (some c, (s.kerne k).nmiAktiv) :: (s.kerne k).stapel := by
+              simp only [kern, KernZustand.unterbrechen, laeuft, List.nil_append]
+            obtain ⟨t', v, danach, _, hv, dispatch, _, _⟩ :=
+              Lauf.gespeicherter_kontext_kehrt_zurueck (ρ := ρ)
+                next bis ordnung crashfrei ⟨[], gespeichert⟩ kurz
+            exact ⟨t', (Nat.lt_succ_self t).trans danach, k, v, hv, dispatch⟩
+          · rw [Function.update_of_ne hk] at kern
+            exact ⟨t + 1, Nat.lt_succ_self t, k, s', next,
+              (congrArg KernZustand.laeuft kern).trans laeuft⟩
 
 end
 
