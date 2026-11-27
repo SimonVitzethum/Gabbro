@@ -149,4 +149,49 @@ theorem bindungSpeicher_quelllauf_erfuellbar :
   exact ⟨P, u, H, ρ, rfl, rfl, akzeptiert, lauf, ⟨_, lauf.2.2.2.trans geladen⟩,
     bindungSpeicher_quelllauf P u rfl rfl lauf⟩
 
+/-- The loader of the source elaboration books no cell: its loaded state has an empty live
+    set, independently of any declared ceiling. This is the exact point where the source
+    path fails to carry an occupied booking. -/
+theorem bindungLadeLeer_quell (P : Plattform) (u : UnitMitSchranken)
+    (a : AussenStart) (p : Ladung) {s : Zustand Nat Zelle Int Nat Rahmen PUnit}
+    (geladen : (einheitVon P u.baum).laden a p = some s) :
+    LebendeZellen s = ∅ := by
+  change (laden (programm u.baum).eingang (programm u.baum).eintritte
+    (programm u.baum).speicher P a p) = some s at geladen
+  unfold laden at geladen
+  by_cases ok : p.starts 0 = some 0 ∧ p.bytes 0 = some 0
+  · rw [if_pos ok] at geladen
+    let d := startdaten (programm u.baum).eingang (programm u.baum).eintritte
+      (a.assignment 0) P a.regions
+    let s0 : Zustand Nat Zelle Int Nat Rahmen PUnit := Zustand.start d.lokal d.status
+      d.kerne d.rechte
+        (einrichtung (programm u.baum).eingang (programm u.baum).eintritte
+          (programm u.baum).speicher).initial (.leer (startmedium a))
+    have hs : s = s0 := by
+      dsimp only [s0]
+      exact (Option.some.inj geladen).symm
+    subst s
+    apply Set.eq_empty_iff_forall_notMem.mpr
+    intro z mem
+    change s0.rechte.lebt z.1 = true ∧ z.2 < (s0.buchung.umfang z.1).length at mem
+    have hleer : s0.buchung.umfang z.1 = [] := rfl
+    rw [hleer] at mem
+    simp only [List.length_nil] at mem
+    exact Nat.not_lt_zero _ mem.2
+  · rw [if_neg ok] at geladen
+    cases geladen
+
+/-- The precise missing connection: the admitted source run's load cut books no cell, so the
+    source elaboration cannot exhibit a positive living-cell count there. The positive booked
+    case lives on the checked low-level path (`b21_belegte_buchung_erfuellbar`), which the
+    source load does not reach. -/
+theorem bindungSpeicher_quell_lade_leer (P : Plattform) (u : UnitMitSchranken)
+    {H : Umgebung} {ρ : Lauf (einheitVon P u.baum)}
+    (lauf : Laeufe (einheitVon P u.baum) H ρ)
+    {s : Zustand Nat Zelle Int Nat Rahmen PUnit} (schnitt : ρ.zeit.zustand 0 = some s) :
+    LebendeZellen s = ∅ := by
+  have geladen : (einheitVon P u.baum).laden ρ.start (H.lade (einheitVon P u.baum).bild) = some s :=
+    lauf.2.2.2.symm.trans schnitt
+  exact bindungLadeLeer_quell P u ρ.start (H.lade (einheitVon P u.baum).bild) geladen
+
 end Gabbro.Core.Beobachtung

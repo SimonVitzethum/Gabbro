@@ -170,4 +170,29 @@ theorem b21_offen_erfuellbar :
   rw [live] at bound
   exact (not_le_of_gt zero_lt_one) bound
 
+/-- A real occupied region booking with a finite ceiling and an admitted run on the checked
+    low-level path: the loaded state books one cell, so its live-cell count is positive and
+    reaches the declared ceiling, and the memory bound is preserved at every cut. This is the
+    booking case the source load (`bindungSpeicher_quell_lade_leer`) does not reach. -/
+theorem b21_belegte_buchung_erfuellbar :
+    ∃ (E : Modell) (h : Umgebung) (ρ : Lauf E) (s : Zustand),
+      E.schranken.speicher = some 1 ∧ Laeufe E h ρ ∧
+      ρ.zeit.zustand 0 = some s ∧
+      s.buchung.umfang 0 = [()] ∧
+      (LebendeZellen s).encard = 1 ∧
+      0 < (LebendeZellen s).encard ∧
+      SpeicherZustand E s ∧
+      (∀ t, RessourcenPrefix E ρ t) := by
+  obtain ⟨start, zul⟩ := zulStart_erfuellbar (erlaubt []) Sicherheit.Laufkonstruktion.bild_gueltig
+  obtain ⟨ρ, lauf, startEq⟩ := lauf_ab_start (mitGrenzen eineZelle) (erlaubt []) zul
+  have pflichten := hosted_pflichten eineZelle (fun s => (eineZelle_encard s).le)
+  have cut : ρ.zeit.zustand 0 = some (eineZelle start) :=
+    lauf.2.2.2.trans (congrArg (fun s => some (eineZelle s)) startEq)
+  refine ⟨mitGrenzen eineZelle, _, ρ, eineZelle start, rfl, lauf, cut, ?_,
+    eineZelle_encard start, ?_, ?_, b9_b21_aus_pflichten pflichten lauf⟩
+  · simp [eineZelle]
+  · rw [eineZelle_encard]
+    exact Nat.zero_lt_one
+  · exact speicher_beschraenzt eineZelle (eineZelle_encard start).le
+
 end Gabbro.Core.Beobachtung
