@@ -349,7 +349,7 @@ private theorem narrowHfind :
     ((narrowS4.lokal entryContext).marken.find? (fun p => p.1.val == narrowName.val)).map Prod.snd =
       some narrowToken := by rfl
 
-private def mappedSpaceN : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsN, 0⟩)], 0, []⟩
+private def mappedSpaceN : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsN, 0, .normal⟩)], 0, []⟩
 
 private def narrowedSpaceN : Adressraum := narrowRights mappedSpaceN 0 1 narrowRightsN
 
