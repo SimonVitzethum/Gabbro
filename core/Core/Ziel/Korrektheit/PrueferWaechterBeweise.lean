@@ -17,7 +17,7 @@ module
 
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
-public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 
 @[expose] public section
 

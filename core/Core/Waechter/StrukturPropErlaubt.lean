@@ -39,7 +39,7 @@ public meta def strukturPropErlaubt : Array (Name × Name) := #[
   (`Gabbro.Core.Ziel.Sicherheit, `Rennfrei),
   (`Gabbro.Core.Ziel.Sicherheit, `Speichersicher),
   (`Gabbro.Core.Ziel.Sicherheit, `ToctouFrei),
-  -- FormBeleg: beleg (Ziel/Korrektheit/Beweise/BegleitZusammensetzung.lean:81) belegt beide Felder.
+  -- FormBeleg: beleg (Ziel/Korrektheit/Beweise/Zusammensetzung/BegleitZusammensetzung.lean:81) belegt beide Felder.
   (`Gabbro.Core.Ziel.Korrektheit.FormBeleg, `enthaelt),
   (`Gabbro.Core.Ziel.Korrektheit.FormBeleg, `realisiert),
   -- ProtokollGut: fuehrtSchrittAus_erhaelt (Ziel/Korrektheit/Beweise/ProtokollSchritt.lean:137) erhält alle Felder je Schritt.

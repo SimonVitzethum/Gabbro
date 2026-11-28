@@ -98,6 +98,20 @@ def FortschrittAkzeptiertAussage : Prop :=
         Maschine.I.FortschrittDerKlasse
           (Maschine.I.FortschrittsKlasse.blockierend : Maschine.I.FortschrittsKlasse Ast.Semantik.Befehl) η
 
+/-- The fair-history part of refinement: one matched ideal run has no hanging context.
+    This is the outstanding progress obligation for the goal. The scheduler theorem can
+    supply it once interrupt handling ensures return or another admissible completion
+    on the chosen fair run. The hard step for the return route is proving finite
+    handler-stack completion on every suffix without a crash. -/
+def FairSimOhneHaengenAussage (P : Katalog.Plattform) : Prop :=
+  ∀ (t : Ast.Unit), Ast.Semantik.zugelassen P Ast.Category.unit t →
+    Annahme.Akzeptiert (einheitVon P t) →
+    ∀ (H : Katalog.Umgebung) (ρ : Maschine.Lauf (einheitVon P t)),
+      Maschine.Laeufe (einheitVon P t) H ρ → Katalog.FairLaeufe (einheitVon P t).katalog H ρ.hw →
+      ∃ η : Maschine.I.Lauf (einheitVon P t),
+        Maschine.I.Laeufe (einheitVon P t) η ∧ Maschine.I.Sim (einheitVon P t) ρ η ∧
+          ∀ c, ¬ Maschine.I.Haengt (einheitVon P t) ρ η c
+
 /-- THE FORM DUTY IS FALSIFIABLE: some unit has a rule whose implementation step the ideal rule does not allow,
 and for it the per-form simulation duty `RegelSimSchritt` is false. Without this statement a duty proved by the
 template `impl ≡ ideal` (as every duty of the current instruction set is, `klassenSim`) cannot be told from a
