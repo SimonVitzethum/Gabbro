@@ -7,18 +7,15 @@
   deadlock or a closed waiting set, and every lock held under a declared hold bound
   stays checker-eligible: `waechterAbstrakt`.
 
-  The run invariant (`invariantAlle` in `WaechterRahmen.lean`) carries the joined
-  environments to every frame at every cut and keeps every lock free. The guard
-  conjunct follows from `pruefeBedarf_gilt`: a guard demand read at a satisfying
-  frame meets the pinned guard row, because the static hull covers the runtime
-  value. Deadlock freedom is vacuous: the elaborated system never blocks
+  The run invariants carry the whole-code bounds to all frames and the prefix
+  bounds to frames certified to advance. A guard demand read at a satisfying frame
+  meets the pinned guard row by `pruefeBedarf_gilt`. Deadlock freedom is vacuous:
+  the elaborated system never blocks
   (`blockiert` is constantly false). The holder conjunct is vacuous: locks stay
   free, so its premise never holds.
 
-  `WaechterFragmentVollstaendigAussage` states completeness on the named decidable
-  fragment for the prover handover: on `waechterFragmentCode` every held guard
-  passes the static check. The remainder outside the fragment is the pinned
-  `PrueferRestUnentscheidbarAussage`.
+  `WaechterFragmentVollstaendigAussage` asks for completeness on the named fragment.
+  `waechterCode_keinEntscheider` records the entrance-scope obstruction.
 -/
 module
 
@@ -113,8 +110,8 @@ theorem pruefeBedarf_gilt (code : List Befehl) (b : Befehl) (frame : Gabbro.Core
   | leiteLeitung _ _ _ => exact guard_none_absurd hg rfl
 
 /-- The abstraction lemma: acceptance of the static analysis gives `WaechterHalten`
-    over all ideal runs of the unit. The guard conjunct goes through the frame
-    invariant and `pruefeBedarf_gilt`; deadlock freedom is vacuous because the
+    over all ideal runs of the unit. The guard conjunct uses the appropriate frame
+    invariant and `pruefeBedarf_gilt`. Deadlock freedom is vacuous because the
     elaborated system never blocks; the holder conjunct is vacuous because locks
     stay free. -/
 theorem waechterAbstrakt (p : Fragment) (platform : Katalog.Plattform)
@@ -133,9 +130,12 @@ theorem waechterAbstrakt (p : Fragment) (platform : Katalog.Plattform)
     · simp only [pruefeVorwaerts, Bool.and_eq_true] at forward
       let r := (ρ.zeit.zustand t.val).lokal c
       have lookup : p.code[r.pc]? = some b := Gabbro.Core.Ast.Semantik.kopf_code head
-      have inRange := List.mem_range.mpr (List.getElem?_eq_some_iff.mp lookup).1
-      have checked := List.all_eq_true.mp forward.2 r.pc inRange
-      rw [lookup] at checked
+      have checked := List.all_eq_true.mp forward.2 (b, r.pc)
+        (List.mk_mem_zipIdx_iff_getElem?.mpr lookup)
+      change ((bedarfStellen b).isEmpty || pruefeBedarf (p.code.take r.pc) b) = true at checked
+      have needs : (bedarfStellen b).isEmpty = false := by
+        cases b <;> first | rfl | cases hdemand
+      simp only [needs, Bool.false_or] at checked
       have frame := vorwaertsRahmen_lauf p platform forward.1 hfre ρ hρ t.val c
       exact pruefeBedarf_gilt (p.code.take r.pc) b r
         (frame.2 r.pc (kopf_aktiv head) (Nat.le_refl _)) checked op args hdemand
@@ -149,18 +149,9 @@ theorem waechterAbstrakt (p : Fragment) (platform : Katalog.Plattform)
     rw [hfree] at hbes
     cases hbes
 
-/-- COMPLETENESS of the guard analysis on its named decidable fragment: on
-    `waechterFragmentCode` every held guard passes the static check. Difficulty:
-    schwer. Sketch: on the fragment every guard sits in the linear prefix before
-    the first control-flow instruction and every slot it reads is written exactly
-    once, before the guard, by a constant write. Induction over the ideal run with
-    the frame invariant shows the runtime value at the guard equals the analysed
-    constant on every path that reaches the guard with present values: the prefix
-    executes in order from the entry cut, the single constant write is the only
-    writer, and control cannot skip it. The static hull is then exact at the guard,
-    so a held guard implies a passing static check. The fragment shape is exact:
-    the witness unit of `NichtAkzeptierteEinheit` lies on the fragment while the
-    analysis refuses it. -/
+/-- The pinned completeness statement for the named fragment. Its premise refers
+    to guards at reachable heads of a particular unit, which can depend on the
+    unit's entrance scope even when the code is fixed. -/
 def WaechterFragmentVollstaendigAussage : Prop :=
   ∀ (p : Fragment) (platform : Katalog.Plattform),
     waechterFragmentCode p.code = true → WaechterHalten (p.einheit platform) →

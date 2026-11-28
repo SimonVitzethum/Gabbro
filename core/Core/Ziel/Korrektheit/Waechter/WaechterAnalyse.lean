@@ -14,13 +14,10 @@
   and restarts. For forward-only code, a second check joins only writes strictly before
   each instruction, so a guard can use an input whose slot the instruction itself overwrites.
 
-  The named decidable fragment (`waechterFragmentCode`) is the class on which the analysis
-  is complete: no access or lifecycle instructions, every guard instruction sits in the
-  linear prefix before the first control-flow instruction, and every operand slot it reads
-  is written exactly once in the whole code, before the guard, by a constant write. On
-  this class runtime values at the guard are exactly the analysed constants, so a held
-  guard implies a passing static check. Outside the class completeness fails: value- and
-  path-dependent guards are undecidable (`PrueferRestUnentscheidbarAussage`, Rice transfer).
+  The named fragment (`waechterFragmentCode`) excludes access and lifecycle instructions.
+  Its guards sit in the linear prefix and each guard input has a preceding constant writer,
+  unique among the other instructions. This describes the input writes but does not
+  guarantee that a guard is reached (see `waechterCode_keinEntscheider`).
 -/
 module
 
@@ -190,17 +187,6 @@ def vorwaertsBefehl : Befehl → Bool
   | .aussen .. | .pruefeMass .. => false
   | b => prefixRein b
 
-/-- Check each guard with the writes preceding it in forward-only code. -/
-def pruefeVorwaerts (code : List Befehl) : Bool :=
-  code.all vorwaertsBefehl && (List.range code.length).all fun pos =>
-    match code[pos]? with
-    | some b => pruefeBedarf (code.take pos) b
-    | none => false
-
-/-- The computable guard verdict over an instruction sequence. -/
-def waechterPruefeCode (code : List Befehl) : Bool :=
-  code.all keinFremdzugriff && (code.all (pruefeBedarf code) || pruefeVorwaerts code)
-
 /-- The kind of an operand slot a guard reads. -/
 inductive OperandenArt where
   | ganz
@@ -215,6 +201,15 @@ def bedarfStellen : Befehl → List (Nat × OperandenArt)
   | .textIndex basis _ => [(basis, .text), (basis + 1, .ganz)]
   | .substring basis _ => [(basis, .text), (basis + 1, .ganz), (basis + 2, .ganz)]
   | _ => []
+
+/-- Check each guard with the writes preceding it in forward-only code. -/
+def pruefeVorwaerts (code : List Befehl) : Bool :=
+  code.all vorwaertsBefehl && code.zipIdx.all fun (b, pos) =>
+    (bedarfStellen b).isEmpty || pruefeBedarf (code.take pos) b
+
+/-- The computable guard verdict over an instruction sequence. -/
+def waechterPruefeCode (code : List Befehl) : Bool :=
+  code.all keinFremdzugriff && (code.all (pruefeBedarf code) || pruefeVorwaerts code)
 
 /-- Constant integer writes: their runtime value is exactly the analysed one. -/
 def konstIntSchreibung : Befehl → List Nat
@@ -259,7 +254,7 @@ def waechterFragmentCodeAux : List Befehl → List Befehl → Nat → Bool → B
     ((bedarfStellen b).all (operandAbgedeckt code pos)) &&
     waechterFragmentCodeAux rest code (pos + 1) inPrefix'
 
-/-- The named decidable fragment on which the guard checker is complete. -/
+/-- The named fragment of the guard completeness statement. -/
 def waechterFragmentCode (code : List Befehl) : Bool :=
   code.all keinFremdzugriff && waechterFragmentCodeAux code code 0 true
 

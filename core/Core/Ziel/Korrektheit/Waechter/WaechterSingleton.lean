@@ -55,4 +55,14 @@ theorem prueferKombiniert_akzeptiertIndex :
   · simp only [Pruefer.pruefe, Bool.and_eq_true]
     exact ⟨⟨singletonLokal, pruefeEinheit_leer _⟩, singletonWaechter⟩
 
+private abbrev teilfolgeCode : List Befehl :=
+  [.textLiteral 0 ['x'], .literal 1 1, .literal 2 1, .substring 0 (sourceUtf8 ['x']).size]
+
+/-- A slice can overwrite the text it just read in forward-only code. -/
+private theorem waechterPruefe_akzeptiertTeilfolge : waechterPruefeCode teilfolgeCode = true := rfl
+
+/-- Reentering the same slice would use the now empty result as input. -/
+private theorem waechterPruefe_verweigertTeilfolgeRuecksprung :
+    waechterPruefeCode (teilfolgeCode ++ [.zurueckSprung 1]) = false := rfl
+
 end Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse
