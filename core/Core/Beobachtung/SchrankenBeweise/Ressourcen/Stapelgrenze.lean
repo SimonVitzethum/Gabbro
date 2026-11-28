@@ -9,7 +9,6 @@ import Core.Ast.Program.Progress
 namespace Gabbro.Core.Ast.Semantik
 
 open Maschine
-open Beobachtung
 
 /-- A bounded transfer keeps its result if the continuation stack fits. On overflow it keeps
     the old frame and records the ordinary named overflow exit. -/
@@ -36,7 +35,7 @@ theorem Schrittform.mitStapelgrenze_stapel {ι : Type} (E : Klasseneinheit ι) (
 theorem Rahmen.begrenzeStapel_voll {r nach : Rahmen} {n : Nat}
     (voll : n < nach.fortsetzungen.length) :
     r.begrenzeStapel nach n = r.halt (.ueberlauf none) :=
-  if_neg (Nat.not_le.mpr voll)
+  ite_eq_right (Nat.not_le.mpr voll)
 
 /-- An actual call-class step can try to push a continuation at the ceiling. With the guard
     the same private plan records the overflow while keeping the previous stack. -/
@@ -65,17 +64,23 @@ theorem stapelgrenze_erfuellbar (name : Identifier) :
   let nach := (F.mitStapelgrenze (some 0)).nach eintritt vor 0
   have fits : r.begrenzeStapel (r.ruf name [] none) 1 = r.ruf name [] none := by
     unfold Rahmen.begrenzeStapel
-    rw [if_pos pushed.le]
+    rw [ite_eq_left pushed.le]
   have over : r.begrenzeStapel (r.ruf name [] none) 0 = r.halt (.ueberlauf none) :=
     Rahmen.begrenzeStapel_voll (pushed.symm ▸ Nat.zero_lt_one)
   have accepted : (F.mitStapelgrenze (some 1)).nach eintritt vor 0 = roh :=
     congrArg (fun frame => { vor with lokal := Function.update vor.lokal eintritt frame }) fits
   have refused : nach.lokal eintritt = r.halt (.ueberlauf none) := by
-    simpa only [nach, Schrittform.nach, Function.update_self] using over
+    simp only [nach, Schrittform.nach, Function.update_self]
+    change r.begrenzeStapel (r.ruf name [] none) 0 = r.halt (.ueberlauf none)
+    exact over
   refine ⟨vor, roh, nach, ⟨rfl, ?_⟩, ⟨rfl, rfl⟩, rfl, ?_, ?_, ?_⟩
   · exact accepted.symm
-  · simpa only [roh, Schrittform.nach, Function.update_self] using pushed
-  · exact congrArg Rahmen.fortsetzungen refused
-  · exact congrArg Rahmen.stopp refused
+  · simp only [roh, Schrittform.nach, Function.update_self]
+    change (r.ruf name [] none).fortsetzungen.length = 1
+    exact pushed
+  · have same := congrArg Rahmen.fortsetzungen refused
+    exact same
+  · have exit := congrArg Rahmen.stopp refused
+    exact exit
 
 end Gabbro.Core.Ast.Semantik
