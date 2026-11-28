@@ -9,14 +9,13 @@ import Core.Sicherheit.Laufkonstruktion
 namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core Beobachtung Katalog Maschine
-open Gabbro.Core.Sicherheit.Laufkonstruktion (Modell)
 
 private def geheimeLadersicht (alive : Bool) : Nat → AussenVerlauf → AussenSicht :=
   fun _ _ =>
     { AussenSicht.leer with
       objects := fun _ => { AussenSicht.leer.objects ⟨.hosted, 0⟩ with alive } }
 
-private def laderLeck : Modell :=
+private def laderLeck : Einheit Unit Unit Unit Unit Unit Unit Unit Unit Unit :=
   let basis := (Sicherheit.Laufkonstruktion.einheit Sicherheit.Laufkonstruktion.start
     (fun _ _ _ _ => False) []).maschine
   { basis with
