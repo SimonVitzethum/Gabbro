@@ -24,6 +24,7 @@ module
 
 public import Core.Ziel.Korrektheit.Waechter.WaechterRahmen
 public import Core.Ziel.Korrektheit.Waechter.WaechterBedarf
+public import Core.Ziel.Korrektheit.Waechter.WaechterVorwaerts
 public import Core.Maschine.Start
 public import Core.Annahme.Waechter
 public import Core.Ast.Semantik.Elaborierung
@@ -45,18 +46,18 @@ open Classical
 
 /-- A guard demand read at a satisfying frame meets the pinned guard row. -/
 theorem pruefeBedarf_gilt (code : List Befehl) (b : Befehl) (frame : Gabbro.Core.Ast.Semantik.Rahmen)
-    (hmem : b ∈ code) (h : RahmenErfuellt code frame)
+    (h : RahmenErfuellt code frame)
     (hp : pruefeBedarf code b = true) (op : PartielleOperation) (args : Operanden op)
     (hg : b.guard frame = some ⟨op, args⟩) :
     waechterBedarf op args := by
   cases b with
-  | teilen links => exact teilenBedarf_gilt code links hmem frame h hp op args hg
+  | teilen links => exact teilenBedarf_gilt code links frame h hp op args hg
   | liesArray basis element count =>
-      exact liesArrayBedarf_gilt code basis element count hmem frame h hp op args hg
+      exact liesArrayBedarf_gilt code basis element count frame h hp op args hg
   | textIndex basis capacity =>
-      exact textIndexBedarf_gilt code basis capacity hmem frame h hp op args hg
+      exact textIndexBedarf_gilt code basis capacity frame h hp op args hg
   | substring basis capacity =>
-      exact substringBedarf_gilt code basis capacity hmem frame h hp op args hg
+      exact substringBedarf_gilt code basis capacity frame h hp op args hg
   | literal _ _ => exact guard_none_absurd hg rfl
   | binaer _ _ => exact guard_none_absurd hg rfl
   | binden _ _ => exact guard_none_absurd hg rfl
@@ -118,24 +119,26 @@ theorem pruefeBedarf_gilt (code : List Befehl) (b : Befehl) (frame : Gabbro.Core
     stay free. -/
 theorem waechterAbstrakt (p : Fragment) (platform : Katalog.Plattform)
     (h : waechterPruefeCode p.code = true) : WaechterHalten (p.einheit platform) := by
-  have hfre : p.code.all keinFremdzugriff = true := by
-    have h2 := h
-    simp only [waechterPruefeCode, Bool.and_eq_true] at h2
-    exact h2.1
-  have hpruef : ∀ b ∈ p.code, pruefeBedarf p.code b = true := by
-    intro b hb
-    have h2 := h
-    simp only [waechterPruefeCode, Bool.and_eq_true] at h2
-    exact List.all_eq_true.mp h2.2 b hb
+  simp only [waechterPruefeCode, Bool.and_eq_true, Bool.or_eq_true] at h
+  obtain ⟨hfre, guards⟩ := h
   refine ⟨?_, ?_, ?_⟩
   · intro ρ hρ t op args hbed
     have hguard : (p.einheit platform).quelltabellen.guard (ρ.zeit.zustand t.val)
         op args := hbed
     obtain ⟨c, b, head, hdemand⟩ := hguard
-    have hmem : b ∈ p.code := kopf_mem head
-    have hfr := (invariantAlle p platform hfre ρ hρ t.val).1 c
-    exact pruefeBedarf_gilt p.code b ((ρ.zeit.zustand t.val).lokal c) hmem hfr
-      (hpruef b hmem) op args hdemand
+    rcases guards with whole | forward
+    · have hfr := (invariantAlle p platform hfre ρ hρ t.val).1 c
+      have checked := List.all_eq_true.mp whole b (kopf_mem head)
+      exact pruefeBedarf_gilt p.code b _ hfr checked op args hdemand
+    · simp only [pruefeVorwaerts, Bool.and_eq_true] at forward
+      let r := (ρ.zeit.zustand t.val).lokal c
+      have lookup : p.code[r.pc]? = some b := Gabbro.Core.Ast.Semantik.kopf_code head
+      have inRange := List.mem_range.mpr (List.getElem?_eq_some_iff.mp lookup).1
+      have checked := List.all_eq_true.mp forward.2 r.pc inRange
+      rw [lookup] at checked
+      have frame := vorwaertsRahmen_lauf p platform forward.1 hfre ρ hρ t.val c
+      exact pruefeBedarf_gilt (p.code.take r.pc) b r
+        (frame.2 r.pc (kopf_aktiv head) (Nat.le_refl _)) checked op args hdemand
   · intro ρ hρ t
     intro hC
     obtain ⟨C, ⟨c, hcC⟩, hclosed⟩ := hC

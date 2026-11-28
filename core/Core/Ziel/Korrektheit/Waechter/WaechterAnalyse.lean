@@ -5,13 +5,14 @@
              over the instruction sequence, with a static value abstraction of the temporary
              registers, as the language checker will run it.
 
-  The analysis is flow-insensitive and entirely static: every transfer is a constant read off
+  The whole-code analysis is flow-insensitive: every transfer is a constant read off
   the instruction (literals, text lengths, array element types), so one fold over the code
   already is a post-fixpoint — no iteration, no fuel, no widening. Unknown same-kind writes
   (arithmetic results, division results, locals read back) poison their slot to top (`none`),
   which is always sound. Control flow needs no case split: the joined environment
   overapproximates every reachable frame on every path, including jumps, calls, interrupts
-  and restarts.
+  and restarts. For forward-only code, a second check joins only writes strictly before
+  each instruction, so a guard can use an input whose slot the instruction itself overwrites.
 
   The named decidable fragment (`waechterFragmentCode`) is the class on which the analysis
   is complete: no access or lifecycle instructions, every guard instruction sits in the
@@ -165,10 +166,6 @@ def keinFremdzugriff : Befehl → Bool
   | .zugriff _ | .faden _ => false
   | _ => true
 
-/-- The computable guard verdict over an instruction sequence. -/
-def waechterPruefeCode (code : List Befehl) : Bool :=
-  code.all keinFremdzugriff && code.all (pruefeBedarf code)
-
 /-- Instructions that end the linear prefix: anything that does not advance `pc` by exactly
     one. Definitions skip over their function body, calls and returns leave the linear flow,
     and `ende` stops the context. -/
@@ -184,6 +181,25 @@ def prefixRein : Befehl → Bool
   | b => !istSteuerung b && match b with
     | .bindeRegion .. => false
     | _ => true
+
+/-- The instruction advances whenever it leaves its frame live, or halts.
+    This subset installs no functions, so the final entry call halts as well. -/
+def vorwaertsBefehl : Befehl → Bool
+  | .starte .. | .ende => true
+  | .springe distance | .springeWenn _ _ distance => 0 < distance
+  | .aussen .. | .pruefeMass .. => false
+  | b => prefixRein b
+
+/-- Check each guard with the writes preceding it in forward-only code. -/
+def pruefeVorwaerts (code : List Befehl) : Bool :=
+  code.all vorwaertsBefehl && (List.range code.length).all fun pos =>
+    match code[pos]? with
+    | some b => pruefeBedarf (code.take pos) b
+    | none => false
+
+/-- The computable guard verdict over an instruction sequence. -/
+def waechterPruefeCode (code : List Befehl) : Bool :=
+  code.all keinFremdzugriff && (code.all (pruefeBedarf code) || pruefeVorwaerts code)
 
 /-- The kind of an operand slot a guard reads. -/
 inductive OperandenArt where
