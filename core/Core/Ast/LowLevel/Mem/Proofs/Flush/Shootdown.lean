@@ -118,8 +118,9 @@ theorem mem_shootdown : MemShootdownAussage := by
   intro core addr right virtual inside
   have miss := cache_miss_of_shootdown clear core _ inside
   have absent := table _ inside
+  change uebersetze k.plattform.ziel frame.mmuSicht core token.raum addr right = .error .absent
   unfold uebersetze MemFrame.mmuSicht
-  simp only [virtual, not_true_eq_false, if_false, cache, miss, Option.none_or, absent]
+  simp only [virtual, not_true_eq_false, if_false, cache, miss, absent] <;> rfl
 
 /-- An invalidation step changes neither the installed tables nor the cells of a different
     core, space or page. A release must therefore have observed every such cell absent. -/
