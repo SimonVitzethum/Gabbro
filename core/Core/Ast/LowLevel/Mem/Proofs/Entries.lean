@@ -79,19 +79,32 @@ public def newSpaceEntry : RegistryEntry ``MemTree.newSpace (schemaMem ``MemTree
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
       hEtiketten, hFluss⟩, hJoint⟩
 
-public def newGuestSpaceEntry : RegistryEntry ``MemTree.newGuestSpace (schemaMem ``MemTree.newGuestSpace) := by
-  simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
-    ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
-  obtain ⟨kern, meaning, isolation, joint⟩ := newGuestSpace_aussage
+private def newGuestSpaceSurfaceProof : RegistryEntry ``MemTree.newGuestSpace
+    ⟨.surface, statementsMem ``MemTree.newGuestSpace .newGuestSpace⟩ := by
+  obtain ⟨kern, meaning, isolation, joint, reachable⟩ := newGuestSpace_aussage
   obtain ⟨parse, inversion, unique, print, elaborated, realized, admitted, ideal, units,
     implementation, progress, preservation, safe, answers, outside, cost, bounds, labels, flow⟩ := kernConj kern
   exact ⟨.surface ⟨parse, inversion, unique, print⟩ elaborated realized,
     ⟨admitted, outside, meaning, isolation⟩, ideal, units, implementation,
-    ⟨preservation, progress, safe, answers, cost, bounds, labels, flow⟩, joint⟩
+    ⟨preservation, progress, safe, answers, cost, bounds, labels, flow⟩, ⟨joint, reachable⟩⟩
 
-public theorem newGuestSpaceCoreEntry :
+public def newGuestSpaceEntry : RegistryEntry ``MemTree.newGuestSpace (schemaMem ``MemTree.newGuestSpace) := by
+  simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false, ite_true, ite_false]
+  exact newGuestSpaceSurfaceProof
+
+public def newGuestSpaceCoreEntry :
+    RegistryEntry ``MemInstruction.newGuestSpace newGuestSpaceCoreSchema where
+  realization := .core newGuestSpaceOrigin
+  acceptanceRule := newGuestSpaceSurfaceProof.acceptanceRule
+  idealRule := newGuestSpaceSurfaceProof.idealRule
+  unitsAndCommutation := newGuestSpaceSurfaceProof.unitsAndCommutation
+  implementationRule := newGuestSpaceSurfaceProof.implementationRule
+  preservation := newGuestSpaceSurfaceProof.preservation
+  jointlySatisfiable := newGuestSpaceSurfaceProof.jointlySatisfiable
+
+public theorem newGuestSpaceCorePacket :
     RegistryPacketProof ``MemInstruction.newGuestSpace NewGuestSpaceCoreAussage :=
-  ⟨⟨newGuestSpaceOrigin, newGuestSpace_aussage⟩⟩
+  ⟨⟨newGuestSpace_aussage, ⟨newGuestSpaceCoreEntry⟩⟩⟩
 
 public def mapEntry : RegistryEntry ``MemTree.mapSpace (schemaMem ``MemTree.mapSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,

@@ -341,8 +341,27 @@ theorem newGuestSpaceOrigin : NewGuestSpaceOriginAussage := by
   cases equal
   exact ⟨tables, rfl, rfl, indexed⟩
 
+theorem guestSpaceHostIsolation_erfuellbar : GuestSpaceHostIsolationErfuellbarAussage := by
+  obtain ⟨k, scope, tree, op, _, start, _, pre, s, next, _, _, _, _, _, _, _, _, _,
+    elaborated, reachable, _, evaluated, ideal, _⟩ := newGuestSpace_erfuellbar
+  cases tree with
+  | newGuestSpace tables =>
+      change (scope.slotRegion tables).map MemInstruction.newGuestSpace = some op at elaborated
+      obtain ⟨tablesSlot, _, rfl⟩ := Option.map_eq_some_iff.mp elaborated
+      obtain ⟨region, _, _, nextFrame⟩ :=
+        (newGuestSpaceMeaning k.plattform.ziel s entryContext tablesSlot next).mp evaluated
+      let space : Adressraum := ⟨region.extent, [], 0, [], true⟩
+      let slot := (s.lokal entryContext).spaces.length
+      have found : ((next.advance entryContext s).lokal entryContext).spaces[slot]? = some space := by
+        simp only [MemFrame.advance, Function.update_self, nextFrame]
+        change ((s.lokal entryContext).spaces ++ [space])[slot]? = some space
+        rw [List.getElem?_append_right (Nat.le_refl slot), Nat.sub_self] <;> rfl
+      exact ⟨k, pre ++ [.newGuestSpace tablesSlot], start, next.advance entryContext s, slot, space,
+        System.IErreichbar.schritt entryContext () _ reachable ideal, found, rfl,
+        guestSpaceHostIsolation _ _ _ _ _ found rfl⟩
+
 theorem newGuestSpace_aussage : NewGuestSpaceAussage :=
   ⟨memObligationsKern_alle .newGuestSpace, newGuestSpaceMeaning,
-    guestSpaceHostIsolation, newGuestSpace_erfuellbar⟩
+    guestSpaceHostIsolation, newGuestSpace_erfuellbar, guestSpaceHostIsolation_erfuellbar⟩
 
 end Gabbro.Core.Ast.LowLevel

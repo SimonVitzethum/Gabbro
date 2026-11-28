@@ -291,7 +291,7 @@ private meta def scopedEntries : Array RegistryPacket := #[
 
 private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.LowLevel.MemInstruction.newGuestSpace, `Gabbro.Core.Ast.LowLevel.NewGuestSpaceCoreAussage,
-    some `Gabbro.Core.Ast.LowLevel.newGuestSpaceCoreEntry⟩,
+    some `Gabbro.Core.Ast.LowLevel.newGuestSpaceCorePacket⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.addressTypeRegistryEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.boolTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.integerTypeEntry⟩,

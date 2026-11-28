@@ -107,6 +107,15 @@ def ActivateJointAussage : Prop :=
   MemErfuellbarNach .activateSpace fun «prefix» op =>
     ∃ tables, «prefix» = [.newSpace tables] ∧ op = .activateSpace 0
 
+/-- Host activation is refused for the fresh slot of a successful, reachable guest-space creation. -/
+def GuestSpaceHostIsolationErfuellbarAussage : Prop :=
+  ∃ (k : Katalog) (code : List MemInstruction) (start : AussenStart) (s : MemState)
+    (slot : Nat) (space : Adressraum),
+    let E := memProgram k code
+    E.system.IErreichbar (I.start E start).2 s ∧
+    (s.lokal entryContext).spaces[slot]? = some space ∧ space.guestPhysical = true ∧
+    (MemInstruction.activateSpace slot).evaluate k.plattform.ziel s entryContext = none
+
 def MeaningAussageMem : MemForm → Prop
   | .splitAt => SplitAtMeaningAussage
   | .splitPages => SplitPagesMeaningAussage
@@ -125,6 +134,7 @@ def JointAussageMem : MemForm → Prop
   | .unmapSpace => UnmapJointAussage
   | .flushSpace => FlushJointAussage ∧ FlushNarrowJointAussage ∧ FlushNarrowWideJointAussage
   | .activateSpace => ActivateJointAussage
+  | .newGuestSpace => MemErfuellbarAussage .newGuestSpace ∧ GuestSpaceHostIsolationErfuellbarAussage
   | form => MemErfuellbarAussage form
 
 def SplitAtAussage : Prop :=
@@ -148,15 +158,14 @@ def ActivateAussage : Prop := memObligationsKern .activateSpace ∧ ActivateMean
 
 def NewGuestSpaceAussage : Prop :=
   memObligationsKern .newGuestSpace ∧ NewGuestSpaceMeaningAussage ∧
-    GuestSpaceHostIsolationAussage ∧ MemErfuellbarAussage .newGuestSpace
+    GuestSpaceHostIsolationAussage ∧ MemErfuellbarAussage .newGuestSpace ∧
+    GuestSpaceHostIsolationErfuellbarAussage
 
 def NewGuestSpaceOriginAussage : Prop :=
   ∀ (form : MemForm) (target : ZielDaten) (scope : MemScope) (tree : MemTree form) (slot : Nat),
     elaborateMemAt target scope tree = some (.newGuestSpace slot) →
     ∃ table, ∃ eq : form = .newGuestSpace,
       (eq ▸ tree) = MemTree.newGuestSpace table ∧ scope.slotRegion table = some slot
-
-def NewGuestSpaceCoreAussage : Prop := NewGuestSpaceOriginAussage ∧ NewGuestSpaceAussage
 
 def statementsMem (constructor : Lean.Name) (form : MemForm) : RegistryStatements constructor .surface where
   realization := .surface (MemParseAussage form ∧ MemInversionAussage form ∧
@@ -183,5 +192,19 @@ def schemaMem (constructor : Lean.Name) : RegistrySchema constructor :=
     else if constructor == ``MemTree.newGuestSpace then MemForm.newGuestSpace
     else MemForm.activateSpace
   ⟨.surface, statementsMem constructor form⟩
+
+def newGuestSpaceCoreSchema : RegistrySchema ``MemInstruction.newGuestSpace :=
+  let surface := statementsMem ``MemTree.newGuestSpace .newGuestSpace
+  ⟨.core, {
+    realization := .core NewGuestSpaceOriginAussage
+    acceptanceRule := surface.acceptanceRule
+    idealRule := surface.idealRule
+    unitsAndCommutation := surface.unitsAndCommutation
+    implementationRule := surface.implementationRule
+    preservation := surface.preservation
+    jointlySatisfiable := surface.jointlySatisfiable }⟩
+
+def NewGuestSpaceCoreAussage : Prop :=
+  NewGuestSpaceAussage ∧ Nonempty (RegistryEntry ``MemInstruction.newGuestSpace newGuestSpaceCoreSchema)
 
 end Gabbro.Core.Ast.LowLevel
