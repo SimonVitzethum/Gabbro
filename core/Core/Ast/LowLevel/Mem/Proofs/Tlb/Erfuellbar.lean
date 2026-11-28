@@ -183,7 +183,7 @@ private theorem tlbReach : tlbE.system.IErreichbar tlbS0 tlbS5 := by
       ⟨.unmapSpace 0 0 1, tlbHead3, ⟨tlbF4, tlbF4eq, rfl, rfl⟩⟩)
     ⟨.bindToken tlbName, tlbHead4, ⟨tlbF5, tlbF5eq, rfl, rfl⟩⟩
 
-private def tlbCell : TlbZelle := ⟨0, 0, 0, ⟨1, [.read], 0⟩⟩
+private def tlbCell : TlbZelle := ⟨0, 0, 0, ⟨1, [.read], 0, .normal⟩⟩
 
 private theorem tlbS5zellen : (tlbS5.lokal entryContext).tlb.zellen = [tlbCell] := by
   rfl

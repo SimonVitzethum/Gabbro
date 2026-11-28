@@ -168,7 +168,7 @@ private def tableRegion : MemRegion := ⟨tableExtent, [⟨0, 0⟩]⟩
 private def frameRegion : MemRegion := ⟨frameExtent, [⟨1, 0⟩]⟩
 
 private def space0 : Adressraum := ⟨tableExtent, [], 0, []⟩
-private def space2 : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0⟩)], 0, []⟩
+private def space2 : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0, .normal⟩)], 0, []⟩
 
 private theorem satHeld0 : heldMemRegion satK.plattform.ziel satS0 entryContext 0 = some tableRegion := by
   rfl
@@ -239,12 +239,12 @@ private theorem satEval2 :
   dsimp [s2frame, space2]
   rfl
 
-private theorem satFirst : space2.abbildung 0 = some ⟨1, satRights, 0⟩ := by
+private theorem satFirst : space2.abbildung 0 = some ⟨1, satRights, 0, .normal⟩ := by
   rfl
 
 private theorem satFrames2 :
     (List.range 1).all (fun i => ((space2.abbildung (0 + i)).map Seiteneintrag.frame) ==
-      some ((⟨1, satRights, 0⟩ : Seiteneintrag).frame + i)) = true := by
+      some ((⟨1, satRights, 0, .normal⟩ : Seiteneintrag).frame + i)) = true := by
   simp only [List.range_one, List.all_cons, List.all_nil, Bool.true_and, zero_add,
     space2, Adressraum.abbildung, List.find?_cons, List.find?_nil, Option.map_none,
     beq_self_eq_true, if_true, Option.map_some]

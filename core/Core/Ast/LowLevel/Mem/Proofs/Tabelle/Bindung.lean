@@ -42,7 +42,7 @@ theorem translate_mmuSicht {k : Katalog} {h : Katalog.Umgebung} (hw : Hardware k
 private def leerFrame : MemFrame := {}
 
 private def fremdSicht : MmuSicht :=
-  { tables := fun _ _ => some ⟨1, [.read], 0⟩, tlb := fun _ _ _ => none }
+  { tables := fun _ _ => some ⟨1, [.read], 0, .normal⟩, tlb := fun _ _ _ => none }
 
 /-- A view is bound to a frame when it IS the frame's MMU view: installed tables plus cached
     translations of exactly that frame. This is the one new premise at every memory access of the
@@ -122,7 +122,7 @@ private theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
   have hleer : leerFrame.tabellenSicht 0 0 = none := by
     apply MemFrame.tabellenSicht_none
     rfl
-  have hfremd : fremdSicht.tables 0 0 = some ⟨1, [.read], 0⟩ := rfl
+  have hfremd : fremdSicht.tables 0 0 = some ⟨1, [.read], 0, .normal⟩ := rfl
   rw [hfremd, hleer] at heq
   cases heq
 
@@ -132,7 +132,7 @@ private theorem leer_nicht_gebunden : ¬ MmuGebunden leerFrame fremdSicht := by
 theorem hauptbefund_gebunden_unmoeglich :
     ¬ ∃ (frame : MemFrame),
       MmuGebunden frame frame.mmuSicht ∧
-      (frame.mmuSicht).tables 0 0 = some ⟨1, [.read], 0⟩ ∧
+      (frame.mmuSicht).tables 0 0 = some ⟨1, [.read], 0, .normal⟩ ∧
       frame.tabellenSicht 0 0 = none := by
   intro h
   obtain ⟨frame, hbound, htab, hnone⟩ := h
