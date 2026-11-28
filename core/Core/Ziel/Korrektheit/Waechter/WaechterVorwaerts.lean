@@ -82,17 +82,20 @@ theorem kopf_aktiv {code : List Befehl} {s : Semantik.Zustand} {c : Kontext} {b 
     · cases head
   · cases head
 
-/-- Prefix bounds hold at every ideal cut, including reboots and handler entries.
-    New frames begin with no temporary values, regardless of their entry position. -/
-theorem vorwaertsRahmen_lauf (p : Fragment) (platform : Plattform)
-    (allowed : p.code.all vorwaertsBefehl = true) (safe : p.code.all keinFremdzugriff = true)
+/-- A frame invariant preserved by every reached private instruction survives all ideal cuts. -/
+theorem privatRahmen_lauf (p : Fragment) (platform : Plattform)
+    (holds : Semantik.Rahmen → Prop)
+    (boot : ∀ k machine regions c,
+      holds ((startdaten p.eingang p.eintritte k machine regions).lokal c))
+    (preserve : ∀ b r live, p.code[r.pc]? = some b → r.Aktiv → holds r →
+      b.Privat ∧ holds (b.auswerten r live))
     (ρ : I.Lauf (p.einheit platform)) (run : I.Laeufe _ ρ) (t : Nat) :
-    ∀ c, VorwaertsRahmen p.code ((ρ.zeit.zustand t).lokal c) := by
+    ∀ c, holds ((ρ.zeit.zustand t).lokal c) := by
   induction t with
   | zero =>
       rw [run.2.2.2.1]
       intro c
-      exact ⟨rfl, fun _ _ _ => rahmenLeer_erfuellt _ _ rfl rfl⟩
+      exact boot (ρ.start.assignment 0) platform ρ.start.regions c
   | succ t ih =>
       cases ρ.zeit.takt t with
       | wartet label eq _ =>
@@ -104,8 +107,8 @@ theorem vorwaertsRahmen_lauf (p : Fragment) (platform : Plattform)
               rename_i u plan spur c w
               obtain ⟨b, head, ideal⟩ := rule
               have lookup := Gabbro.Core.Ast.Semantik.kopf_code head
-              have allowedB := List.all_eq_true.mp allowed b (List.mem_of_getElem? lookup)
-              have privat := vorwaerts_privat allowedB
+              obtain ⟨privat, maintained⟩ :=
+                preserve b _ _ lookup (kopf_aktiv head) (ih c)
               have hi : b.ideal c (ρ.zeit.zustand t) w [plan] u := ideal
               obtain ⟨plans, after⟩ := (b.ideal_privat privat c _ w [plan] u).1 hi
               have still : plan.aktion.Still := by
@@ -115,12 +118,12 @@ theorem vorwaertsRahmen_lauf (p : Fragment) (platform : Plattform)
               obtain ⟨_, _, localEq, _, _⟩ := exec.still_erhaelt still
               rw [eq]
               intro d
-              change VorwaertsRahmen p.code (v.lokal d)
+              change holds (v.lokal d)
               rw [localEq, after]
               by_cases same : d = c
               · subst d
                 rw [b.nach_lokal_eigener]
-                exact vorwaertsRahmen_schritt _ allowedB safe lookup (kopf_aktiv head) (ih c)
+                exact maintained
               · rw [b.nach_lokal_anderer same]
                 exact ih d
           | antwort _ h =>
@@ -135,6 +138,19 @@ theorem vorwaertsRahmen_lauf (p : Fragment) (platform : Plattform)
               obtain ⟨_, eq⟩ := AbsturzSchritt.genau h
               rw [eq]
               intro c
-              exact ⟨rfl, fun _ _ _ => rahmenLeer_erfuellt _ _ rfl rfl⟩
+              exact boot (some 0) .x86_64 [] c
+
+/-- Prefix bounds hold at every ideal cut, including reboots and handler entries.
+    New frames begin with no temporary values, regardless of their entry position. -/
+theorem vorwaertsRahmen_lauf (p : Fragment) (platform : Plattform)
+    (allowed : p.code.all vorwaertsBefehl = true) (safe : p.code.all keinFremdzugriff = true)
+    (ρ : I.Lauf (p.einheit platform)) (run : I.Laeufe _ ρ) (t : Nat) :
+    ∀ c, VorwaertsRahmen p.code ((ρ.zeit.zustand t).lokal c) := by
+  apply privatRahmen_lauf p platform (VorwaertsRahmen p.code) _ _ ρ run t
+  · intro k machine regions c
+    exact ⟨rfl, fun _ _ _ => rahmenLeer_erfuellt _ _ rfl rfl⟩
+  · intro b r live lookup active before
+    have allowedB := List.all_eq_true.mp allowed b (List.mem_of_getElem? lookup)
+    exact ⟨vorwaerts_privat allowedB, vorwaertsRahmen_schritt live allowedB safe lookup active before⟩
 
 end Gabbro.Core.Ziel.Korrektheit.WaechterAnalyse

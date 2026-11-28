@@ -151,7 +151,8 @@ def sTxt2 (s : AussenStart) : Zustand :=
 
 /-- Forcing one ideal step: from local, status and core agreement with a concrete
     pre-state, the run takes the forced step and agrees with the concrete post-state. -/
-theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEinheit ρ)
+theorem fragmentForceStep (p : Fragment) (platform : Plattform)
+    (ρ : I.Lauf (p.einheit platform)) (hρ : I.Laeufe (p.einheit platform) ρ)
     (t : Nat) (k : Nat) (b : Befehl) (sPre : Zustand)
     (hNoCrash : (ρ.hw.angebot t).crash = false)
     (hCore : (ρ.hw.angebot t).core = some k)
@@ -164,7 +165,7 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
     (hEqK : (ρ.zeit.zustand t).kerne = sPre.kerne)
     (hEqF : (ρ.zeit.zustand t).fragen = sPre.fragen)
     (hEqR : Zustand.regionLive (ρ.zeit.zustand t) = Zustand.regionLive sPre)
-    (hHead : kopf textIndexCode sPre eintritt = some b)
+    (hHead : kopf p.code sPre eintritt = some b)
     (hPriv : b.klasse = .lokal ∨ b.klasse = .ruf)
     (hReady : KannSchreiten ρ.hw t eintritt sPre)
     (hStPre : ∀ c, c ≠ eintritt → sPre.status c = .ruht)
@@ -182,16 +183,16 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
       exact hd
     · rw [hEqS]
       exact hs
-  have headT : kopf textIndexCode (ρ.zeit.zustand t) eintritt = some b := by
+  have headT : kopf p.code (ρ.zeit.zustand t) eintritt = some b := by
     simp only [kopf, hEqS, hEqL]
     exact hHead
-  have stepT : I.Schritt textIndexEinheit.einrichtung textIndexEinheit.system
-      textIndexEinheit.katalog ρ.hw t
+  have stepT : I.Schritt (p.einheit platform).einrichtung (p.einheit platform).system
+      (p.einheit platform).katalog ρ.hw t
       (ρ.zeit.zustand t) (.kontext eintritt (), ⟨[], []⟩)
       (b.maschinennach eintritt (ρ.zeit.zustand t) (b.nach eintritt (ρ.zeit.zustand t))) :=
     .kontext hNoCrash hReadyT
       ⟨b, headT, (b.ideal_privat (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))) eintritt (ρ.zeit.zustand t) () [_] _).2 ⟨rfl, rfl⟩⟩
-      (b.vollzug textIndexEinheit.einrichtung _ _ _ (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))))
+      (b.vollzug (p.einheit platform).einrichtung _ _ _ (hPriv.elim Or.inl (fun h => Or.inr (Or.inl h))))
   have hsome : ∃ ev, ρ.zeit.spur t = some ev := by
     cases hsp : ρ.zeit.spur t with
     | none =>
@@ -211,7 +212,8 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
       · subst heq
         obtain ⟨b', head', ideal'⟩ := regel
         have hb' : b' = b := by
-          rw [txt_system_kopf, headT] at head'
+          change kopf p.code _ _ = some b' at head'
+          rw [headT] at head'
           cases head'
           rfl
         subst b'
@@ -259,7 +261,8 @@ theorem txtForceStep (ρ : I.Lauf textIndexEinheit) (hρ : I.Laeufe textIndexEin
         have hruht : (ρ.zeit.zustand t).status c0 = .ruht := by
           rw [hEqS]
           exact hStPre c0 heq
-        rw [txt_system_kopf, txt_kopf_ruht hruht] at head'
+        change kopf p.code _ _ = some b' at head'
+        simp only [kopf, hruht] at head'
         cases head'
     | antwort _ reply =>
       exfalso
@@ -364,15 +367,17 @@ theorem textIndexUnit_guardVersagt
       exact txt_dispatch s k assigned
     · rw [hS]
       exact txt_status_entry s
-  have st0 := txtForceStep ρ hρ 0 k (.textLiteral 0 []) (sTxt s)
+  have st0 := fragmentForceStep (fragment .unit textIndexUnit) .x86_64 ρ hρ 0 k (.textLiteral 0 []) (sTxt s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
     baseL baseS baseK baseF baseR
-    (by rw [textIndexUnit_code]; rfl) (by first | exact Or.inl rfl | exact Or.inr rfl)
+    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl)
+    (by first | exact Or.inl rfl | exact Or.inr rfl)
     (readyAt _ _ rfl rfl) (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st1 := txtForceStep ρ hρ 1 k (.literal 1 0) (sTxt1 s)
+  have st1 := fragmentForceStep (fragment .unit textIndexUnit) .x86_64 ρ hρ 1 k (.literal 1 0) (sTxt1 s)
     (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
     st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2.1 st0.2.2.2.2.2
-    (by rw [textIndexUnit_code]; rfl) (by first | exact Or.inl rfl | exact Or.inr rfl)
+    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl)
+    (by first | exact Or.inl rfl | exact Or.inr rfl)
     (readyAt _ _ rfl rfl) (fun c hne => hStPre _ c hne rfl) (by rfl)
   obtain ⟨ev1, hspur1⟩ := st1.1
   have hEqL2 : (ρ.zeit.zustand 2).lokal = (sTxt2 s).lokal := st1.2.1
