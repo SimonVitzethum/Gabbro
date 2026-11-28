@@ -72,10 +72,9 @@ theorem transfer_schreibe_statischInt (code : List Befehl) (frame : Rahmen) (liv
     (hschreibe : b.auswerten frame live = frame.schreibe s V)
     (hV : ∀ g : Ganzzahl, (((b.auswerten frame live).temp s).bind alsGanzzahl) = some g →
       ∀ L H : Int, umgebungInt code s = some (L, H) → L ≤ g.zahl.wert ∧ g.zahl.wert ≤ H)
-    (hT : beitragText b s = some .unbekannt) :
+    (hT : beitragText b s = some .unbekannt ∨
+      ∀ (cap : Nat) (t : TextValue cap), V ≠ some ⟨.text cap, t⟩) :
     RahmenErfuellt code (b.auswerten frame live) := by
-  have hnoneT : umgebungText code s = none :=
-    umgebungText_unbekannt code s (unbekanntText_mem code s b hT hmem)
   have htemp : ∀ slot, (b.auswerten frame live).temp slot =
       if slot = s then V else frame.temp slot := by
     intro slot
@@ -100,8 +99,10 @@ theorem transfer_schreibe_statischInt (code : List Befehl) (frame : Rahmen) (liv
     by_cases heq : slot = s
     · subst heq
       simp only [eq_self_iff_true, if_true] at hd
-      rw [hnoneT] at hlook
-      cases hlook
+      rcases hT with unknown | noText
+      · rw [umgebungText_unbekannt code slot (unbekanntText_mem code slot b unknown hmem)] at hlook
+        cases hlook
+      · exact (noText cap txt (hd.trans (congrArg some hdt))).elim
     · rw [if_neg heq] at hd
       exact h.2.1 slot l hh hlook d hd cap txt hdt
   · intro k hk

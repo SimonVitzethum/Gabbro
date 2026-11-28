@@ -80,12 +80,15 @@ def beitragInt : Befehl → Nat → Option IntBeitrag
     if s = basis then some (.intervall 0 capacity) else none
   | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
-/-- The static text-length information one instruction writes to one slot. -/
+/-- The static text-length information one instruction writes to one slot.
+    An index reads the old text before storing an integer byte. That store contributes no
+    length, even if control later returns to the index instruction. -/
 def beitragText : Befehl → Nat → Option TextBeitrag
   | .textLiteral dst decoded, s =>
     if s = dst then some (.laenge (sourceUtf8 decoded).size (sourceUtf8 decoded).size) else none
   | .textConcat dst a b, s => if s = dst then some (.laenge 0 (a + b)) else none
   | .substring dst capacity, s => if s = dst then some (.laenge 0 capacity) else none
+  | .textIndex .., _ => none
   | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
 /-- Join one integer interval into the running hull; unknown writes are handled
