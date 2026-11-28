@@ -50,6 +50,15 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
   | .flushSpace name => (scope.slotMarke name).map (fun _ => .flushSpace name)
   | .activateSpace space => (scope.slotRaum space).map .activateSpace
 
+/-- Resolve the source in the named target's catalogue. The frame-operand scope carries
+    the ordinary RAM grants of the memory unit. -/
+def elaborateMemAt (target : ZielDaten) (scope : MemScope) (tree : MemTree form) :
+    Option MemInstruction :=
+  match tree with
+  | .mapSpace _ _ _ _ kind =>
+      if target.ramMappingKind kind then elaborateMem scope tree else none
+  | other => elaborateMem scope other
+
 /-- A single region cut supplies both the left and the right authority. -/
 def MemFrame.partition (frame : MemFrame) (slot : Nat) (region : MemRegion) (point : Nat) : MemFrame :=
   let left := { region with extent := ⟨region.extent.von, point⟩ }

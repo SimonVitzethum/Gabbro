@@ -232,9 +232,10 @@ private theorem satEval2 (kind : MemoryKind) (allowed : satK.plattform.ziel.ramM
   dsimp [s2frame, space2]
   rfl
 
-private theorem satElab (kind : MemoryKind) :
-    elaborateMem satScope (MemTree.mapSpace nameSpace 0 nameRegion1 satRights kind) = some (satOp kind) := by
-  rfl
+private theorem satElab (kind : MemoryKind) (allowed : satK.plattform.ziel.ramMappingKind kind = true) :
+    elaborateMemAt satK.plattform.ziel satScope
+      (MemTree.mapSpace nameSpace 0 nameRegion1 satRights kind) = some (satOp kind) := by
+  simp only [elaborateMemAt, allowed, if_true] <;> rfl
 
 private theorem satScopeNodup :
     (satScope.regionen.map Subtype.val).Nodup ∧ (satScope.raeume.map Subtype.val).Nodup ∧
@@ -266,8 +267,7 @@ private theorem satHead2 (kind : MemoryKind) (allowed : satK.plattform.ziel.ramM
   dsimp only [satOp] at ready
   change memHead satK.plattform.ziel (satCode kind) satS1 entryContext = some (satOp kind)
   simp only [memHead, satS1status, satS1pc, satCode, List.getElem?_cons_succ,
-    List.getElem?_cons_zero, Bind.bind, Option.bind, Option.bind_some,
-    if_pos rfl, if_pos ready, ↓reduceIte]
+    List.getElem?_cons_zero, Bind.bind, Option.bind, ite_eq_left ready, ↓reduceIte] <;> rfl
 
 private theorem satReach1 (kind : MemoryKind) : (satE kind).system.IErreichbar satS0 satS1 := by
   apply System.IErreichbar.schritt entryContext () [plan]
@@ -289,9 +289,9 @@ private theorem mapKind_erfuellbar (kind : MemoryKind) (allowed : satK.plattform
   · exact satScopeNodup.2.1
   · exact satScopeNodup.2.2
   · refine ⟨tree, (memDruckKern .mapSpace tree).2, ?_⟩
-    exact ⟨satOp kind, satElab kind, rfl⟩
+    exact ⟨satOp kind, satElab kind allowed, rfl⟩
   · exact (memDruckKern .mapSpace tree).2
-  · exact satElab kind
+  · exact satElab kind allowed
   · exact satHead2 kind allowed
   · exact ⟨satOp kind, satHead2 kind allowed, ⟨s2frame kind, satEval2 kind allowed, rfl, rfl⟩⟩
   · exact ⟨satOp kind, satHead2 kind allowed, ⟨s2frame kind, satEval2 kind allowed, rfl, rfl⟩⟩
@@ -311,7 +311,8 @@ theorem map_isolation_erfuellbar :
   have head := satHead2 .uncached rfl
   have eval := satEval2 .uncached rfl
   have execute := op.vollzug frame 1 entryContext satS1
-  refine ⟨satK, satCode .uncached, hw, satS1, frame.advance entryContext satS1, _, head, ?_, by omega⟩
+  refine ⟨satK, satCode .uncached, hw, satS1, frame.advance entryContext satS1,
+    op.schrittSpur satS1 entryContext, head, ?_, by omega⟩
   exact .kontext rfl ⟨0, rfl, rfl, satS1status⟩ ⟨op, head, ⟨frame, eval, rfl, rfl⟩⟩ execute
 
 end Gabbro.Core.Ast.LowLevel

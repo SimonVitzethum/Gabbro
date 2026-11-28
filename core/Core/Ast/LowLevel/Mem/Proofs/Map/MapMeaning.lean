@@ -190,7 +190,9 @@ theorem mapMeaning : MapMeaningAussage := by
   exact ⟨fun guards => maps ⟨rfl, guards⟩, refuses⟩
 
 theorem mapKindMeaning : MapKindMeaningAussage := by
-  refine ⟨mapMeaningFor, ?_⟩
+  refine ⟨mapMeaningFor, ?_, ?_⟩
+  · intro target scope space virt frames rights kind unsupported
+    simp only [elaborateMemAt, unsupported, Bool.false_eq_true, if_false]
   intro target s c sp virt slot rights kind unsupported
   simp only [MemInstruction.evaluate]
   cases hs : (s.lokal c).spaces[sp]? with

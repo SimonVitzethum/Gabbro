@@ -56,8 +56,10 @@ def MapMeaningFor (kind : MemoryKind) : Prop :=
 
 def MapKindMeaningAussage : Prop :=
   (∀ kind, MapMeaningFor kind) ∧
-  ∀ target s c sp virt slot rights kind, target.ramMappingKind kind = false →
-    (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = none
+  (∀ target scope space virt frames rights kind, target.ramMappingKind kind = false →
+    elaborateMemAt target scope (.mapSpace space virt frames rights kind) = none) ∧
+  (∀ target s c sp virt slot rights kind, target.ramMappingKind kind = false →
+    (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = none)
 
 /-- The first step of a staged narrowing. The table is narrowed in one step and a token of the range is
     pending; the translation caches of the cores are NOT touched (no step clears the cache of another
