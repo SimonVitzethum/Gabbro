@@ -283,6 +283,9 @@ public import Core.Beobachtung.SchrankenBeweise.Kosten.PrologKosten
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.BindungEndlich
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.StartHandoff
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.StartByteHandoff
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Stapelgrenze
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Startbuchung
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Maschinengrenzen
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
