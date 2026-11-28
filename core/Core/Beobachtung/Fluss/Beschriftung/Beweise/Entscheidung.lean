@@ -90,6 +90,13 @@ instance EndlicheBeschriftung.entscheidetFragment (t : EndlicheBeschriftung) (p 
 def Fragment.pruefeFluss (p : Fragment) (t : EndlicheBeschriftung) : Bool :=
   decide (p.FlussAkzeptiert t.deutung)
 
+def EndlicheFlussAussage : Prop :=
+  ∀ (p : Fragment) (t : EndlicheBeschriftung),
+    p.pruefeFluss t = true ↔ p.FlussAkzeptiert t.deutung
+
+theorem endlicheFlussAussage_beweis : EndlicheFlussAussage :=
+  fun _ _ => decide_eq_true_iff
+
 theorem Fragment.pruefeFluss_lokal (p : Fragment) (platform : Katalog.Plattform)
     (t : EndlicheBeschriftung) (h : p.pruefeFluss t = true) :
     FlussLokal (p.beschriftet platform t.deutung) :=

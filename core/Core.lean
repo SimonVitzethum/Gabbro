@@ -171,6 +171,8 @@ public import Core.Beobachtung.Fluss.Beschriftung.Offen.RegionBeweis
 public import Core.Beobachtung.Fluss.Beschriftung.Pegel
 public import Core.Beobachtung.Fluss.Beschriftung.PegelSatz
 public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Entscheidung
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.EntscheidungErfuellbar
+public import Core.Beobachtung.Fluss.Beschriftung.Beweise.Ausgabe
 public import Core.Beobachtung.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Beweise.Speicherverwaltung
 public import Core.Beobachtung.Fluss.Geraet
