@@ -67,9 +67,12 @@ private theorem flush_frame_release {target : ZielDaten} {s : MemState} {c : Kon
           have absent := List.all_eq_true.mp done.1.2 _ (List.mem_range.mpr index)
           rw [offset] at absent
           simp only [MemFrame.tabellenSicht, List.getElem?_set_self pos]
+          change space.abbildung page = none
           cases entry : space.abbildung page with
-          | none => rfl
-          | some entry => simp only [entry, Option.isNone] at absent
+          | none => first | exact entry | rfl
+          | some entry =>
+            simp only [entry, Option.isNone] at absent
+            cases absent
         · cases eval
       · simp only [MemInstruction.evaluate, found, spaceAt, Option.bind_eq_bind, Option.bind_some,
           kind, if_true] at eval
@@ -107,7 +110,7 @@ theorem mem_shootdown : MemShootdownAussage := by
     rw [MemInstruction.schrittSpur, bound] at label
     cases label
     exact bound
-  have result : frame.result = _ := by
+  have result : frame.result = some (.frames (token.frames k.plattform.ziel.seitengranule)) := by
     simpa only [MemFrame.advance, Function.update_self] using frames
   obtain ⟨clear, cache, table⟩ := flush_frame_release key eval result
   simp only [MemFrame.advance, Function.update_self]
