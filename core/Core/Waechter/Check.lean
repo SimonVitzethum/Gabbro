@@ -15,6 +15,7 @@ meta import Core.Ast.Inventory.Entries.Text
 meta import Core.Ast.Inventory.Entries.ScalarTypes
 meta import Core.Ast.LowLevel.Mem.Proofs.Entries
 meta import Core.Ast.LowLevel.Exec.Proofs.Entries
+meta import Core.Ast.LowLevel.Proofs.RegionRegistry
 meta import Core.Ast.Semantik.Runtime.Klasse.Pflichten
 meta import Core.Ast.Semantik.Runtime.Atom.Aussagen
 meta import Core.Ast.Semantik.Runtime.Faden.Aussagen
@@ -189,8 +190,7 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Stmt.whileBounded, `Gabbro.Core.Ast.Semantik.boundedWhileEntry),
     (`Gabbro.Core.Ast.Stmt.forRange, `Gabbro.Core.Ast.Semantik.forRangeEntry),
     (`Gabbro.Core.Ast.Stmt.forever, `Gabbro.Core.Ast.Semantik.foreverEntry),
-    (`Gabbro.Core.Ast.Stmt.access, `Gabbro.Core.Ast.Semantik.accessEntry) ], #[
-    (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage) ]⟩,
+    (`Gabbro.Core.Ast.Stmt.access, `Gabbro.Core.Ast.Semantik.accessEntry) ], #[]⟩,
   ⟨`Gabbro.Core.Ast.Decl, `Gabbro.Core.Ast.Semantik.declSchema, #[
     (`Gabbro.Core.Ast.Decl.constant, `Gabbro.Core.Ast.Semantik.constantEntry),
     (`Gabbro.Core.Ast.Decl.function, `Gabbro.Core.Ast.Semantik.functionEntry),
@@ -227,7 +227,6 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.starte, `Gabbro.Core.Ast.Semantik.kern_starte),
     (`Gabbro.Core.Ast.Semantik.Befehl.ende, `Gabbro.Core.Ast.Semantik.kern_ende),
     (`Gabbro.Core.Ast.Semantik.Befehl.waehleUmgebung, `Gabbro.Core.Ast.Semantik.environmentBefehlEntry) ], #[
-    (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.zugriff, `Gabbro.Core.Ast.Semantik.ZugriffBefehlAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.faden, `Gabbro.Core.Ast.Semantik.FadenBefehlAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.aussen, `Gabbro.Core.Aussenfrage.AussenFrageAussagen),
@@ -236,8 +235,14 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.Semantik.Befehl.sendeUnterbrechung, `Gabbro.Core.Ast.Semantik.SendeLiefertAussage),
     (`Gabbro.Core.Ast.Semantik.Befehl.leiteLeitung, `Gabbro.Core.Ast.Semantik.LeiteWirktAussage) ]⟩]
 
+private meta def constructorSchemas : Array (Name × Name) := #[
+  (`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.regionStmtSchema),
+  (`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.regionBefehlSchema)]
+
 /-- Change only the proof slot when a scoped form is closed. -/
 private meta def scopedEntries : Array RegistryPacket := #[
+  ⟨`Gabbro.Core.Ast.Stmt.letRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage, some `Gabbro.Core.Ast.Semantik.regionBindStmtEntry⟩,
+  ⟨`Gabbro.Core.Ast.Semantik.Befehl.bindeRegion, `Gabbro.Core.Ast.Semantik.RegionBindUnitAussage, some `Gabbro.Core.Ast.Semantik.regionBindBefehlEntry⟩,
   ⟨`Gabbro.Core.Ast.Expr.arrayValue, `Gabbro.Core.Ast.Semantik.ArrayValueProofPacket, some `Gabbro.Core.Ast.Semantik.arrayValueEntry⟩,
   ⟨`Gabbro.Core.Ast.Expr.arrayIndex, `Gabbro.Core.Ast.Semantik.ArrayIndexProofPacket, some `Gabbro.Core.Ast.Semantik.arrayIndexEntry⟩,
   ⟨`Gabbro.Core.Ast.Expr.tupleValue, `Gabbro.Core.Ast.Semantik.TupleValueProofPacket, some `Gabbro.Core.Ast.Semantik.tupleValueEntry⟩,
@@ -283,6 +288,7 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, some `Gabbro.Core.Ast.Semantik.buildEffectGroupEntry⟩]
 
 private meta def auxiliaryEntries : Array RegistryPacket := #[
+  ⟨`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.addressTypeRegistryEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.boolTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.integerTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.array, `Gabbro.Core.Ast.Semantik.ArrayTypeProofPacket, some `Gabbro.Core.Ast.Semantik.arrayTypeEntry⟩,
@@ -295,7 +301,6 @@ private meta def auxiliaryEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.optionMatchForm, `Gabbro.Core.Ast.Semantik.OptionMatchProofPacket, some `Gabbro.Core.Ast.Semantik.optionMatchEntry⟩]
 
 private meta def openAuxiliaryEntries : Array (Name × Name) := #[
-  (`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeUnitAussage),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lokal, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.ruf, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
   (`Gabbro.Core.Ast.Semantik.Wirkungsklasse.lesen, `Gabbro.Core.Ast.Semantik.KlassenAussagen),
@@ -389,7 +394,8 @@ elab "#check_core" : command => do
     let dependencyErrors := compiledImportErrors env ++ pinTask.get ++ acceptanceErrors env index acceptance
       ++ safetyErrors env index safety ++ aussageTask.get
     let pinNames := pins.map (·.1)
-    let mut errors ← phase "registry" (registryErrors registry scopedEntries pinNames closing.isSome)
+    let mut errors ← phase "registry"
+      (registryErrors registry scopedEntries pinNames closing.isSome constructorSchemas)
     let auxiliary := auxiliaryEntries ++ openAuxiliaryEntries.map (fun (form, packet) => ⟨form, packet, none⟩)
     let covered := #[`Gabbro.Core.Ast.Semantik.Wirkungsklasse, `Gabbro.Core.Ast.WrittenType]
     errors := errors ++ (← phase "auxiliary registry" (auxiliaryRegistryErrors auxiliary pinNames closing.isSome covered))

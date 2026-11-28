@@ -108,14 +108,32 @@ public meta def auxiliaryRegistryErrors (rows : Array RegistryPacket) (pinNames 
         errors := errors.push s!"missing auxiliary registry entry for {ctor}"
   return errors
 
+private meta def validSchema (env : Environment) (name : Name) : MetaM Bool := do
+  let expected := mkForall `constructor .default (mkConst ``Name)
+    (mkApp (mkConst ``RegistrySchema) (mkBVar 0))
+  match env.find? name with
+  | some schema => if isCoreConstant env name then isDefEq schema.type expected else pure false
+  | none => pure false
+
 /-- Compares configured families with Lean's actual constructor lists. Each constructor must have one
-    Core declaration of type `RegistryEntry constructor (schema constructor)`. The schema selects source
-    or internal origin per constructor and is fixed by the language definitions. This guard checks coverage
+    typed Core entry. Constructor-specific schemas extend a pinned family schema while retaining it
+    for the other constructors. The schema selects source or internal origin. This guard checks coverage
     and typing. The intended meaning and non-degeneracy of the propositions require review and pins. -/
 public meta def registryErrors (families : Array RegistryFamily) (packetEntries : Array RegistryPacket)
-    (pinNames : Array Name) (closing : Bool) : MetaM (Array String) := do
+    (pinNames : Array Name) (closing : Bool)
+    (constructorSchemas : Array (Name × Name) := #[]) : MetaM (Array String) := do
   let env ← getEnv
   let mut errors := #[]
+  let mut overrides : Std.HashMap Name Name := {}
+  for (constructor, schema) in constructorSchemas do
+    if overrides.contains constructor then
+      errors := errors.push s!"duplicate registry schema for {constructor}"
+    else
+      let schemaOK ← validSchema env schema
+      if pinNames.contains schema && schemaOK then
+        overrides := overrides.insert constructor schema
+      else
+        errors := errors.push s!"invalid pinned registry schema {schema} for {constructor}"
   let mut registered : NameSet := {}
   let mut constructors : NameSet := {}
   for family in families do
@@ -129,14 +147,10 @@ public meta def registryErrors (families : Array RegistryFamily) (packetEntries 
       constructors := constructors.insert ctor
     unless isCoreConstant env info.name do
       errors := errors.push s!"registry family {info.name} is outside Core"
-    let schemaType := mkForall `constructor .default (mkConst ``Name)
-      (mkApp (mkConst ``RegistrySchema) (mkBVar 0))
-    let schemaOK ← match env.find? family.schema with
-      | some schema =>
-        if isCoreConstant env schema.name then isDefEq schema.type schemaType else pure false
-      | none => pure false
+    let schemaOK ← validSchema env family.schema
     unless schemaOK do
       errors := errors.push s!"invalid registry schema function {family.schema}"
+    let schemaFor := fun constructor => (overrides[constructor]?).getD family.schema
     let mut supplied : NameSet := {}
     for (ctor, entry) in family.entries do
       if !info.ctors.contains ctor then
@@ -149,7 +163,7 @@ public meta def registryErrors (families : Array RegistryFamily) (packetEntries 
         errors := errors.push s!"registry entry declaration {entry} is missing"
         continue
       let index := toExpr ctor
-      let expected := mkApp2 (mkConst ``RegistryEntry) index (mkApp (mkConst family.schema) index)
+      let expected := mkApp2 (mkConst ``RegistryEntry) index (mkApp (mkConst (schemaFor ctor)) index)
       if !isCoreConstant env entry || !schemaOK || !(← isDefEq value.type expected) then
         errors := errors.push s!"registry entry {entry} lacks the required typed proofs for {ctor}"
     let packetRows := (packetEntries.filter fun row => info.ctors.contains row.form) ++
@@ -164,7 +178,7 @@ public meta def registryErrors (families : Array RegistryFamily) (packetEntries 
       supplied := supplied.insert ctor
       if schemaOK then
         let index := toExpr ctor
-        let expected := mkApp3 (mkConst ``RegistryPacketEntry) index (mkApp (mkConst family.schema) index)
+        let expected := mkApp3 (mkConst ``RegistryPacketEntry) index (mkApp (mkConst (schemaFor ctor)) index)
           (mkConst row.statement)
         errors := errors ++ (← packetErrors row pinNames closing expected)
     for ctor in info.ctors do
@@ -173,6 +187,9 @@ public meta def registryErrors (families : Array RegistryFamily) (packetEntries 
   for row in packetEntries do
     unless constructors.contains row.form do
       errors := errors.push s!"unknown packet registry constructor {row.form}"
+  for (constructor, _) in constructorSchemas do
+    unless constructors.contains constructor do
+      errors := errors.push s!"unknown registry constructor for schema override {constructor}"
   return errors
 
 end Gabbro.Core.Waechter
