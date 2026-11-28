@@ -12,6 +12,7 @@ public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Verfeinerung
 public import Core.Ziel.Korrektheit.Beweise.NIAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise2.ZielNI
+import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.VergleichSpuren
 public import Core.Ziel.Korrektheit.Beweise2.EinheitHerkunft
 public import Core.Ziel.Korrektheit.SchrankenAkzeptiert
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.SchedulerEinheit
@@ -149,13 +150,13 @@ theorem zielAusTeilenVerfeinerung (B : FormBeleg) (existiert : ZugriffSchrittExi
   zielAusTeilenVerfeinerung_mitFairSim B (fairSim_aus_rueckkehr rueckkehr existiert) schranken
 
 /-- The goal over `R₀` follows from the listed proof obligations. -/
-theorem zielAusTeilen (niSpuren : VergleichSpurenAussage) (B : FormBeleg)
+theorem zielAusTeilen (B : FormBeleg)
     (formG : FormenGedecktAussage P B) : Ziel.GabbroZielForm (R₀ P B) := by
   unfold Ziel.GabbroZielForm
   constructor
   · exact zielAusTeilenNichtLeer P B (bildGueltig P) formG
   · constructor
     · exact zielAusTeilenVerfeinerung rueckkehr B zugriffSchrittExistiert (schrankenAkzeptiert P)
-    · exact (zielNI_iff_vergleich P B).2 niSpuren
+    · exact (zielNI_iff_vergleich P B).2 vergleichSpuren
 
 end Gabbro.Core.Ziel.Korrektheit

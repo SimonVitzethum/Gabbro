@@ -2,6 +2,7 @@ module
 
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ast.Program.Linken
+public import Core.Annahme.Quellbindung
 
 @[expose] public section
 
@@ -20,6 +21,16 @@ inductive EinheitHerkunft : Ast.Semantik.Einheit → Prop where
 
 /-- The image of the whole-unit constructions, with equality inherited from the machine unit. -/
 abbrev Spracheinheit := { E : Ast.Semantik.Einheit // EinheitHerkunft E }
+
+theorem akzeptiert_herkunft {E : Ast.Semantik.Einheit} (h : Annahme.Quelle.Akzeptiert E) :
+    EinheitHerkunft E := by
+  obtain ⟨P, p, herkunft, _, bindung⟩ := h.1.2
+  change E = p.einheit P at bindung
+  subst E
+  cases herkunft with
+  | quelle P t => exact .quelle P t
+  | mitInvarianten P u => exact .mitInvarianten P u
+  | verlinkt plan p linked => exact .verlinkt plan p linked
 
 theorem bezeichnet_herkunft {P : Katalog.Plattform} {a : Text.RawText} {E : Ast.Semantik.Einheit}
     (h : Ast.Semantik.Bezeichnet P Ast.Category.unit a E) : EinheitHerkunft E := by

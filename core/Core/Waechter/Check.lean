@@ -120,6 +120,7 @@ private meta def acceptance : AcceptanceSpec := {
     `Gabbro.Core.Annahme.Akzeptiert,
     `Gabbro.Core.Annahme.Quelle.FragmentHerkunft,
     `Gabbro.Core.Annahme.Quelle.Idealbindung,
+    `Gabbro.Core.Annahme.Quelle.Implementierungsbindung,
     `Gabbro.Core.Annahme.Quelle.Lokal,
     `Gabbro.Core.Annahme.Quelle.Akzeptiert,
     `Gabbro.Core.Annahme.akzeptiert_katalog],
@@ -129,8 +130,8 @@ private meta def acceptance : AcceptanceSpec := {
   idealModules := #[`Core.Maschine, `Core.Ideal, `Core.Speicher],
   catalogueModules := #[`Core.Katalog, `Core.Aussen],
     -- Meaning change (MK-17): the isolation row of `Lokal` constrains the recorded
-    -- implementation steps through `Regel.impl`, so the form-step projection is no longer
-    -- forbidden; images, runs and the loader stay outside acceptance.
+    -- implementation steps through `Regel.impl`. Source acceptance also binds the whole unit
+    -- to canonical elaboration. It does so without projecting the loader or inspecting runs.
     forbidden := #[
       `Gabbro.Core.Maschine.ImplSchritt, `Gabbro.Core.Maschine.Lauffolge,
       `Gabbro.Core.Maschine.Lauf, `Gabbro.Core.Maschine.Laeufe, `Gabbro.Core.Maschine.Schnitt,
