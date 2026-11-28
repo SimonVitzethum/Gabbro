@@ -110,11 +110,9 @@ def MemoryKind.properties : MemoryKind → MemoryKindProperties
 /-- The RAM grant and the named target's paging row must both admit the requested kind.
     The x86 paging row assumes the effective UC and WC attributes for applicable RAM
     grants. Base Sv39 has no page-based memory type extension in this catalogue. -/
-def ZielDaten.ramMappingKind (z : ZielDaten) : MemoryKind → Bool
-  | .normal => true
-  | .uncached => z.page == .x86FourLevel
-  | .device => false
-  | .writeCombining => z.page == .x86FourLevel
+def ZielDaten.ramMappingKind (z : ZielDaten) (kind : MemoryKind) : Bool :=
+  kind.properties.idempotent &&
+    (kind == .normal || (z.page == .x86FourLevel && (kind == .uncached || kind == .writeCombining)))
 
 /-- The decoded page table and the cache view of a core. The language owns shootdown and reuse. -/
 structure Seiteneintrag where

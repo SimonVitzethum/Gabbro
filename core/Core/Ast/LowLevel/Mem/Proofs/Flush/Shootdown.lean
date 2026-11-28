@@ -118,6 +118,23 @@ theorem mem_shootdown : MemShootdownAussage := by
   unfold uebersetze MemFrame.mmuSicht
   simp only [virtual, not_true_eq_false, if_false, cache, miss, Option.none_or, absent]
 
+/-- An invalidation step changes neither the installed tables nor the cells of a different
+    core, space or page. A release must therefore have observed every such cell absent. -/
+def MemInvalidationAussage : Prop :=
+  ∀ target s c core space page,
+    ∃ frame, (MemInstruction.tlbVerdraengen core space page).evaluate target s c = some frame ∧
+      frame.spaces = (s.lokal c).spaces ∧
+      ∀ cell, cell ∈ frame.tlb.zellen ↔
+        cell ∈ (s.lokal c).tlb.zellen ∧
+          ¬ (cell.kern = core ∧ cell.raum = space ∧ cell.seite = page)
+
+theorem mem_invalidation : MemInvalidationAussage := by
+  intro target s c core space page
+  refine ⟨{ s.lokal c with tlb := ⟨(s.lokal c).tlb.zellen.filter fun cell =>
+    !decide (cell.kern = core ∧ cell.raum = space ∧ cell.seite = page)⟩ }, rfl, rfl, ?_⟩
+  intro cell
+  simp only [List.mem_filter, Bool.not_eq_true', decide_eq_false_iff_not]
+
 theorem mem_shootdown_erfuellbar :
     ∃ k code hw t s next name token,
       (memProgram k code).system.kopf s entryContext = some (.flushSpace name) ∧
