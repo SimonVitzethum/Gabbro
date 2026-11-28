@@ -96,10 +96,11 @@ theorem ressourcenschutz_regel (P : Plattform) (u : UnitMitSchranken) (b : Befeh
 /-- The same checked transfer supplies the per-form ideal checker row. -/
 theorem ressourcenschutz_regelSchranken (P : Plattform) (u : UnitMitSchranken) (b : Befehl) :
     Annahme.RegelSchranken (einheitMitRessourcenschutz P u) b := by
+  intro η
   let E := einheitMitRessourcenschutz P u
   let F := b.form.mitStapelgrenze E.schranken.stapel
-  exact Ast.Semantik.klassenSchranken F.klasse Befehl E b F rfl
-    ⟨rfl, rfl, rfl⟩ (Schrittform.mitStapelgrenze_stapel E b.form) (fun _ => rfl)
+  exact @Ast.Semantik.klassenSchranken F.klasse Befehl E b F rfl
+    ⟨rfl, rfl, rfl⟩ (Schrittform.mitStapelgrenze_stapel E b.form) (fun _ => rfl) η
 
 /-- Crash recovery discards the continuation stack and uses the existing empty restart
     booking. Replies and interrupts preserve both resources through the shared protocol. -/
@@ -179,7 +180,7 @@ theorem ressourcenschutz_erfuellbar (baum : Ast.Unit) :
     change (ladeStartbuchung .x86_64 u a
       (h.lade (einheitMitSchranken .x86_64 u).bild)).toOption = some s
     simp only [ladeStartbuchung, preloaded, cap, charge, Option.any,
-      decide_eq_false (Nat.lt_irrefl 1), Bool.false_eq_true, if_false, Except.toOption, s]
+      decide_eq_false (Nat.lt_irrefl 1), Bool.false_eq_true, ite_false, Except.toOption, s]
   have schnitt : ρ.zeit.zustand 0 = some s := lauf.2.2.2.trans (startEq.symm ▸ geladen)
   have bytes : 0 < handoffByteFootprint ρ.start.regions := by
     rw [startEq, charge] <;> exact Nat.zero_lt_one
