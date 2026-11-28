@@ -263,11 +263,11 @@ private theorem satHead2 (kind : MemoryKind) (allowed : satK.plattform.ziel.ramM
   have ready : ((satOp kind).evaluate satK.plattform.ziel satS1 entryContext).isSome = true := by
     rw [satEval2 kind allowed]
     rfl
+  dsimp only [satOp] at ready
   change memHead satK.plattform.ziel (satCode kind) satS1 entryContext = some (satOp kind)
   simp only [memHead, satS1status, satS1pc, satCode, List.getElem?_cons_succ,
     List.getElem?_cons_zero, Bind.bind, Option.bind, Option.bind_some,
     if_pos rfl, if_pos ready, ↓reduceIte]
-  dsimp [satOp]
 
 private theorem satReach1 (kind : MemoryKind) : (satE kind).system.IErreichbar satS0 satS1 := by
   apply System.IErreichbar.schritt entryContext () [plan]
@@ -299,5 +299,19 @@ private theorem mapKind_erfuellbar (kind : MemoryKind) (allowed : satK.plattform
 theorem map_joint : MapJointAussage := mapKind_erfuellbar .normal rfl
 
 theorem mapUncached_erfuellbar : MapUncachedJointAussage := mapKind_erfuellbar .uncached rfl
+
+theorem map_isolation_erfuellbar :
+    ∃ k code hw s next trace,
+      (memProgram k code).system.kopf s entryContext = some (.mapSpace 0 0 1 [.read] .uncached) ∧
+      ImplSchritt memSetup (memProgram k code).system k hw 1 s (.kontext entryContext (), trace) next ∧
+      (1 : Nat) ≠ 0 := by
+  let op := satOp .uncached
+  let hw := Umgebung.referenzLauf satK 1 satSicht
+  let frame := s2frame .uncached
+  have head := satHead2 .uncached rfl
+  have eval := satEval2 .uncached rfl
+  have execute := op.vollzug frame 1 entryContext satS1
+  refine ⟨satK, satCode .uncached, hw, satS1, frame.advance entryContext satS1, _, head, ?_, by omega⟩
+  exact .kontext rfl ⟨0, rfl, rfl, satS1status⟩ ⟨op, head, ⟨frame, eval, rfl, rfl⟩⟩ execute
 
 end Gabbro.Core.Ast.LowLevel
