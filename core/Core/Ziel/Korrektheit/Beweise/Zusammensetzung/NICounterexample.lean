@@ -52,13 +52,14 @@ private theorem laderLeck_umgebung :
     politikProjektion laderLeck.etiketten
       (Sicherheit.Laufkonstruktion.umgebung (geheimeLadersicht false)).politik := by
     apply Prod.ext
-    · exact funext fun t v => laderLeck_sicht true false t (niedrigerVerlauf laderLeck.etiketten v)
+    · funext t v
+      exact laderLeck_sicht true false t (niedrigerVerlauf laderLeck.etiketten v)
     · refine Prod.ext ?_ rfl
       funext t v q
       simp only [politikProjektion, laderLeck_frage, sichtbar, Ast.Semantik.geheim_verborgen,
         Bool.false_eq_true, if_false]
   unfold GleicheNiedrigeUmgebung umgebungsProjektion
-  rw [policy]
+  rw [policy] <;> rfl
 
 private theorem ladefehler_bleibt {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
     [DecidableEq L] {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
