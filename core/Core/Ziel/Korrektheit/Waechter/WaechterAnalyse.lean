@@ -5,21 +5,19 @@
              over the instruction sequence, with a static value abstraction of the temporary
              registers, as the language checker will run it.
 
-  The analysis is flow-insensitive and entirely static: every transfer is a constant read off
+  The whole-code analysis is flow-insensitive: every transfer is a constant read off
   the instruction (literals, text lengths, array element types), so one fold over the code
   already is a post-fixpoint — no iteration, no fuel, no widening. Unknown same-kind writes
   (arithmetic results, division results, locals read back) poison their slot to top (`none`),
   which is always sound. Control flow needs no case split: the joined environment
   overapproximates every reachable frame on every path, including jumps, calls, interrupts
-  and restarts.
+  and restarts. For forward-only code, a second check joins only writes strictly before
+  each instruction, so a guard can use an input whose slot the instruction itself overwrites.
 
-  The named decidable fragment (`waechterFragmentCode`) is the class on which the analysis
-  is complete: no access or lifecycle instructions, every guard instruction sits in the
-  linear prefix before the first control-flow instruction, and every operand slot it reads
-  is written exactly once in the whole code, before the guard, by a constant write. On
-  this class runtime values at the guard are exactly the analysed constants, so a held
-  guard implies a passing static check. Outside the class completeness fails: value- and
-  path-dependent guards are undecidable (`PrueferRestUnentscheidbarAussage`, Rice transfer).
+  The named fragment (`waechterFragmentCode`) excludes access and lifecycle instructions.
+  Its guards sit in the linear prefix and each guard input has a preceding constant writer,
+  unique among the other instructions. This describes the input writes but does not
+  guarantee that a guard is reached (see `waechterCode_keinEntscheider`).
 -/
 module
 
@@ -80,12 +78,15 @@ def beitragInt : Befehl → Nat → Option IntBeitrag
     if s = basis then some (.intervall 0 capacity) else none
   | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
-/-- The static text-length information one instruction writes to one slot. -/
+/-- The static text-length information one instruction writes to one slot.
+    An index reads the old text before storing an integer byte. That store contributes no
+    length, even if control later returns to the index instruction. -/
 def beitragText : Befehl → Nat → Option TextBeitrag
   | .textLiteral dst decoded, s =>
     if s = dst then some (.laenge (sourceUtf8 decoded).size (sourceUtf8 decoded).size) else none
   | .textConcat dst a b, s => if s = dst then some (.laenge 0 (a + b)) else none
   | .substring dst capacity, s => if s = dst then some (.laenge 0 capacity) else none
+  | .textIndex .., _ => none
   | b, s => if s ∈ schreibtTemp b then some .unbekannt else none
 
 /-- Join one integer interval into the running hull; unknown writes are handled
@@ -162,10 +163,6 @@ def keinFremdzugriff : Befehl → Bool
   | .zugriff _ | .faden _ => false
   | _ => true
 
-/-- The computable guard verdict over an instruction sequence. -/
-def waechterPruefeCode (code : List Befehl) : Bool :=
-  code.all keinFremdzugriff && code.all (pruefeBedarf code)
-
 /-- Instructions that end the linear prefix: anything that does not advance `pc` by exactly
     one. Definitions skip over their function body, calls and returns leave the linear flow,
     and `ende` stops the context. -/
@@ -182,6 +179,14 @@ def prefixRein : Befehl → Bool
     | .bindeRegion .. => false
     | _ => true
 
+/-- The instruction advances whenever it leaves its frame live, or halts.
+    This subset installs no functions, so the final entry call halts as well. -/
+def vorwaertsBefehl : Befehl → Bool
+  | .starte .. | .ende => true
+  | .springe distance | .springeWenn _ _ distance => 0 < distance
+  | .aussen .. | .pruefeMass .. => false
+  | b => prefixRein b
+
 /-- The kind of an operand slot a guard reads. -/
 inductive OperandenArt where
   | ganz
@@ -196,6 +201,15 @@ def bedarfStellen : Befehl → List (Nat × OperandenArt)
   | .textIndex basis _ => [(basis, .text), (basis + 1, .ganz)]
   | .substring basis _ => [(basis, .text), (basis + 1, .ganz), (basis + 2, .ganz)]
   | _ => []
+
+/-- Check each guard with the writes preceding it in forward-only code. -/
+def pruefeVorwaerts (code : List Befehl) : Bool :=
+  code.all vorwaertsBefehl && code.zipIdx.all fun (b, pos) =>
+    (bedarfStellen b).isEmpty || pruefeBedarf (code.take pos) b
+
+/-- The computable guard verdict over an instruction sequence. -/
+def waechterPruefeCode (code : List Befehl) : Bool :=
+  code.all keinFremdzugriff && (code.all (pruefeBedarf code) || pruefeVorwaerts code)
 
 /-- Constant integer writes: their runtime value is exactly the analysed one. -/
 def konstIntSchreibung : Befehl → List Nat
@@ -240,7 +254,7 @@ def waechterFragmentCodeAux : List Befehl → List Befehl → Nat → Bool → B
     ((bedarfStellen b).all (operandAbgedeckt code pos)) &&
     waechterFragmentCodeAux rest code (pos + 1) inPrefix'
 
-/-- The named decidable fragment on which the guard checker is complete. -/
+/-- The named fragment of the guard completeness statement. -/
 def waechterFragmentCode (code : List Befehl) : Bool :=
   code.all keinFremdzugriff && waechterFragmentCodeAux code code 0 true
 

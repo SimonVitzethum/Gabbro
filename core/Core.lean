@@ -360,8 +360,10 @@ public import Core.Ziel.Korrektheit.Waechter.WaechterWert
 public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
 public import Core.Ziel.Korrektheit.Waechter.WaechterRahmen
 public import Core.Ziel.Korrektheit.Waechter.WaechterBedarf
+public import Core.Ziel.Korrektheit.Waechter.WaechterVorwaerts
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
-public import Core.Ziel.Korrektheit.Waechter.WaechterGegenbeispiel
+public import Core.Ziel.Korrektheit.Waechter.WaechterSingleton
+public import Core.Ziel.Korrektheit.Waechter.WaechterEingang
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher

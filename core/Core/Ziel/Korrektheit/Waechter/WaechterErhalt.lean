@@ -39,7 +39,7 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
         simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
       rw [htemp] at hg
       exact literal_wertSat code dst val hmem g hg L H hlook
-    exact transfer_schreibe_statischInt code frame live _ _ hmem h _ rfl hV hpoisT
+    exact transfer_schreibe_statischInt code frame live _ _ hmem h _ rfl hV (.inl hpoisT)
   | binaer op links =>
     have hpoisI : beitragInt (Befehl.binaer op links) links = some .unbekannt := by
       exact if_pos List.mem_cons_self
@@ -72,7 +72,7 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
         simp only [Befehl.auswerten, Rahmen.schreibe, Function.update_self]
       rw [htemp] at hg
       exact negativ_wertSat code dst betrag hmem g hg L H hlook
-    exact transfer_schreibe_statischInt code frame live _ _ hmem h _ rfl hV hpoisT
+    exact transfer_schreibe_statischInt code frame live _ _ hmem h _ rfl hV (.inl hpoisT)
   | negieren dst =>
     have hpoisI : beitragInt (Befehl.negieren dst) dst = some .unbekannt := by
       exact if_pos List.mem_cons_self
@@ -269,7 +269,7 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
           some .unbekannt := by
         simp only [beitragText, schreibtTemp, List.mem_cons_self, if_true]
       exact transfer_schreibe_statischInt code frame live _ _ hmem h _
-        rfl (liesArray_hV code frame live basis count lo hi hmem h) hpoisT
+        rfl (liesArray_hV code frame live basis count lo hi hmem h) (.inl hpoisT)
     all_goals
       refine transfer_schreibe_unbekannt code frame live _ _ hmem h _ rfl ?_ ?_ <;>
         simp only [beitragInt, beitragText, schreibtTemp, List.mem_cons_self, if_true]
@@ -368,7 +368,7 @@ theorem auswerten_erfuellt (code : List Befehl) (frame : Rahmen) (live : Nat →
     have hpoisT : beitragText (Befehl.textLength base capacity) base = some .unbekannt := by
       exact if_pos List.mem_cons_self
     exact transfer_schreibe_statischInt code frame live _ _ hmem h _
-      rfl (textLength_hV code frame live base capacity hmem h) hpoisT
+      rfl (textLength_hV code frame live base capacity hmem h) (.inl hpoisT)
   | definiereTraeger count labels layout exported =>
     exact transfer_unveraendert code frame live _ hmem h rfl rfl
   | optionIstBesetzt dst count =>

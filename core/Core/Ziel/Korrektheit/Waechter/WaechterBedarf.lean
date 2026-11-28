@@ -118,7 +118,6 @@ theorem wertAls_text_form {capacity : Nat} {d : Dynamisch} {text : TextValue cap
     hull keeps the divisor away from zero, and satisfaction carries it to the
     runtime value. -/
 theorem teilenBedarf_gilt (code : List Befehl) (links : Nat)
-    (hmem : Befehl.teilen links ∈ code)
     (frame : Gabbro.Core.Ast.Semantik.Rahmen) (h : RahmenErfuellt code frame)
     (hp : pruefeBedarf code (Befehl.teilen links) = true)
     (op : PartielleOperation) (args : Operanden op)
@@ -170,7 +169,6 @@ theorem teilenBedarf_gilt (code : List Befehl) (links : Nat)
 /-- An array-index demand read at a satisfying frame meets the guard row. -/
 theorem liesArrayBedarf_gilt (code : List Befehl) (basis : Nat)
     (element : Ty .value) (count : Nat)
-    (hmem : Befehl.liesArray basis element count ∈ code)
     (frame : Gabbro.Core.Ast.Semantik.Rahmen) (h : RahmenErfuellt code frame)
     (hp : pruefeBedarf code (Befehl.liesArray basis element count) = true)
     (op : PartielleOperation) (args : Operanden op)
@@ -222,7 +220,6 @@ theorem liesArrayBedarf_gilt (code : List Befehl) (basis : Nat)
 /-- A text-index demand read at a satisfying frame meets the guard row: the static
     text-length lower bound covers the runtime length. -/
 theorem textIndexBedarf_gilt (code : List Befehl) (basis capacity : Nat)
-    (hmem : Befehl.textIndex basis capacity ∈ code)
     (frame : Gabbro.Core.Ast.Semantik.Rahmen) (h : RahmenErfuellt code frame)
     (hp : pruefeBedarf code (Befehl.textIndex basis capacity) = true)
     (op : PartielleOperation) (args : Operanden op)
@@ -306,7 +303,6 @@ theorem textIndexBedarf_gilt (code : List Befehl) (basis capacity : Nat)
 
 /-- A substring demand read at a satisfying frame meets the guard row. -/
 theorem substringBedarf_gilt (code : List Befehl) (basis capacity : Nat)
-    (hmem : Befehl.substring basis capacity ∈ code)
     (frame : Gabbro.Core.Ast.Semantik.Rahmen) (h : RahmenErfuellt code frame)
     (hp : pruefeBedarf code (Befehl.substring basis capacity) = true)
     (op : PartielleOperation) (args : Operanden op)
