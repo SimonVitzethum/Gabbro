@@ -247,8 +247,6 @@ theorem textIndex_transfer (code : List Befehl) (frame : Rahmen) (live : Nat →
     (base capacity : Nat) (hmem : (Befehl.textIndex base capacity) ∈ code)
     (h : RahmenErfuellt code frame) :
     RahmenErfuellt code ((Befehl.textIndex base capacity).auswerten frame live) := by
-  have hpoisT : beitragText (Befehl.textIndex base capacity) base = some .unbekannt := by
-    exact if_pos List.mem_cons_self
   cases htext : (frame.temp base).bind (wertAls (.text capacity)) with
   | none =>
     have htemp : (((Befehl.textIndex base capacity).auswerten frame live).temp) =
@@ -301,8 +299,11 @@ theorem textIndex_transfer (code : List Befehl) (frame : Rahmen) (live : Nat →
               frame.schreibe base (some ⟨.int (0 : Int) 255, byteValue byte⟩) := by
             simp only [Befehl.auswerten, htext, hzahl, if_neg hneg, hbyte, Rahmen.halt, Id.run]
             rfl
-          exact transfer_schreibe_statischInt code frame live _ _ hmem h _
-            hschreibe (textIndex_hV code frame live base capacity hmem h) hpoisT
+          refine transfer_schreibe_statischInt code frame live _ _ hmem h _
+            hschreibe (textIndex_hV code frame live base capacity hmem h) (.inr ?_)
+          intro cap text eq
+          have typeEq := congrArg (fun v : Dynamisch => v.1) (Option.some.inj eq)
+          cases typeEq
 
 /-- Transfer through a substring step: halt on guard miss, static write on success. -/
 theorem substring_transfer (code : List Befehl) (frame : Rahmen) (live : Nat → Bool)
