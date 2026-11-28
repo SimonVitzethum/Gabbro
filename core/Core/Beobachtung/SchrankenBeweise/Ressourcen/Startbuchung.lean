@@ -47,6 +47,10 @@ theorem ladeStartbuchung_erfolg (P : Plattform) (u : UnitMitSchranken) (a : Auss
     cases geladen
   | some roh =>
     rw [bild] at geladen
+    change (if u.deklaration.speicher.any (fun n => decide (n < handoffByteFootprint a.regions)) then
+      Except.error RessourcenLadefehler.regionVoll
+    else Except.ok { roh with buchung := handoffBooking 1 a.regions roh.buchung }) =
+      Except.ok s at geladen
     by_cases voll : u.deklaration.speicher.any (fun n => decide (n < handoffByteFootprint a.regions)) = true
     · rw [ite_eq_left voll] at geladen
       cases geladen
