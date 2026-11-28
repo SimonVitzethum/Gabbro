@@ -2,7 +2,7 @@ module
 
 public import Core.Ziel.Korrektheit.Beweise2.ZielAusTeilen
 public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.VergleichSpuren
-import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 import Core.Ziel.Korrektheit.Beweise.BildGueltig
 import Core.Ziel.Korrektheit.Beweise2.ZugriffSchrittExistiert
 

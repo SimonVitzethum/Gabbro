@@ -34,7 +34,7 @@ private theorem laderLeck_sicht (a b : Bool) (t : Nat) (v : AussenVerlauf) :
   refine Prod.ext (funext fun o => ?_) rfl
   change sichtbar (Ast.Semantik.geheim ∪ Ast.Semantik.geheim) ((geheimeLadersicht a t v).objects o) =
     sichtbar (Ast.Semantik.geheim ∪ Ast.Semantik.geheim) ((geheimeLadersicht b t v).objects o)
-  simp only [laderLeck_label_union, sichtbar, Ast.Semantik.geheim_verborgen, Bool.false_eq_true, if_false]
+  simp only [laderLeck_label_union, sichtbar, Ast.Semantik.geheim_verborgen, Bool.false_eq_true, ite_false]
 
 private theorem laderLeck_frage (q : Frage) : laderLeck.etiketten.frage q = Ast.Semantik.geheim := by
   change (q.zugriffe.map (fun _ => Ast.Semantik.geheim)).foldl (· ∪ ·) Ast.Semantik.geheim =
@@ -57,9 +57,10 @@ private theorem laderLeck_umgebung :
     · refine Prod.ext ?_ rfl
       funext t v q
       simp only [politikProjektion, laderLeck_frage, sichtbar, Ast.Semantik.geheim_verborgen,
-        Bool.false_eq_true, if_false]
+        Bool.false_eq_true, ite_false]
   unfold GleicheNiedrigeUmgebung umgebungsProjektion
-  rw [policy] <;> rfl
+  rw [policy]
+  rfl
 
 private theorem ladefehler_bleibt {L Ort Wert Raum Lok Grund Bedingung Wahl Form : Type}
     [DecidableEq L] {E : Einheit L Ort Wert Raum Lok Grund Bedingung Wahl Form}
@@ -150,7 +151,8 @@ theorem niRefutierbar :
   have loaded : laderLeck.laden s₁ (H₁.lade laderLeck.bild) = some Sicherheit.Laufkonstruktion.start := by
     change (if (s₁.outside.objects ⟨.hosted, 0⟩).alive then
       some Sicherheit.Laufkonstruktion.start else none) = _
-    rw [outside] <;> rfl
+    rw [outside]
+    rfl
   have failed : laderLeck.laden s₂ (H₂.lade laderLeck.bild) = none := rfl
   obtain ⟨links, rechts, v, mismatch⟩ :=
     vergleich_mit_ladefehler hw₁ hw₂ zul₁ zul₂ laderLeck_umgebung lowStart loaded failed

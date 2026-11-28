@@ -142,7 +142,7 @@ private theorem bootLeck_vergleich :
     funext a
     change (sichtbar Ast.Semantik.geheim (s₁.inputBytes a)).join =
       (sichtbar Ast.Semantik.geheim (s₂.inputBytes a)).join
-    simp only [sichtbar, Ast.Semantik.geheim_verborgen, Bool.false_eq_true, if_false]
+    simp only [sichtbar, Ast.Semantik.geheim_verborgen, Bool.false_eq_true, ite_false]
   have loaded : bootLeck.laden s₁ (H.lade bootLeck.bild) = some (Maschine.I.start bootBasis s₁).2 := by
     change bootBasis.laden s₁ (H.lade bootBasis.bild) = _
     exact Beobachtung.fragment_geladen (Ast.Semantik.fragment Ast.Category.unit trivialUnit) .x86_64 hw zul₁
