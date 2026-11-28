@@ -48,10 +48,35 @@ def MapMeaningAussage : Prop :=
         next.spaces[sp]? = some mapped ∧ next.result = some .mapped ∧
         next.tlb = (s.lokal c).tlb ∧
         (∀ i < pages, mapped.abbildung (base + i) =
-          some ⟨region.extent.von / granule + i, rights, space.generation⟩) ∧
+          some ⟨region.extent.von / granule + i, rights, space.generation, .normal⟩) ∧
         (∀ pg, ¬ pageRange base pages pg → mapped.abbildung pg = space.abbildung pg)) ∧
     ((∃ token ∈ space.ausstehend, ∃ i < pages, token.contains (base + i)) →
       (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = none)
+
+def MapMeaningFor (kind : MemoryKind) : Prop :=
+  ∀ target s c sp virt slot rights space region,
+    (s.lokal c).spaces[sp]? = some space → heldMemRegion target s c slot = some region →
+    let granule := target.seitengranule
+    let base := virt / granule
+    let pages := (region.extent.bis - region.extent.von) / granule
+    (target.ramMappingKind kind = true ∧ rights ≠ [] ∧ region.extent.seiten target ∧ validVirtualRange target virt pages ∧
+        (∀ i < pages, space.abbildung (base + i) = none) ∧
+        (∀ token ∈ space.ausstehend, ∀ i < pages, ¬ token.contains (base + i)) →
+      ∃ next mapped, (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = some next ∧
+        next.spaces[sp]? = some mapped ∧ next.result = some .mapped ∧
+        next.tlb = (s.lokal c).tlb ∧
+        (∀ i < pages, mapped.abbildung (base + i) =
+          some ⟨region.extent.von / granule + i, rights, space.generation, kind⟩) ∧
+        (∀ pg, ¬ pageRange base pages pg → mapped.abbildung pg = space.abbildung pg)) ∧
+    ((∃ token ∈ space.ausstehend, ∃ i < pages, token.contains (base + i)) →
+      (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = none)
+
+def MapKindMeaningAussage : Prop :=
+  (∀ kind, MapMeaningFor kind) ∧
+  (∀ target scope space virt frames rights kind, target.ramMappingKind kind = false →
+    elaborateMemAt target scope (.mapSpace space virt frames rights kind) = none) ∧
+  (∀ target s c sp virt slot rights kind, target.ramMappingKind kind = false →
+    (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = none)
 
 /-- The first step of a staged narrowing. The table is narrowed in one step and a token of the range is
     pending; the translation caches of the cores are NOT touched (no step clears the cache of another

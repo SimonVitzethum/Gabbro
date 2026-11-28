@@ -40,9 +40,9 @@ inductive MemTree : MemForm → Type where
   | merge (first second : Identifier) : MemTree .merge
   /-- `space.new(tables)`: create an address space from the owned table region. -/
   | newSpace (tables : Identifier) : MemTree .newSpace
-  /-- `map(s, virt, frames, rights { … }) else full`: install the mapping. -/
+  /-- `map(s, virt, frames, kind, rights { … }) else full`: install the mapping. -/
   | mapSpace (space : Identifier) (virt : Nat) (frames : Identifier)
-      (rights : List Speicherdienst) : MemTree .mapSpace
+      (rights : List Speicherdienst) (kind : MemoryKind := .normal) : MemTree .mapSpace
   /-- `protect(s, virt, n, rights { … })`: narrow the rights of mapped pages. -/
   | protectSpace (space : Identifier) (virt : Nat) (pages : Nat)
       (rights : List Speicherdienst) : MemTree .protectSpace
@@ -71,6 +71,12 @@ def rightsPrint : Speicherdienst → PrintedToken
 def rightsPrints (rights : List Speicherdienst) : List PrintedToken :=
   ((rights.map rightsPrint).intersperse printComma)
 
+def memoryKindPrint : MemoryKind → PrintedToken
+  | .normal => lowWord 'n' "ormal"
+  | .uncached => lowWord 'u' "ncached"
+  | .device => lowWord 'd' "evice"
+  | .writeCombining => lowWord 'w' "rite_combining"
+
 def MemTree.printPieces : MemTree form → List PrintedToken
   | .splitAt region point =>
       [region.print, printDot, lowWord 's' "plit_at", printOpen, printInteger point, printClose]
@@ -80,9 +86,10 @@ def MemTree.printPieces : MemTree form → List PrintedToken
       [lowWord 'm' "erge", printOpen, first.print, printComma, second.print, printClose]
   | .newSpace tables =>
       [lowWord 's' "pace", printDot, lowWord 'n' "ew", printOpen, tables.print, printClose]
-  | .mapSpace space virt frames rights =>
+  | .mapSpace space virt frames rights kind =>
       [lowWord 'm' "ap", printOpen, space.print, printComma, printInteger virt, printComma,
-        frames.print, printComma, lowWord 'r' "ights", printOpenBrace] ++ rightsPrints rights ++
+        frames.print, printComma, memoryKindPrint kind, printComma,
+        lowWord 'r' "ights", printOpenBrace] ++ rightsPrints rights ++
         [printCloseBrace, printClose, lowWord 'e' "lse", lowWord 'f' "ull"]
   | .protectSpace space virt pages rights =>
       [lowWord 'p' "rotect", printOpen, space.print, printComma, printInteger virt, printComma,
@@ -107,9 +114,10 @@ def MemTree.production : MemTree form → List Token → Prop
       tokens = [keyword "merge", openParen, .word first.val, comma, .word second.val, closeParen]
   | .newSpace tables => fun tokens =>
       tokens = [keyword "space", dot, keyword "new", openParen, .word tables.val, closeParen]
-  | .mapSpace space virt frames rights => fun tokens =>
+  | .mapSpace space virt frames rights kind => fun tokens =>
       tokens = [keyword "map", openParen, .word space.val, comma, .natural virt, comma,
-        .word frames.val, comma, keyword "rights", openBrace] ++ rightsTokens rights ++
+        .word frames.val, comma, (memoryKindPrint kind).value, comma,
+        keyword "rights", openBrace] ++ rightsTokens rights ++
         [closeBrace, closeParen, keyword "else", keyword "full"]
   | .protectSpace space virt pages rights => fun tokens =>
       tokens = [keyword "protect", openParen, .word space.val, comma, .natural virt, comma,

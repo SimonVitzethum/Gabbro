@@ -78,7 +78,7 @@ theorem freigabe_ohne_pflicht_unsicher :
     ∃ (before after : MemFrame), before.TlbGedeckt ∧ ¬ after.TlbGedeckt ∧
       after.tlb = before.tlb := by
   let token : Zuruecknahme := ⟨0, 0, 1, 1, 5, false⟩
-  let cell : TlbZelle := ⟨7, 0, 0, ⟨5, [.read], 0⟩⟩
+  let cell : TlbZelle := ⟨7, 0, 0, ⟨5, [.read], 0, .normal⟩⟩
   refine ⟨{ spaces := [⟨⟨0, 0⟩, [], 1, [token], false⟩]
             tlb := ⟨[cell]⟩ },
     { spaces := [⟨⟨0, 0⟩, [], 1, [], false⟩]

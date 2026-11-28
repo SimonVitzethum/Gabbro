@@ -74,14 +74,14 @@ private theorem range_find_add : ∀ pages base i, i < pages →
         simp only [Option.none_or, List.find?_singleton, beq_self_eq_true, ↓reduceIte]
 
 private theorem find_new_entry (pages base i : Nat) (hi : i < pages)
-    (rights : List Speicherdienst) (gen von granule : Nat) :
+    (rights : List Speicherdienst) (kind : MemoryKind) (gen von granule : Nat) :
     ((List.range pages).map (fun j => (base + j,
-      (⟨von / granule + j, rights, gen⟩ : Seiteneintrag)))).find? (fun e => e.1 == base + i)
-      = some (base + i, (⟨von / granule + i, rights, gen⟩ : Seiteneintrag)) := by
+      (⟨von / granule + j, rights, gen, kind⟩ : Seiteneintrag)))).find? (fun e => e.1 == base + i)
+      = some (base + i, (⟨von / granule + i, rights, gen, kind⟩ : Seiteneintrag)) := by
   rw [List.find?_map]
   change (List.find? (fun j => base + j == base + i) (List.range pages)).map
-      (fun j => (base + j, (⟨von / granule + j, rights, gen⟩ : Seiteneintrag))) =
-    some (base + i, (⟨von / granule + i, rights, gen⟩ : Seiteneintrag))
+      (fun j => (base + j, (⟨von / granule + j, rights, gen, kind⟩ : Seiteneintrag))) =
+    some (base + i, (⟨von / granule + i, rights, gen, kind⟩ : Seiteneintrag))
   rw [range_find_add pages base i hi]
   simp only [Option.map_some]
 
@@ -117,7 +117,7 @@ private theorem set_self_mem {A : Type} (l : List A) (i : Nat) (a b : A) (h : l[
   obtain ⟨hlen, _⟩ := List.getElem?_eq_some_iff.1 h
   exact List.getElem?_set_self hlen
 
-theorem mapMeaning : MapMeaningAussage := by
+private theorem mapMeaningFor (kind : MemoryKind) : MapMeaningFor kind := by
   intro target s c sp virt slot rights space region hspace hregion
   let granule := target.seitengranule
   let base := virt / granule
@@ -125,9 +125,9 @@ theorem mapMeaning : MapMeaningAussage := by
   let frame := s.lokal c
   constructor
   · intro hcond
-    rcases hcond with ⟨hrights, hseiten, hvalid, habb, htoken⟩
+    rcases hcond with ⟨hkind, hrights, hseiten, hvalid, habb, htoken⟩
     let entries := (List.range pages).map (fun i => (base + i,
-      (⟨region.extent.von / granule + i, rights, space.generation⟩ : Seiteneintrag)))
+      (⟨region.extent.von / granule + i, rights, space.generation, kind⟩ : Seiteneintrag)))
     let mapped : Adressraum := { space with entries := space.entries ++ entries }
     let next : MemFrame :=
       { frame with
@@ -145,14 +145,14 @@ theorem mapMeaning : MapMeaningAussage := by
       have hallTok : space.ausstehend.all (fun token =>
           (List.range pages).all (fun i => decide (¬ token.contains (base + i)))) = true :=
         allAusstehend_of space.ausstehend base pages htoken
-      have hc : rights ≠ [] ∧ Strecke.seiten target region.extent ∧
+      have hc : target.ramMappingKind kind = true ∧ rights ≠ [] ∧ Strecke.seiten target region.extent ∧
           validVirtualRange target virt ((region.extent.bis - region.extent.von) / target.seitengranule) = true ∧
           ((List.range ((region.extent.bis - region.extent.von) / target.seitengranule)).all fun i =>
             (space.abbildung (virt / target.seitengranule + i)).isNone) = true ∧
           space.ausstehend.all (fun token =>
             (List.range ((region.extent.bis - region.extent.von) / target.seitengranule)).all fun i =>
               decide (¬ token.contains (virt / target.seitengranule + i))) = true :=
-        ⟨hrights, hseiten, hvalid, hallAbb, hallTok⟩
+        ⟨hkind, hrights, hseiten, hvalid, hallAbb, hallTok⟩
       rw [if_pos hc]
       rfl
     · change (frame.spaces.set sp mapped)[sp]? = some mapped
@@ -162,7 +162,7 @@ theorem mapMeaning : MapMeaningAussage := by
     · intro i hi
       unfold mapped entries
       apply abbildung_append_new (habb i hi)
-      exact find_new_entry pages base i hi rights space.generation region.extent.von granule
+      exact find_new_entry pages base i hi rights kind space.generation region.extent.von granule
     · intro pg hpg
       unfold mapped entries
       apply abbildung_append_old
@@ -179,9 +179,29 @@ theorem mapMeaning : MapMeaningAussage := by
     rw [doSomeSomeMem]
     rw [if_neg]
     intro hc
-    rcases hc with ⟨_, _, _, _, hallTok⟩
+    rcases hc with ⟨_, _, _, _, _, hallTok⟩
     have hno := of_allAusstehend space.ausstehend base pages hallTok
     obtain ⟨token, htmem, i, hi, hcont⟩ := hex
     exact hno token htmem i hi hcont
+
+theorem mapMeaning : MapMeaningAussage := by
+  intro target s c sp virt slot rights space region hs hr
+  obtain ⟨maps, refuses⟩ := mapMeaningFor .normal target s c sp virt slot rights space region hs hr
+  exact ⟨fun guards => maps ⟨rfl, guards⟩, refuses⟩
+
+theorem mapKindMeaning : MapKindMeaningAussage := by
+  refine ⟨mapMeaningFor, ?_, ?_⟩
+  · intro target scope space virt frames rights kind unsupported
+    simp only [elaborateMemAt, unsupported, Bool.false_eq_true, if_false]
+  intro target s c sp virt slot rights kind unsupported
+  simp only [MemInstruction.evaluate]
+  cases hs : (s.lokal c).spaces[sp]? with
+  | none => simp only [hs, Option.bind_eq_bind, Option.bind_none]
+  | some space =>
+    cases hr : heldMemRegion target s c slot with
+    | none => simp only [hs, hr, Option.bind_eq_bind, Option.bind_some, Option.bind_none]
+    | some region =>
+      simp only [hs, hr, Option.bind_eq_bind, Option.bind_some, unsupported, Bool.false_eq_true,
+        false_and, if_false]
 
 end Gabbro.Core.Ast.LowLevel

@@ -141,7 +141,7 @@ code kernel_main(ram: region<normal, rw>) in kernel -> never { … }
 
 ```gabbro
 let s = space.new(tables);                  // tables: an owned region; format is the compiler's
-map(s, virt, frames, rights { read, write }) else full;
+map(s, virt, frames, normal, rights { read, write }) else full;
 protect(s, virt, n, rights { read });
 let pending = unmap(s, virt, n);            // a revocation token, not yet the frames
 let frames  = flush(pending);               // generated shootdown to every possible user; then the frames

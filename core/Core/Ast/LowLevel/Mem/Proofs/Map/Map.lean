@@ -12,4 +12,7 @@ namespace Gabbro.Core.Ast.LowLevel
 theorem map_aussage : MapAussage :=
   ⟨memObligationsKern_alle .mapSpace, mapMeaning, map_joint⟩
 
+theorem mapKind_aussage : MapKindAussage :=
+  ⟨mapKindMeaning, mapUncached_erfuellbar⟩
+
 end Gabbro.Core.Ast.LowLevel

@@ -142,23 +142,23 @@ private theorem satZul : Katalog.ZulStart satK satEnv image satStart := by
 
 private def satRights : List Speicherdienst := [.read]
 
-private def satCode : List MemInstruction :=
-  [.newSpace 0, .mapSpace 0 0 1 satRights]
+private def satCode (kind : MemoryKind) : List MemInstruction :=
+  [.newSpace 0, .mapSpace 0 0 1 satRights kind]
 
 private def satPrefix : List MemInstruction :=
   [.newSpace 0]
 
-private def satOp : MemInstruction := .mapSpace 0 0 1 satRights
+private def satOp (kind : MemoryKind) : MemInstruction := .mapSpace 0 0 1 satRights kind
 
-private def satE : MemUnit := memProgram satK satCode
+private def satE (kind : MemoryKind) : MemUnit := memProgram satK (satCode kind)
 
-private def satS0 : MemState := (I.start satE satStart).2
+private def satS0 : MemState := (I.start (satE .normal) satStart).2
 
 private def tableRegion : MemRegion := ⟨tableExtent, [⟨0, 0⟩]⟩
 private def frameRegion : MemRegion := ⟨frameExtent, [⟨1, 0⟩]⟩
 
 private def space0 : Adressraum := ⟨tableExtent, [], 0, [], false⟩
-private def space2 : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0⟩)], 0, [], false⟩
+private def space2 (kind : MemoryKind) : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0, kind⟩)], 0, [], false⟩
 
 private theorem satHeld0 : heldMemRegion satK.plattform.ziel satS0 entryContext 0 = some tableRegion := by
   rfl
@@ -216,23 +216,26 @@ private theorem satPending0 :
     space0.ausstehend.all (fun token => (List.range 1).all (fun i => decide (¬ token.contains (0 + i)))) = true := by
   rfl
 
-private def s2frame : MemFrame := { (satS1.lokal entryContext) with result := some .mapped, spaces := [space2] }
+private def s2frame (kind : MemoryKind) : MemFrame :=
+  { (satS1.lokal entryContext) with result := some .mapped, spaces := [space2 kind] }
 
 private theorem frameRegion_seiten : frameRegion.extent.seiten satK.plattform.ziel := by
   change frameExtent.seiten satK.plattform.ziel
   exact frameExtent_seiten
 
-private theorem satEval2 :
-    satOp.evaluate satK.plattform.ziel satS1 entryContext = some s2frame := by
+private theorem satEval2 (kind : MemoryKind) (allowed : satK.plattform.ziel.ramMappingKind kind = true) :
+    (satOp kind).evaluate satK.plattform.ziel satS1 entryContext = some (s2frame kind) := by
   simp only [satOp, MemInstruction.evaluate, satHeld1, satRights_ne, frameRegion_seiten, satValid,
-    satEmpty0, satPending0, Bind.bind, Option.bind, Option.bind_some, and_true,
+    satEmpty0, satPending0, allowed, true_and, Bind.bind, Option.bind, Option.bind_some, and_true,
     if_true, ↓reduceIte, List.range_one, List.map_cons, List.map_nil,
     List.nil_append, List.set_cons_zero]
   dsimp [s2frame, space2]
   rfl
 
-private theorem satElab : elaborateMem satScope (MemTree.mapSpace nameSpace 0 nameRegion1 satRights) = some satOp := by
-  rfl
+private theorem satElab (kind : MemoryKind) (allowed : satK.plattform.ziel.ramMappingKind kind = true) :
+    elaborateMemAt satK.plattform.ziel satScope
+      (MemTree.mapSpace nameSpace 0 nameRegion1 satRights kind) = some (satOp kind) := by
+  simp only [elaborateMemAt, allowed, if_true] <;> rfl
 
 private theorem satScopeNodup :
     (satScope.regionen.map Subtype.val).Nodup ∧ (satScope.raeume.map Subtype.val).Nodup ∧
@@ -251,33 +254,32 @@ private theorem satEval1Some : ((MemInstruction.newSpace 0).evaluate satK.plattf
   rw [satEval1]
   rfl
 
-private theorem satHead1 : satE.system.kopf satS0 entryContext = some (.newSpace 0) := by
-  change memHead satK.plattform.ziel satCode satS0 entryContext = some (.newSpace 0)
+private theorem satHead1 (kind : MemoryKind) : (satE kind).system.kopf satS0 entryContext = some (.newSpace 0) := by
+  change memHead satK.plattform.ziel (satCode kind) satS0 entryContext = some (.newSpace 0)
   simp only [memHead, satS0status, satS0pc, satCode, List.getElem?_cons_zero,
     Bind.bind, Option.bind, Option.bind_some, if_pos rfl, if_pos satEval1Some, ↓reduceIte]
 
-private theorem satEval2Some :
-    ((MemInstruction.mapSpace 0 0 1 satRights).evaluate satK.plattform.ziel satS1 entryContext).isSome = true := by
-  change (satOp.evaluate satK.plattform.ziel satS1 entryContext).isSome = true
-  rw [satEval2]
-  rfl
-
-private theorem satHead2 : satE.system.kopf satS1 entryContext = some satOp := by
-  change memHead satK.plattform.ziel satCode satS1 entryContext = some satOp
+private theorem satHead2 (kind : MemoryKind) (allowed : satK.plattform.ziel.ramMappingKind kind = true) :
+    (satE kind).system.kopf satS1 entryContext = some (satOp kind) := by
+  have ready : ((satOp kind).evaluate satK.plattform.ziel satS1 entryContext).isSome = true := by
+    rw [satEval2 kind allowed]
+    rfl
+  dsimp only [satOp] at ready
+  change memHead satK.plattform.ziel (satCode kind) satS1 entryContext = some (satOp kind)
   simp only [memHead, satS1status, satS1pc, satCode, List.getElem?_cons_succ,
-    List.getElem?_cons_zero, Bind.bind, Option.bind, Option.bind_some,
-    if_pos rfl, if_pos satEval2Some, ↓reduceIte]
-  dsimp [satOp]
+    List.getElem?_cons_zero, Bind.bind, Option.bind, ite_eq_left ready, ↓reduceIte] <;> rfl
 
-private theorem satReach1 : satE.system.IErreichbar satS0 satS1 := by
+private theorem satReach1 (kind : MemoryKind) : (satE kind).system.IErreichbar satS0 satS1 := by
   apply System.IErreichbar.schritt entryContext () [plan]
   · exact .start
-  · exact ⟨.newSpace 0, satHead1, ⟨s1frame, satEval1, rfl, rfl⟩⟩
+  · exact ⟨.newSpace 0, satHead1 kind, ⟨s1frame, satEval1, rfl, rfl⟩⟩
 
-theorem map_joint : MapJointAussage := by
-  let tree : MemTree .mapSpace := .mapSpace nameSpace 0 nameRegion1 satRights
-  refine ⟨satK, satScope, tree, satOp, satEnv, satStart, tree.print, satPrefix, satS1, s2frame, ?_⟩
-  refine ⟨?_, satHardware, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, satReach1, ?_, satEval2, ?_, ?_⟩
+private theorem mapKind_erfuellbar (kind : MemoryKind) (allowed : satK.plattform.ziel.ramMappingKind kind = true) :
+    MemErfuellbarNach .mapSpace fun «prefix» op =>
+      ∃ tables virt frames rights, «prefix» = [.newSpace tables] ∧ op = .mapSpace 0 virt frames rights kind := by
+  let tree : MemTree .mapSpace := .mapSpace nameSpace 0 nameRegion1 satRights kind
+  refine ⟨satK, satScope, tree, satOp kind, satEnv, satStart, tree.print, satPrefix, satS1, s2frame kind, ?_⟩
+  refine ⟨?_, satHardware, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, satReach1 kind, ?_, satEval2 kind allowed, ?_, ?_⟩
   · exact ⟨0, 0, 1, satRights, rfl, rfl⟩
   · change Katalog.ZulStart satK satEnv image satStart
     exact satZul
@@ -287,11 +289,30 @@ theorem map_joint : MapJointAussage := by
   · exact satScopeNodup.2.1
   · exact satScopeNodup.2.2
   · refine ⟨tree, (memDruckKern .mapSpace tree).2, ?_⟩
-    exact ⟨satOp, satElab, rfl⟩
+    exact ⟨satOp kind, satElab kind allowed, rfl⟩
   · exact (memDruckKern .mapSpace tree).2
-  · exact satElab
-  · exact satHead2
-  · exact ⟨satOp, satHead2, ⟨s2frame, satEval2, rfl, rfl⟩⟩
-  · exact ⟨satOp, satHead2, ⟨s2frame, satEval2, rfl, rfl⟩⟩
+  · exact satElab kind allowed
+  · exact satHead2 kind allowed
+  · exact ⟨satOp kind, satHead2 kind allowed, ⟨s2frame kind, satEval2 kind allowed, rfl, rfl⟩⟩
+  · exact ⟨satOp kind, satHead2 kind allowed, ⟨s2frame kind, satEval2 kind allowed, rfl, rfl⟩⟩
+
+theorem map_joint : MapJointAussage := mapKind_erfuellbar .normal rfl
+
+theorem mapUncached_erfuellbar : MapUncachedJointAussage := mapKind_erfuellbar .uncached rfl
+
+theorem map_isolation_erfuellbar :
+    ∃ k code hw s next trace,
+      (memProgram k code).system.kopf s entryContext = some (.mapSpace 0 0 1 [.read] .uncached) ∧
+      ImplSchritt memSetup (memProgram k code).system k hw 1 s (.kontext entryContext (), trace) next ∧
+      (1 : Nat) ≠ 0 := by
+  let op := satOp .uncached
+  let hw := Umgebung.referenzLauf satK 1 satSicht
+  let frame := s2frame .uncached
+  have head := satHead2 .uncached rfl
+  have eval := satEval2 .uncached rfl
+  have execute := op.vollzug frame 1 entryContext satS1
+  refine ⟨satK, satCode .uncached, hw, satS1, frame.advance entryContext satS1,
+    op.schrittSpur satS1 entryContext, head, ?_, by omega⟩
+  exact .kontext rfl ⟨0, rfl, rfl, satS1status⟩ ⟨op, head, ⟨frame, eval, rfl, rfl⟩⟩ execute
 
 end Gabbro.Core.Ast.LowLevel

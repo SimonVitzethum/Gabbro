@@ -13,7 +13,7 @@ inductive MemInstruction where
   | splitPages (slot pages : Nat)
   | mergeRegions (first second : Nat)
   | newSpace (tables : Nat)
-  | mapSpace (space virt frames : Nat) (rights : List Speicherdienst)
+  | mapSpace (space virt frames : Nat) (rights : List Speicherdienst) (kind : MemoryKind := .normal)
   | protectSpace (space virt pages : Nat) (rights : List Speicherdienst)
   | unmapSpace (space virt pages : Nat)
   | flushSpace (name : Identifier)
@@ -38,10 +38,10 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
     let right ← scope.slotRegion second
     pure (.mergeRegions left right)
   | .newSpace tables => (scope.slotRegion tables).map .newSpace
-  | .mapSpace space virt frames rights => do
+  | .mapSpace space virt frames rights kind => do
     let sp ← scope.slotRaum space
     let fr ← scope.slotRegion frames
-    pure (.mapSpace sp virt fr rights)
+    pure (.mapSpace sp virt fr rights kind)
   | .protectSpace space virt pages rights => do
     let sp ← scope.slotRaum space
     pure (.protectSpace sp virt pages rights)
@@ -51,6 +51,15 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
   | .flushSpace name => (scope.slotMarke name).map (fun _ => .flushSpace name)
   | .activateSpace space => (scope.slotRaum space).map .activateSpace
   | .newGuestSpace tables => (scope.slotRegion tables).map .newGuestSpace
+
+/-- Resolve the source in the named target's catalogue. The frame-operand scope carries
+    the ordinary RAM grants of the memory unit. -/
+def elaborateMemAt (target : ZielDaten) (scope : MemScope) (tree : MemTree form) :
+    Option MemInstruction :=
+  match tree with
+  | .mapSpace _ _ _ _ kind =>
+      if target.ramMappingKind kind then elaborateMem scope tree else none
+  | other => elaborateMem scope other
 
 /-- A single region cut supplies both the left and the right authority. -/
 def MemFrame.partition (frame : MemFrame) (slot : Nat) (region : MemRegion) (point : Nat) : MemFrame :=
@@ -234,18 +243,19 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
         regions := (frame.regions.set first (some joined)).set second none }
     else none
   | .newSpace tables => allocateAddressSpace target false s c tables
-  | .mapSpace sp virt slot rights => do
+  | .mapSpace sp virt slot rights kind => do
     let space ← frame.spaces[sp]?
     let region ← heldMemRegion target s c slot
     let extent := region.extent
     let pages := (extent.bis - extent.von) / granule
     let base := virt / granule
     let range := List.range pages
-    if rights ≠ [] ∧ extent.seiten target ∧ validVirtualRange target virt pages ∧
+    if target.ramMappingKind kind = true ∧ rights ≠ [] ∧ extent.seiten target ∧
+        validVirtualRange target virt pages ∧
         (range.all fun i => (space.abbildung (base + i)).isNone) ∧
         (space.ausstehend.all fun token =>
           range.all fun i => decide (¬ token.contains (base + i))) then
-      let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation⟩)
+      let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation, kind⟩)
       pure { frame with
         result := some .mapped
         spaces := frame.spaces.set sp { space with entries := space.entries ++ entries } }

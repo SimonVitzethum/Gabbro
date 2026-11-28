@@ -339,12 +339,12 @@ private theorem wideHfind :
     ((wideS5.lokal entryContext).marken.find? (fun p => p.1.val == wideName.val)).map Prod.snd =
       some wideToken := by rfl
 
-private def mappedSpaceW : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsW, 0⟩)], 0, [], false⟩
+private def mappedSpaceW : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsW, 0, .normal⟩)], 0, [], false⟩
 private def narrowedSpaceW : Adressraum := narrowRights mappedSpaceW 0 1 narrowRightsW
 private theorem wideHspace : (wideS5.lokal entryContext).spaces[wideToken.raum]? =
     some narrowedSpaceW := by rfl
 
-private def wideCell : TlbZelle := ⟨0, 0, 0, ⟨1, mapRightsW, 0⟩⟩
+private def wideCell : TlbZelle := ⟨0, 0, 0, ⟨1, mapRightsW, 0, .normal⟩⟩
 private theorem wideCellMem : wideCell ∈ (wideS5.lokal entryContext).tlb.zellen := by
   change wideCell ∈ [wideCell]
   exact List.mem_cons_self
@@ -362,7 +362,7 @@ private theorem wideNotNichtBreiter :
   intro nb
   obtain ⟨right, hright, hnot⟩ := wideCellWider
   have ged := nb wideCell wideCellMem (by rfl)
-  exact hnot (ged ⟨1, narrowRightsW, 0⟩ (by rfl) (by rfl) right hright)
+  exact hnot (ged ⟨1, narrowRightsW, 0, .normal⟩ (by rfl) (by rfl) right hright)
 private theorem wideFlushNone :
     wideOp.evaluate Plattform.x86_64.katalog.plattform.ziel wideS5 entryContext = none := by
   have hmeaning := (flush_aussage.2.1 Plattform.x86_64.katalog.plattform.ziel wideS5 entryContext

@@ -82,6 +82,8 @@ public import Core.Verfeinerung.Abnahme.StotterMass
 public import Core.Verfeinerung.Abnahme.RegelStotterSchranke
 public import Core.Verfeinerung.Abnahme.Flush
 public import Core.Verfeinerung.Abnahme.Beweise.FlushFamilie
+public import Core.Ast.LowLevel.Mem.Proofs.Flush.Shootdown
+public import Core.Ast.LowLevel.Mem.Proofs.Tabelle.Isolation
 public import Core.Verfeinerung.Abnahme.LockFree
 public import Core.Verfeinerung.Abnahme.LockFreeRmw
 public import Core.Verfeinerung.Review.Befunde

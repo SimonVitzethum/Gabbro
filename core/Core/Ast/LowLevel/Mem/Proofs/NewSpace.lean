@@ -267,9 +267,9 @@ private theorem spaceCreation_erfuellbar (guestPhysical : Bool) :
     · exact List.Pairwise.cons (by intro a ha; cases ha) List.Pairwise.nil
     · exact regions_ok
   have accepted : Annahme.Akzeptiert E := memAkzeptiertX86 op
-  have hElab : elaborateMem scope tree = some op := by
+  have hElab : elaborateMemAt target scope tree = some op := by
     cases guestPhysical <;>
-      simp only [tree, spaceCreationTree, elaborateMem, op, scope, newSpaceName_slot,
+      simp only [tree, spaceCreationTree, elaborateMemAt, elaborateMem, op, scope, newSpaceName_slot,
         Bool.false_eq_true, ↓reduceIte, Option.map_some]
   have hParse : MemParse text tree := (memDruckKern _ tree).2
   have hhr : heldMemRegion target s entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
@@ -328,7 +328,10 @@ theorem guestSpaceHostIsolation : GuestSpaceHostIsolationAussage := by
     (fun activatable => Bool.false_ne_true (activatable.1.symm.trans guestPhysical))
 
 theorem newGuestSpaceOrigin : NewGuestSpaceOriginAussage := by
-  intro form scope tree slot origin
+  intro form target scope tree slot checked
+  have origin : elaborateMem scope tree = some (.newGuestSpace slot) := by
+    cases tree <;> simp only [elaborateMemAt] at checked
+    all_goals first | exact checked | (split at checked <;> first | exact checked | cases checked)
   cases tree <;>
     simp only [elaborateMem, Option.map_eq_some_iff, Option.bind_eq_bind,
       Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,

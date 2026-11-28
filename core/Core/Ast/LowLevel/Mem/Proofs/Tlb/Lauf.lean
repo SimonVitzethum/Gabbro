@@ -34,7 +34,7 @@ theorem tlbGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemS
   | mergeRegions first second =>
     exact tlbGedeckt_ohne_raeume target _ s c (erhaelt_mergeRegions target first second s c) h inv
   | newSpace tables => exact tlbGedeckt_allocateSpace target false tables s c h inv
-  | mapSpace space virt frames rights => exact tlbGedeckt_mapSpace target space virt frames rights s c h inv
+  | mapSpace space virt frames rights kind => exact tlbGedeckt_mapSpace target space virt frames rights kind s c h inv
   | protectSpace space virt pages rights =>
     exact tlbGedeckt_protectSpace target space virt pages rights s c h inv
   | unmapSpace space virt pages => exact tlbGedeckt_unmapSpace target space virt pages s c h inv

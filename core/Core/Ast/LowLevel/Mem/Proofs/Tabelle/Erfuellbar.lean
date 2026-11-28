@@ -133,11 +133,11 @@ private theorem tabS3tabellen : tabS3.TabellenGedeckt := by
   simpa only [tabE] using tabellenGedeckt_erreichbar Plattform.x86_64.katalog tabCode tabStart tabReach
 
 private theorem tabS3zellen : (tabS3.lokal entryContext).tlb.zellen =
-    [⟨0, 0, 0, ⟨1, [.read], 0⟩⟩] := by
+    [⟨0, 0, 0, ⟨1, [.read], 0, .normal⟩⟩] := by
   rfl
 
 private theorem tabS3tabelle : (tabS3.lokal entryContext).tabellenSicht 0 0 =
-    some ⟨1, [.read], 0⟩ := by
+    some ⟨1, [.read], 0, .normal⟩ := by
   rfl
 
 private theorem tabS3uebersetzt :

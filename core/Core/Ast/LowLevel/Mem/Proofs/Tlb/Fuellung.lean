@@ -61,9 +61,9 @@ theorem Adressraum.unmapFreiAusstehend (space : Adressraum) (sp base pages first
 theorem mapSpace_neue_eintraege_fern (space : Adressraum) (base pages : Nat)
     (hall : space.ausstehend.all (fun token =>
       (List.range pages).all (fun i => decide (¬ token.contains (base + i)))) = true)
-    (rights : List Speicherdienst) (von gen : Nat) :
+    (rights : List Speicherdienst) (kind : MemoryKind) (von gen : Nat) :
     ∀ token ∈ space.ausstehend,
-      ∀ e ∈ (List.range pages).map (fun i => (base + i, (⟨von + i, rights, gen⟩ : Seiteneintrag))),
+      ∀ e ∈ (List.range pages).map (fun i => (base + i, (⟨von + i, rights, gen, kind⟩ : Seiteneintrag))),
         ¬ token.contains e.1 := by
   intro token' htmem e he
   obtain ⟨i, hi, rfl⟩ := List.mem_map.mp he
@@ -134,7 +134,7 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
       intro zelle hz
       rw [allocateAddressSpace_tlb target false tables s c step] at hz
       exact hz
-  | mapSpace sp virt slot rights =>
+  | mapSpace sp virt slot rights kind =>
       simp only [MemInstruction.evaluate] at step
       cases hs : (s.lokal c).spaces[sp]? with
       | none => simp only [hs, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
@@ -275,7 +275,7 @@ theorem keineFuellung_speicher (target : ZielDaten) (op : MemInstruction) (s : M
   | splitPages slot pages => exact rest (by intro a b d e; cases e)
   | mergeRegions first second => exact rest (by intro a b d e; cases e)
   | newSpace tables => exact rest (by intro a b d e; cases e)
-  | mapSpace space virt frames rights =>
+  | mapSpace space virt frames rights kind =>
       exact rest (by intro a b d e; cases e)
   | protectSpace space virt pages rights =>
       exact rest (by intro a b d e; cases e)

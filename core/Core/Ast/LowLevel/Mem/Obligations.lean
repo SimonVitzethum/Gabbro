@@ -28,13 +28,13 @@ def MemDruckAussage (form : MemForm) : Prop :=
     tree.production (tree.printPieces.map PrintedToken.value) ∧ MemParse tree.print tree
 
 def ElaboriertMem (k : Katalog) (scope : MemScope) (tree : MemTree form) (E : MemUnit) : Prop :=
-  ∃ op, elaborateMem scope tree = some op ∧ E = memUnit k op
+  ∃ op, elaborateMemAt k.plattform.ziel scope tree = some op ∧ E = memUnit k op
 
 def BezeichnetMem (k : Katalog) (scope : MemScope) (text : RawText) (E : MemUnit) (form : MemForm) : Prop :=
   ∃ tree : MemTree form, MemParse text tree ∧ ElaboriertMem k scope tree E
 
 def MemElaboriertAussage (form : MemForm) : Prop :=
-  ∀ k scope (tree : MemTree form) op, elaborateMem scope tree = some op →
+  ∀ (k : Katalog) scope (tree : MemTree form) op, elaborateMemAt k.plattform.ziel scope tree = some op →
     ElaboriertMem k scope tree (memUnit k op)
 
 def MemRealisiertAussage (form : MemForm) : Prop :=
@@ -148,7 +148,7 @@ def MemErfuellbarNach (form : MemForm) (precedes : List MemInstruction → MemIn
     (scope.regionen.map Subtype.val).Nodup ∧ (scope.raeume.map Subtype.val).Nodup ∧
     (scope.marken.map Subtype.val).Nodup ∧
     BezeichnetMem k scope text (memUnit k op) form ∧ MemParse text tree ∧
-    elaborateMem scope tree = some op ∧ E.system.IErreichbar (I.start E start).2 s ∧
+    elaborateMemAt k.plattform.ziel scope tree = some op ∧ E.system.IErreichbar (I.start E start).2 s ∧
     E.system.kopf s entryContext = some op ∧ op.evaluate k.plattform.ziel s entryContext = some next ∧
     E.system.ISchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s) ∧
     E.system.ImplSchritt entryContext s () [op.schrittPlan s entryContext] (next.advance entryContext s)

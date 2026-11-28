@@ -102,9 +102,9 @@ public def mapEntry : RegistryEntry ``MemTree.mapSpace (schemaMem ``MemTree.mapS
     hIdeal, hEinheit, hImpl, hFortschritt, hErhaltung, hSicher, hAntwortSicher,
     hAussen, hKosten, hSchranken, hEtiketten, hFluss⟩
   exact ⟨.surface ⟨hParse, hInv, hEindeutig, hDruck⟩ hElab hReal,
-    ⟨hAnnahme, hAussen, hMeaning⟩, hIdeal, hEinheit, hImpl,
+    ⟨hAnnahme, hAussen, hMeaning, mapKind_aussage.1⟩, hIdeal, hEinheit, hImpl,
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
-      hEtiketten, hFluss⟩, hJoint⟩
+      hEtiketten, hFluss⟩, ⟨hJoint, mapKind_aussage.2⟩⟩
 
 public def protectEntry : RegistryEntry ``MemTree.protectSpace (schemaMem ``MemTree.protectSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
