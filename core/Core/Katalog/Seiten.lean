@@ -86,11 +86,42 @@ inductive Speicherdienst where
   | execute
   deriving DecidableEq, Repr
 
+/-- Target-neutral attributes of a mapping. The names denote observable behaviour. -/
+inductive MemoryKind where
+  | normal
+  | uncached
+  | device
+  | writeCombining
+  deriving DecidableEq, Repr
+
+structure MemoryKindProperties where
+  cacheable : Bool
+  idempotent : Bool
+  gathering : Bool
+  reordering : Bool
+  writeCombining : Bool
+
+def MemoryKind.properties : MemoryKind → MemoryKindProperties
+  | .normal => ⟨true, true, true, true, false⟩
+  | .uncached => ⟨false, true, false, false, false⟩
+  | .device => ⟨false, false, false, false, false⟩
+  | .writeCombining => ⟨false, true, true, true, true⟩
+
+/-- The RAM grant and the named target's paging row must both admit the requested kind.
+    The x86 paging row assumes the effective UC and WC attributes for applicable RAM
+    grants. Base Sv39 has no page-based memory type extension in this catalogue. -/
+def ZielDaten.ramMappingKind (z : ZielDaten) : MemoryKind → Bool
+  | .normal => true
+  | .uncached => z.page == .x86FourLevel
+  | .device => false
+  | .writeCombining => z.page == .x86FourLevel
+
 /-- The decoded page table and the cache view of a core. The language owns shootdown and reuse. -/
 structure Seiteneintrag where
   frame : Nat
   rights : List Speicherdienst
   generation : Nat
+  kind : MemoryKind := .normal
   deriving DecidableEq, Repr
 
 structure MmuSicht where

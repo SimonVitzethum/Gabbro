@@ -13,6 +13,10 @@ def MapJointAussage : Prop :=
   MemErfuellbarNach .mapSpace fun «prefix» op =>
     ∃ tables virt frames rights, «prefix» = [.newSpace tables] ∧ op = .mapSpace 0 virt frames rights
 
+def MapUncachedJointAussage : Prop :=
+  MemErfuellbarNach .mapSpace fun «prefix» op =>
+    ∃ tables virt frames rights, «prefix» = [.newSpace tables] ∧ op = .mapSpace 0 virt frames rights .uncached
+
 def ProtectJointAussage : Prop :=
   MemErfuellbarNach .protectSpace fun «prefix» op =>
     ∃ tables virt frames original narrowed pages,
@@ -108,14 +112,14 @@ def MeaningAussageMem : MemForm → Prop
   | .splitPages => SplitPagesMeaningAussage
   | .merge => MergeMeaningAussage
   | .newSpace => NewSpaceMeaningAussage
-  | .mapSpace => MapMeaningAussage
+  | .mapSpace => MapMeaningAussage ∧ MapKindMeaningAussage
   | .protectSpace => ProtectMeaningAussage
   | .unmapSpace => UnmapMeaningAussage
   | .flushSpace => FlushMeaningAussage
   | .activateSpace => ActivateMeaningAussage
 
 def JointAussageMem : MemForm → Prop
-  | .mapSpace => MapJointAussage
+  | .mapSpace => MapJointAussage ∧ MapUncachedJointAussage
   | .protectSpace => ProtectJointAussage
   | .unmapSpace => UnmapJointAussage
   | .flushSpace => FlushJointAussage ∧ FlushNarrowJointAussage ∧ FlushNarrowWideJointAussage
@@ -135,6 +139,7 @@ def NewSpaceAussage : Prop :=
   memObligationsKern .newSpace ∧ NewSpaceMeaningAussage ∧ MemErfuellbarAussage .newSpace
 
 def MapAussage : Prop := memObligationsKern .mapSpace ∧ MapMeaningAussage ∧ MapJointAussage
+def MapKindAussage : Prop := MapKindMeaningAussage ∧ MapUncachedJointAussage
 def ProtectAussage : Prop := memObligationsKern .protectSpace ∧ ProtectMeaningAussage ∧ ProtectJointAussage
 def UnmapAussage : Prop := memObligationsKern .unmapSpace ∧ UnmapMeaningAussage ∧ UnmapJointAussage
 def FlushAussage : Prop := memObligationsKern .flushSpace ∧ FlushMeaningAussage ∧ FlushJointAussage

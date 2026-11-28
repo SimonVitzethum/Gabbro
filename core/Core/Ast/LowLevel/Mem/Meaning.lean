@@ -13,7 +13,7 @@ inductive MemInstruction where
   | splitPages (slot pages : Nat)
   | mergeRegions (first second : Nat)
   | newSpace (tables : Nat)
-  | mapSpace (space virt frames : Nat) (rights : List Speicherdienst)
+  | mapSpace (space virt frames : Nat) (rights : List Speicherdienst) (kind : MemoryKind := .normal)
   | protectSpace (space virt pages : Nat) (rights : List Speicherdienst)
   | unmapSpace (space virt pages : Nat)
   | flushSpace (name : Identifier)
@@ -37,10 +37,10 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
     let right ← scope.slotRegion second
     pure (.mergeRegions left right)
   | .newSpace tables => (scope.slotRegion tables).map .newSpace
-  | .mapSpace space virt frames rights => do
+  | .mapSpace space virt frames rights kind => do
     let sp ← scope.slotRaum space
     let fr ← scope.slotRegion frames
-    pure (.mapSpace sp virt fr rights)
+    pure (.mapSpace sp virt fr rights kind)
   | .protectSpace space virt pages rights => do
     let sp ← scope.slotRaum space
     pure (.protectSpace sp virt pages rights)
@@ -228,18 +228,19 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
       let space : Adressraum := ⟨region.extent, [], 0, []⟩
       pure { frame with result := some (.space frame.spaces.length), spaces := frame.spaces ++ [space] }
     else none
-  | .mapSpace sp virt slot rights => do
+  | .mapSpace sp virt slot rights kind => do
     let space ← frame.spaces[sp]?
     let region ← heldMemRegion target s c slot
     let extent := region.extent
     let pages := (extent.bis - extent.von) / granule
     let base := virt / granule
     let range := List.range pages
-    if rights ≠ [] ∧ extent.seiten target ∧ validVirtualRange target virt pages ∧
+    if target.ramMappingKind kind = true ∧ rights ≠ [] ∧ extent.seiten target ∧
+        validVirtualRange target virt pages ∧
         (range.all fun i => (space.abbildung (base + i)).isNone) ∧
         (space.ausstehend.all fun token =>
           range.all fun i => decide (¬ token.contains (base + i))) then
-      let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation⟩)
+      let entries := range.map fun i => (base + i, ⟨extent.von / granule + i, rights, space.generation, kind⟩)
       pure { frame with
         result := some .mapped
         spaces := frame.spaces.set sp { space with entries := space.entries ++ entries } }

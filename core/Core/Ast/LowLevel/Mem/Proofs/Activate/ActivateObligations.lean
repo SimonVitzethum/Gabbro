@@ -130,6 +130,11 @@ private theorem rightsTokens_inj {a b : List Speicherdienst}
   apply rightsKey_inj
   rwa [rightsTokens_eq_key a, rightsTokens_eq_key b] at h
 
+private theorem memoryKindPrint_value_inj :
+    Function.Injective (fun kind => (memoryKindPrint kind).value) := by
+  intro a b h
+  cases a <;> cases b <;> first | rfl | cases h
+
 private theorem memProductionPrint {form : MemForm} (tree : MemTree form) :
     tree.production (tree.printPieces.map PrintedToken.value) := by
   cases tree <;>
@@ -221,23 +226,25 @@ theorem memEindeutigActivate (form : MemForm) : MemEindeutigAussage form := by
           have heq : tables = tables' := Subtype.ext ht
           subst tables'
           rfl
-  | mapSpace space virt frames rights =>
+  | mapSpace space virt frames rights kind =>
       cases b with
-      | mapSpace space' virt' frames' rights' =>
+      | mapSpace space' virt' frames' rights' kind' =>
           simp only [MemTree.production] at ha hb
           have h := ha.symm.trans hb
           have h' := h
           simp only [List.cons_append, List.nil_append, List.cons.injEq] at h'
-          rcases h' with ⟨_, _, hs, _, hv, _, hf, _, _, _, hrt⟩
+          rcases h' with ⟨_, _, hs, _, hv, _, hf, _, hk, _, _, _, hrt⟩
           injection hs with hs
           injection hv with hv
           injection hf with hf
           have hsE : space = space' := Subtype.ext hs
           have hfE : frames = frames' := Subtype.ext hf
+          have hkE : kind = kind' := memoryKindPrint_value_inj hk
           have hrE : rights = rights' := rightsTokens_inj (List.append_cancel_right hrt)
           subst space'
           subst virt'
           subst frames'
+          subst kind'
           subst rights'
           rfl
   | protectSpace space virt pages rights =>

@@ -139,8 +139,8 @@ theorem tabellenGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s :
     have keep := erhaelt_mergeRegions target first second s c next h
     exact inv.aus_gleich keep.2.1 keep.2.2
   | newSpace tables => exact tabellenGedeckt_newSpace target tables s c h inv
-  | mapSpace space virt frames rights =>
-    exact tabellenGedeckt_mapSpace target space virt frames rights s c h inv
+  | mapSpace space virt frames rights kind =>
+    exact tabellenGedeckt_mapSpace target space virt frames rights kind s c h inv
   | protectSpace space virt pages rights =>
     exact tabellenGedeckt_protectSpace target space virt pages rights s c h inv
   | unmapSpace space virt pages => exact tabellenGedeckt_unmapSpace target space virt pages s c h inv

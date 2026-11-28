@@ -109,8 +109,8 @@ theorem tlbGedeckt_protectSpace (target : ZielDaten) (sp virt pages : Nat)
     · cases h
 
 theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
-    (rights : List Speicherdienst) (s : MemState) (c : Kontext) {next : MemFrame}
-    (h : (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = some next)
+    (rights : List Speicherdienst) (kind : MemoryKind) (s : MemState) (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = some next)
     (inv : (s.lokal c).TlbGedeckt) : next.TlbGedeckt := by
   simp only [MemInstruction.evaluate] at h
   cases hs : (s.lokal c).spaces[sp]? with
@@ -129,7 +129,7 @@ theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
           intro i hi
           have hiMem : i ∈ List.range ((region.extent.bis - region.extent.von) / target.seitengranule) :=
             List.mem_range.mpr hi
-          have hiT := (List.all_eq_true.mp cond.2.2.2.1) i hiMem
+          have hiT := (List.all_eq_true.mp cond.2.2.2.2.1) i hiMem
           cases hfind : space.abbildung (virt / target.seitengranule + i) with
           | none => rfl
           | some entry =>
@@ -140,7 +140,7 @@ theorem tlbGedeckt_mapSpace (target : ZielDaten) (sp virt slot : Nat)
             ¬ token.contains (virt / target.seitengranule + i) := by
           intro token htmem i hi
           have hiT := (List.all_eq_true.mp
-            ((List.all_eq_true.mp cond.2.2.2.2) token htmem)) i (List.mem_range.mpr hi)
+            ((List.all_eq_true.mp cond.2.2.2.2.2) token htmem)) i (List.mem_range.mpr hi)
           simpa only [decide_eq_true_eq] using hiT
         intro zelle mem
         obtain ⟨space0, found0, covered0⟩ := inv zelle mem

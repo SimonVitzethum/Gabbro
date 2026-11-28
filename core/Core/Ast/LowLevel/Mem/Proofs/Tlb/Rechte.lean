@@ -158,8 +158,8 @@ theorem tlbRechte_protectSpace (target : ZielDaten) (sp virt pages : Nat)
 /-! ## Mapping adds entries on pages no cell can cache -/
 
 theorem tlbRechte_mapSpace (target : ZielDaten) (sp virt slot : Nat)
-    (rights : List Speicherdienst) (s : MemState) (c : Kontext) {next : MemFrame}
-    (h : (MemInstruction.mapSpace sp virt slot rights).evaluate target s c = some next)
+    (rights : List Speicherdienst) (kind : MemoryKind) (s : MemState) (c : Kontext) {next : MemFrame}
+    (h : (MemInstruction.mapSpace sp virt slot rights kind).evaluate target s c = some next)
     (cover : (s.lokal c).TlbGedeckt) (inv : (s.lokal c).TlbRechteGedeckt) :
     next.TlbRechteGedeckt := by
   simp only [MemInstruction.evaluate] at h
@@ -172,7 +172,7 @@ theorem tlbRechte_mapSpace (target : ZielDaten) (sp virt slot : Nat)
       simp only [hs, hr, Option.bind_eq_bind, Option.bind_some] at h
       split at h
       · rename_i cond
-        obtain ⟨_, _, _, hnone, htokens⟩ := cond
+        obtain ⟨_, _, _, _, hnone, htokens⟩ := cond
         simp only [Option.pure_def, Option.some.injEq] at h
         subst h
         intro zelle mem space1 found

@@ -61,8 +61,8 @@ theorem tlbRechte_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemSt
     have kept := erhaelt_mergeRegions target first second s c next h
     exact inv.aus_gleich kept.1 kept.2.1 kept.2.2
   | newSpace tables => exact tlbRechte_newSpace target tables s c h cover inv
-  | mapSpace space virt frames rights =>
-    exact tlbRechte_mapSpace target space virt frames rights s c h cover inv
+  | mapSpace space virt frames rights kind =>
+    exact tlbRechte_mapSpace target space virt frames rights kind s c h cover inv
   | protectSpace space virt pages rights =>
     exact tlbRechte_protectSpace target space virt pages rights s c h inv
   | unmapSpace space virt pages => exact tlbRechte_unmapSpace target space virt pages s c h inv
