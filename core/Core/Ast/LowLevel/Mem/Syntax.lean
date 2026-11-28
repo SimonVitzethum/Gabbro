@@ -23,6 +23,7 @@ inductive MemForm where
   | unmapSpace
   | flushSpace
   | activateSpace
+  | newGuestSpace
   deriving DecidableEq
 
 /-- Low-level memory-management leaves of the reference AST. Region operands
@@ -51,6 +52,8 @@ inductive MemTree : MemForm → Type where
   | flushSpace (name : Identifier) : MemTree .flushSpace
   /-- `activate(s)`: install the well-formed space on this core. -/
   | activateSpace (space : Identifier) : MemTree .activateSpace
+  /-- `space.new_guest(tables)`: reserve owned tables for a guest-physical space. -/
+  | newGuestSpace (tables : Identifier) : MemTree .newGuestSpace
 
 def rightsToken : Speicherdienst → Token
   | .read => keyword "read"
@@ -90,6 +93,8 @@ def MemTree.printPieces : MemTree form → List PrintedToken
         printInteger pages, printClose]
   | .flushSpace name => [lowWord 'f' "lush", printOpen, name.print, printClose]
   | .activateSpace space => [lowWord 'a' "ctivate", printOpen, space.print, printClose]
+  | .newGuestSpace tables =>
+      [lowWord 's' "pace", printDot, lowWord 'n' "ew_guest", printOpen, tables.print, printClose]
 
 /-- Exact productions over canonical tokens. Numbers use the decimal token and
     rights use the closed read/write/execute vocabulary. -/
@@ -117,6 +122,8 @@ def MemTree.production : MemTree form → List Token → Prop
       tokens = [keyword "flush", openParen, .word name.val, closeParen]
   | .activateSpace space => fun tokens =>
       tokens = [keyword "activate", openParen, .word space.val, closeParen]
+  | .newGuestSpace tables => fun tokens =>
+      tokens = [keyword "space", dot, keyword "new_guest", openParen, .word tables.val, closeParen]
 
 def MemParse (text : RawText) (tree : MemTree form) : Prop :=
   Text.Parse (tokenGrammar (fun tokens (tree : MemTree form) => tree.production tokens)) text tree

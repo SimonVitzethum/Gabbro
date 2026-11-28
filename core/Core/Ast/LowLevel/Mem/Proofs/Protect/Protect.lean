@@ -167,8 +167,8 @@ private def satS0 : MemState := (I.start satE satStart).2
 private def tableRegion : MemRegion := ⟨tableExtent, [⟨0, 0⟩]⟩
 private def frameRegion : MemRegion := ⟨frameExtent, [⟨1, 0⟩]⟩
 
-private def space0 : Adressraum := ⟨tableExtent, [], 0, []⟩
-private def space2 : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0⟩)], 0, []⟩
+private def space0 : Adressraum := ⟨tableExtent, [], 0, [], false⟩
+private def space2 : Adressraum := ⟨tableExtent, [(0, ⟨1, satRights, 0⟩)], 0, [], false⟩
 
 private theorem satHeld0 : heldMemRegion satK.plattform.ziel satS0 entryContext 0 = some tableRegion := by
   rfl
@@ -205,7 +205,7 @@ private def satS1 : MemState := s1frame.advance entryContext satS0
 
 private theorem satEval1 :
     (MemInstruction.newSpace 0).evaluate satK.plattform.ziel satS0 entryContext = some s1frame := by
-  simp only [MemInstruction.evaluate, satHeld0, tableExtent_seiten, Bind.bind, Option.bind,
+  simp only [MemInstruction.evaluate, allocateAddressSpace, satHeld0, tableExtent_seiten, Bind.bind, Option.bind,
     Option.bind_some, if_pos tableExtent_seiten, ↓reduceIte, List.nil_append]
   dsimp [s1frame, space0]
   rfl

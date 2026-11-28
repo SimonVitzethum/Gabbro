@@ -17,6 +17,7 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Ast.LowLevel.SplitPagesAussage, 14482266360900285937),
   (`Gabbro.Core.Ast.LowLevel.MergeAussage, 10965578404787335593),
   (`Gabbro.Core.Ast.LowLevel.NewSpaceAussage, 10167353823609914351),
+  (`Gabbro.Core.Ast.LowLevel.NewGuestSpaceCoreAussage, 0),
   (`Gabbro.Core.Ast.LowLevel.MapAussage, 8397062472820462075),
   (`Gabbro.Core.Ast.LowLevel.ProtectAussage, 10943911179031364773),
   (`Gabbro.Core.Ast.LowLevel.UnmapAussage, 16364488463870961743),

@@ -252,11 +252,11 @@ theorem activateJoint : ActivateJointAussage := by
   let frame0 : MemFrame :=
     { (s0.lokal entryContext) with
       result := some (.space (s0.lokal entryContext).spaces.length),
-      spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, []⟩] }
+      spaces := (s0.lokal entryContext).spaces ++ [⟨extent, [], 0, [], false⟩] }
   have hframe0 : (MemInstruction.newSpace 0).evaluate target s0 entryContext = some frame0 := by
     change (do let region ← heldMemRegion target s0 entryContext 0
                if region.extent.seiten target then
-                 (let space : Adressraum := ⟨region.extent, [], 0, []⟩
+                 (let space : Adressraum := ⟨region.extent, [], 0, [], false⟩
                   some { (s0.lokal entryContext) with
                     result := some (.space (s0.lokal entryContext).spaces.length),
                     spaces := (s0.lokal entryContext).spaces ++ [space] })
@@ -288,11 +288,11 @@ theorem activateJoint : ActivateJointAussage := by
   have hsregions : (s.lokal entryContext).regions = [some ⟨extent, [⟨0, 0⟩]⟩] := by
     rfl
   have hsspaces : (s.lokal entryContext).spaces =
-      [⟨extent, [], 0, []⟩] := by
+      [⟨extent, [], 0, [], false⟩] := by
     rfl
-  have hAktiv : (⟨extent, [], 0, []⟩ : Adressraum).Aktivierbar target s entryContext := by
+  have hAktiv : (⟨extent, [], 0, [], false⟩ : Adressraum).Aktivierbar target s entryContext := by
     unfold Adressraum.Aktivierbar Adressraum.Wohlgeformt
-    refine ⟨⟨hseiten, List.nodup_nil, ?_⟩, ?_, ?_⟩
+    refine ⟨rfl, ⟨hseiten, List.nodup_nil, ?_⟩, ?_, ?_⟩
     · intro entry hmem
       cases hmem
     · simp only [MemFrame.covered, hsregions, List.any_cons, List.any_nil, Bool.or_false,
@@ -314,7 +314,7 @@ theorem activateJoint : ActivateJointAussage := by
                else none) =
       some { (s.lokal entryContext) with result := some .activated, active := some 0 }
     rw [hsspaces]
-    change (if (⟨extent, [], 0, []⟩ : Adressraum).Aktivierbar target s entryContext then
+    change (if (⟨extent, [], 0, [], false⟩ : Adressraum).Aktivierbar target s entryContext then
       some { (s.lokal entryContext) with result := some .activated, active := some 0 }
       else none) =
       some { (s.lokal entryContext) with result := some .activated, active := some 0 }

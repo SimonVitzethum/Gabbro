@@ -149,7 +149,8 @@ private meta def registry : Array RegistryFamily := #[
     (`Gabbro.Core.Ast.LowLevel.MemTree.protectSpace, `Gabbro.Core.Ast.LowLevel.protectEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.unmapSpace, `Gabbro.Core.Ast.LowLevel.unmapEntry),
     (`Gabbro.Core.Ast.LowLevel.MemTree.flushSpace, `Gabbro.Core.Ast.LowLevel.flushEntry),
-    (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.activateEntry)], #[]⟩,
+    (`Gabbro.Core.Ast.LowLevel.MemTree.activateSpace, `Gabbro.Core.Ast.LowLevel.activateEntry),
+    (`Gabbro.Core.Ast.LowLevel.MemTree.newGuestSpace, `Gabbro.Core.Ast.LowLevel.newGuestSpaceEntry)], #[]⟩,
   ⟨`Gabbro.Core.Ast.LowLevel.ExecTree, `Gabbro.Core.Ast.LowLevel.schemaExec, #[
     (`Gabbro.Core.Ast.LowLevel.ExecTree.stateDecl, `Gabbro.Core.Ast.LowLevel.stateDeclEntry),
     (`Gabbro.Core.Ast.LowLevel.ExecTree.jump, `Gabbro.Core.Ast.LowLevel.jumpEntry),
@@ -289,6 +290,8 @@ private meta def scopedEntries : Array RegistryPacket := #[
   ⟨`Gabbro.Core.Ast.Semantik.Befehl.definiereEffektgruppe, `Gabbro.Core.Ast.Semantik.EffectGroupProofPacket, some `Gabbro.Core.Ast.Semantik.buildEffectGroupEntry⟩]
 
 private meta def auxiliaryEntries : Array RegistryPacket := #[
+  ⟨`Gabbro.Core.Ast.LowLevel.MemInstruction.newGuestSpace, `Gabbro.Core.Ast.LowLevel.NewGuestSpaceCoreAussage,
+    some `Gabbro.Core.Ast.LowLevel.newGuestSpaceCoreEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.address, `Gabbro.Core.Ast.Semantik.AddressTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.addressTypeRegistryEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.bool, `Gabbro.Core.Ast.Semantik.BoolTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.boolTypeEntry⟩,
   ⟨`Gabbro.Core.Ast.WrittenType.integer, `Gabbro.Core.Ast.Semantik.IntegerTypeRegistryAussage, some `Gabbro.Core.Ast.Semantik.integerTypeEntry⟩,

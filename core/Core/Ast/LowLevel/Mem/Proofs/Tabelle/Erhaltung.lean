@@ -56,10 +56,10 @@ private theorem rechte_narrow (space : Adressraum) (base pages : Nat)
       cases heq
       exact holdOk
 
-theorem tabellenGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemState) (c : Kontext)
-    {next : MemFrame} (h : (MemInstruction.newSpace tables).evaluate target s c = some next)
+theorem tabellenGedeckt_allocateSpace (target : ZielDaten) (guestPhysical : Bool) (tables : Nat) (s : MemState) (c : Kontext)
+    {next : MemFrame} (h : allocateAddressSpace target guestPhysical s c tables = some next)
     (inv : (s.lokal c).TabellenGedeckt) : next.TabellenGedeckt := by
-  simp only [MemInstruction.evaluate] at h
+  simp only [allocateAddressSpace] at h
   cases hr : heldMemRegion target s c tables with
   | none =>
     simp only [hr, Option.bind_eq_bind, Option.bind_none] at h

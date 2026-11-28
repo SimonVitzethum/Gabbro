@@ -16,11 +16,11 @@ any moment (`TlbRechteGedeckt.verdraengt`). The covering invariant `TlbGedeckt` 
 `map` and a `newSpace` need it to know that no cell sits on a page that is about to be mapped or on a
 space that does not exist yet. -/
 
-theorem tlbRechte_newSpace (target : ZielDaten) (tables : Nat) (s : MemState) (c : Kontext)
-    {next : MemFrame} (h : (MemInstruction.newSpace tables).evaluate target s c = some next)
+theorem tlbRechte_allocateSpace (target : ZielDaten) (guestPhysical : Bool) (tables : Nat) (s : MemState) (c : Kontext)
+    {next : MemFrame} (h : allocateAddressSpace target guestPhysical s c tables = some next)
     (cover : (s.lokal c).TlbGedeckt) (inv : (s.lokal c).TlbRechteGedeckt) :
     next.TlbRechteGedeckt := by
-  simp only [MemInstruction.evaluate] at h
+  simp only [allocateAddressSpace] at h
   cases hr : heldMemRegion target s c tables with
   | none => simp only [hr, Option.bind_eq_bind, Option.bind_none] at h <;> cases h
   | some region =>
@@ -60,7 +60,7 @@ theorem tlbRechte_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemSt
   | mergeRegions first second =>
     have kept := erhaelt_mergeRegions target first second s c next h
     exact inv.aus_gleich kept.1 kept.2.1 kept.2.2
-  | newSpace tables => exact tlbRechte_newSpace target tables s c h cover inv
+  | newSpace tables => exact tlbRechte_allocateSpace target false tables s c h cover inv
   | mapSpace space virt frames rights =>
     exact tlbRechte_mapSpace target space virt frames rights s c h cover inv
   | protectSpace space virt pages rights =>
@@ -75,6 +75,7 @@ theorem tlbRechte_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemSt
     exact inv.aus_gleich kept.1 kept.2.1 kept.2.2
   | tlbFuellen core space page => exact tlbRechte_tlbFuellen target core space page s c h inv
   | tlbVerdraengen core space page => exact tlbRechte_tlbVerdraengen target core space page s c h inv
+  | newGuestSpace tables => exact tlbRechte_allocateSpace target true tables s c h cover inv
 
 /-- Every context's frame of a state satisfies the invariant. -/
 def MemState.TlbRechteGedeckt (s : MemState) : Prop := ∀ c, (s.lokal c).TlbRechteGedeckt

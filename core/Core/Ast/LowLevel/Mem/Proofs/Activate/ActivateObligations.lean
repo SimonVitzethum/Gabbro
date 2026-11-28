@@ -296,6 +296,17 @@ theorem memEindeutigActivate (form : MemForm) : MemEindeutigAussage form := by
           subst space'
           rfl
 
+  | newGuestSpace tables =>
+      cases b with
+      | newGuestSpace tables' =>
+          simp only [MemTree.production] at ha hb
+          have h := ha.symm.trans hb
+          simp only [List.cons.injEq, Token.word.injEq] at h
+          rcases h with ⟨_, _, _, _, names, _⟩
+          have heq : tables = tables' := Subtype.ext names
+          subst tables'
+          rfl
+
 theorem memDruckActivate (form : MemForm) : MemDruckAussage form := by
   intro tree
   exact ⟨memProductionPrint tree, memParsePrint tree⟩

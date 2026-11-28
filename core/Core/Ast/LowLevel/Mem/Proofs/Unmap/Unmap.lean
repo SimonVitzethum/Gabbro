@@ -88,8 +88,8 @@ theorem unmap_meaning : UnmapMeaningAussage := by
     exact beq_self_eq_true _
   let token : Zuruecknahme := ⟨sp, base, pages, space.generation + 1, first.frame, false⟩
   let entries := space.entries.filter (fun (page, _) => !decide (pageRange base pages page))
-  let cleared : Adressraum := ⟨space.tabellen, entries, token.generation,
-    token :: space.ausstehend⟩
+  let cleared : Adressraum :=
+    { space with entries, generation := token.generation, ausstehend := token :: space.ausstehend }
   let next : MemFrame := { s.lokal c with result := some (.pending token), spaces := (s.lokal c).spaces.set sp cleared }
   have hcond' : (List.range pages).all (fun i =>
       ((space.abbildung (virt / target.seitengranule + i)).map Seiteneintrag.frame) ==

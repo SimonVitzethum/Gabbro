@@ -79,6 +79,20 @@ public def newSpaceEntry : RegistryEntry ``MemTree.newSpace (schemaMem ``MemTree
     ⟨hErhaltung, hFortschritt, hSicher, hAntwortSicher, hKosten, hSchranken,
       hEtiketten, hFluss⟩, hJoint⟩
 
+public def newGuestSpaceEntry : RegistryEntry ``MemTree.newGuestSpace (schemaMem ``MemTree.newGuestSpace) := by
+  simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
+    ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]
+  obtain ⟨kern, meaning, isolation, joint⟩ := newGuestSpace_aussage
+  obtain ⟨parse, inversion, unique, print, elaborated, realized, admitted, ideal, units,
+    implementation, progress, preservation, safe, answers, outside, cost, bounds, labels, flow⟩ := kernConj kern
+  exact ⟨.surface ⟨parse, inversion, unique, print⟩ elaborated realized,
+    ⟨admitted, outside, meaning, isolation⟩, ideal, units, implementation,
+    ⟨preservation, progress, safe, answers, cost, bounds, labels, flow⟩, joint⟩
+
+public theorem newGuestSpaceCoreEntry :
+    RegistryPacketProof ``MemInstruction.newGuestSpace NewGuestSpaceCoreAussage :=
+  ⟨⟨newGuestSpaceOrigin, newGuestSpace_aussage⟩⟩
+
 public def mapEntry : RegistryEntry ``MemTree.mapSpace (schemaMem ``MemTree.mapSpace) := by
   simp only [schemaMem, beq_iff_eq, Lean.Name.str.injEq, String.reduceEq, and_false,
     ite_true, ite_false, statementsMem, MeaningAussageMem, JointAussageMem]

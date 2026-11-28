@@ -38,6 +38,8 @@ structure Adressraum where
   entries : List (Nat × Seiteneintrag)
   generation : Nat
   ausstehend : List Zuruecknahme
+  /-- A stage-two table cannot be installed as the host's active translation space. -/
+  guestPhysical : Bool
 
 def Adressraum.abbildung (space : Adressraum) (page : Nat) : Option Seiteneintrag :=
   (space.entries.find? (fun entry => entry.1 == page)).map Prod.snd
@@ -148,7 +150,7 @@ def MemFrame.covered (frame : MemFrame) (s : MemState) (extent : Strecke) : Bool
     slot.any fun region => region.live s && decide (region.extent.enthaelt extent)
 
 def Adressraum.Aktivierbar (space : Adressraum) (z : ZielDaten) (s : MemState) (c : Kontext) : Prop :=
-  space.Wohlgeformt z ∧ (s.lokal c).covered s space.tabellen ∧
+  space.guestPhysical = false ∧ space.Wohlgeformt z ∧ (s.lokal c).covered s space.tabellen ∧
   space.entries.all fun (_, entry) =>
     (s.lokal c).covered s ⟨entry.frame * z.seitengranule, (entry.frame + 1) * z.seitengranule⟩
 

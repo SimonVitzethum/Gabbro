@@ -79,9 +79,9 @@ theorem freigabe_ohne_pflicht_unsicher :
       after.tlb = before.tlb := by
   let token : Zuruecknahme := ⟨0, 0, 1, 1, 5, false⟩
   let cell : TlbZelle := ⟨7, 0, 0, ⟨5, [.read], 0⟩⟩
-  refine ⟨{ spaces := [{ tabellen := ⟨0, 0⟩, entries := [], generation := 1, ausstehend := [token] }]
+  refine ⟨{ spaces := [⟨⟨0, 0⟩, [], 1, [token], false⟩]
             tlb := ⟨[cell]⟩ },
-    { spaces := [{ tabellen := ⟨0, 0⟩, entries := [], generation := 1, ausstehend := [] }]
+    { spaces := [⟨⟨0, 0⟩, [], 1, [], false⟩]
       tlb := ⟨[cell]⟩ }, ?_, ?_, rfl⟩
   · intro zelle mem
     have : zelle = cell := List.mem_singleton.mp mem
@@ -91,7 +91,7 @@ theorem freigabe_ohne_pflicht_unsicher :
     · rfl
   · intro covered
     obtain ⟨space, found, hd⟩ := covered cell (List.mem_singleton_self _)
-    have eq : space = { tabellen := ⟨0, 0⟩, entries := [], generation := 1, ausstehend := [] } :=
+    have eq : space = ⟨⟨0, 0⟩, [], 1, [], false⟩ :=
       (Option.some.inj found).symm
     subst eq
     rcases hd with ⟨entry, hmap, _⟩ | ⟨t, tmem, _⟩

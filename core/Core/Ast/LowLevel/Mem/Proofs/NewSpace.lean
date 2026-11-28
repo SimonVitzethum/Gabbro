@@ -11,20 +11,6 @@ open Gabbro.Core.Text Katalog Maschine Waechter
 open Gabbro.Core.Annahme
 open Gabbro.Core.Aussen
 open Gabbro.Core.Sicherheit (Absturz NeueWirkungen)
-private theorem newSpacePrints (tree : MemTree .newSpace) :
-    tree.production (tree.printPieces.map PrintedToken.value) := by
-  cases tree with
-  | newSpace tables =>
-      simpa [MemTree.production, MemTree.printPieces, keyword, word, Identifier.print,
-        PrintedToken.unquoted, printPunctuation, printDot, printOpen, printClose,
-        dot, openParen, closeParen, String.reduceToList]
-private def newSpaceSyntax : Gabbro.Core.Text.Syntax (MemTree .newSpace) where
-  reads := fun tokens tree => tree.production tokens
-  unique := by
-    intro tokens a b ha hb
-    exact memEindeutigKern .newSpace a b tokens ha hb
-  printPieces := MemTree.printPieces
-  reads_print := newSpacePrints
 private theorem memHead_some_iff (target : ZielDaten) (op : MemInstruction)
     (s : MemState) (c : Kontext) :
     memHead target [op] s c = some op ↔
@@ -126,12 +112,12 @@ private theorem newSpaceMeaning : NewSpaceMeaningAussage := by
   intro target s c slot region hhr
   constructor
   · intro hseiten
-    let space : Adressraum := ⟨region.extent, [], 0, []⟩
+    let space : Adressraum := ⟨region.extent, [], 0, [], false⟩
     let next : MemFrame := { s.lokal c with
       result := some (.space (s.lokal c).spaces.length)
       spaces := (s.lokal c).spaces ++ [space] }
     refine ⟨next, space, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-    · simp only [MemInstruction.evaluate, hhr]
+    · simp only [MemInstruction.evaluate, allocateAddressSpace, hhr]
       dsimp
       rw [if_pos hseiten]
     · rfl
@@ -142,7 +128,7 @@ private theorem newSpaceMeaning : NewSpaceMeaningAussage := by
     · rfl
     · exact ⟨hseiten, List.nodup_nil, by intro entry hm; cases hm⟩
   · intro hnot
-    simp only [MemInstruction.evaluate, hhr]
+    simp only [MemInstruction.evaluate, allocateAddressSpace, hhr]
     dsimp
     rw [if_neg hnot]
 private theorem imageGueltigX86 : image.gueltig (Plattform.x86_64).ziel := by
@@ -232,13 +218,20 @@ private theorem newSpaceName_slot :
     MemScope.slotRegion ⟨[newSpaceName], [], []⟩ newSpaceName = some 0 := by
   change [newSpaceName.val].idxOf? newSpaceName.val = some 0
   simp only [List.idxOf?_cons, beq_self_eq_true, if_true]
-private theorem newSpace_erfuellbar : MemErfuellbarAussage .newSpace := by
+private def spaceCreationTree (guestPhysical : Bool) (name : Identifier) :
+    MemTree (if guestPhysical then .newGuestSpace else .newSpace) :=
+  match guestPhysical with
+  | false => .newSpace name
+  | true => .newGuestSpace name
+
+private theorem spaceCreation_erfuellbar (guestPhysical : Bool) :
+    MemErfuellbarAussage (if guestPhysical then .newGuestSpace else .newSpace) := by
   let target := Plattform.x86_64.ziel
   let k : Katalog := Plattform.x86_64.katalog
   let extent : Strecke := ⟨0, 4096⟩
   let scope : MemScope := ⟨[newSpaceName], [], []⟩
-  let tree : MemTree .newSpace := .newSpace newSpaceName
-  let op : MemInstruction := .newSpace 0
+  let tree := spaceCreationTree guestPhysical newSpaceName
+  let op : MemInstruction := if guestPhysical then .newGuestSpace 0 else .newSpace 0
   let sicht : Nat → AussenVerlauf → AussenSicht := fun _ _ => AussenSicht.leer
   let env : Katalog.Umgebung := Katalog.Umgebung.referenz k 1 sicht
   let start : AussenStart := ⟨0, (fun i => if i = 0 then some 0 else none), [extent],
@@ -247,7 +240,7 @@ private theorem newSpace_erfuellbar : MemErfuellbarAussage .newSpace := by
   let E : MemUnit := memProgram k (pre ++ [op])
   let text : RawText := tree.print
   let s : MemState := (I.start E start).2
-  let space : Adressraum := ⟨extent, [], 0, []⟩
+  let space : Adressraum := ⟨extent, [], 0, [], guestPhysical⟩
   let next : MemFrame := { s.lokal entryContext with
     result := some (.space (s.lokal entryContext).spaces.length)
     spaces := (s.lokal entryContext).spaces ++ [space] }
@@ -275,26 +268,30 @@ private theorem newSpace_erfuellbar : MemErfuellbarAussage .newSpace := by
     · exact regions_ok
   have accepted : Annahme.Akzeptiert E := memAkzeptiertX86 op
   have hElab : elaborateMem scope tree = some op := by
-    simp only [tree, elaborateMem, op, scope, newSpaceName_slot, Option.map_some]
-  have hParse : MemParse text tree := by
-    change Gabbro.Core.Text.Parse newSpaceSyntax.grammar (newSpaceSyntax.print tree) tree
-    exact newSpaceSyntax.parse_print tree
+    cases guestPhysical <;>
+      simp only [tree, spaceCreationTree, elaborateMem, op, scope, newSpaceName_slot,
+        Bool.false_eq_true, ↓reduceIte, Option.map_some]
+  have hParse : MemParse text tree := (memDruckKern _ tree).2
   have hhr : heldMemRegion target s entryContext 0 = some ⟨extent, [⟨0, 0⟩]⟩ := by
     rfl
   have heval : op.evaluate target s entryContext = some next := by
-    simp only [op, MemInstruction.evaluate, hhr]
-    dsimp
-    rw [if_pos extent_ok]
+    have allocate : allocateAddressSpace target guestPhysical s entryContext 0 = some next := by
+      simp only [allocateAddressSpace, hhr]
+      dsimp
+      rw [if_pos extent_ok]
+    cases guestPhysical <;> exact allocate
   have hhead : E.system.kopf s entryContext = some op := by
     change memHead target [op] s entryContext = some op
     exact (memHead_some_iff target op s entryContext).2 ⟨rfl, rfl, rfl, by rw [heval]; rfl⟩
   have hreach : E.system.IErreichbar (I.start E start).2 s := by
     change E.system.IErreichbar s s
     exact System.IErreichbar.start
-  have hstep : E.system.ISchritt entryContext s () [plan] (next.advance entryContext s) := by
+  have hstep : E.system.ISchritt entryContext s () [op.schrittPlan s entryContext]
+      (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
     exact ⟨next, heval, rfl, rfl⟩
-  have himpl : E.system.ImplSchritt entryContext s () [plan] (next.advance entryContext s) := by
+  have himpl : E.system.ImplSchritt entryContext s () [op.schrittPlan s entryContext]
+      (next.advance entryContext s) := by
     refine ⟨op, hhead, ?_⟩
     exact ⟨next, heval, rfl, rfl⟩
   have hnodup : (scope.regionen.map Subtype.val).Nodup := by
@@ -305,6 +302,44 @@ private theorem newSpace_erfuellbar : MemErfuellbarAussage .newSpace := by
     List.nodup_nil, List.nodup_nil,
     ⟨tree, hParse, ⟨op, hElab, rfl⟩⟩, hParse, hElab, hreach, hhead, heval, hstep, himpl⟩
 theorem newSpace_aussage : NewSpaceAussage :=
-  ⟨memObligationsKern_alle .newSpace, newSpaceMeaning, newSpace_erfuellbar⟩
+  ⟨memObligationsKern_alle .newSpace, newSpaceMeaning, spaceCreation_erfuellbar false⟩
+
+theorem newGuestSpace_erfuellbar : MemErfuellbarAussage .newGuestSpace :=
+  spaceCreation_erfuellbar true
+
+theorem newGuestSpaceMeaning : NewGuestSpaceMeaningAussage := by
+  intro target s c slot next
+  change allocateAddressSpace target true s c slot = some next ↔ _
+  cases held : heldMemRegion target s c slot with
+  | none =>
+      simp only [allocateAddressSpace, held, Option.bind_eq_bind, Option.bind_none,
+        reduceCtorEq, false_and, exists_false]
+  | some region =>
+      simp only [allocateAddressSpace, held, Option.bind_eq_bind, Option.bind_some,
+        Option.some.injEq, exists_eq_left']
+      by_cases aligned : region.extent.seiten target
+      · simp only [aligned, if_true, Option.pure_def, Option.some.injEq, true_and]
+        exact eq_comm
+      · simp only [aligned, if_false, reduceCtorEq, false_and]
+
+theorem guestSpaceHostIsolation : GuestSpaceHostIsolationAussage := by
+  intro target s c slot space found guestPhysical
+  exact ((activate_meaning target s c slot).2 space found).2
+    (fun activatable => Bool.false_ne_true (activatable.1.symm.trans guestPhysical))
+
+theorem newGuestSpaceOrigin : NewGuestSpaceOriginAussage := by
+  intro form scope tree slot origin
+  cases tree <;>
+    simp only [elaborateMem, Option.map_eq_some_iff, Option.bind_eq_bind,
+      Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
+      reduceCtorEq, and_false, exists_false] at origin
+  rename_i tables
+  obtain ⟨index, indexed, equal⟩ := origin
+  cases equal
+  exact ⟨tables, rfl, rfl, indexed⟩
+
+theorem newGuestSpace_aussage : NewGuestSpaceAussage :=
+  ⟨memObligationsKern_alle .newGuestSpace, newGuestSpaceMeaning,
+    guestSpaceHostIsolation, newGuestSpace_erfuellbar⟩
 
 end Gabbro.Core.Ast.LowLevel

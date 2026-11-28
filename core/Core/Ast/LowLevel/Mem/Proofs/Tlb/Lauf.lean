@@ -33,7 +33,7 @@ theorem tlbGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemS
     exact tlbGedeckt_ohne_raeume target _ s c (erhaelt_splitPages target slot pages s c) h inv
   | mergeRegions first second =>
     exact tlbGedeckt_ohne_raeume target _ s c (erhaelt_mergeRegions target first second s c) h inv
-  | newSpace tables => exact tlbGedeckt_newSpace target tables s c h inv
+  | newSpace tables => exact tlbGedeckt_allocateSpace target false tables s c h inv
   | mapSpace space virt frames rights => exact tlbGedeckt_mapSpace target space virt frames rights s c h inv
   | protectSpace space virt pages rights =>
     exact tlbGedeckt_protectSpace target space virt pages rights s c h inv
@@ -45,6 +45,7 @@ theorem tlbGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s : MemS
     exact tlbGedeckt_ohne_raeume target _ s c (erhaelt_bindToken target name s c) h inv
   | tlbFuellen core space page => exact tlbGedeckt_tlbFuellen target core space page s c h inv
   | tlbVerdraengen core space page => exact tlbGedeckt_tlbVerdraengen target core space page s c h inv
+  | newGuestSpace tables => exact tlbGedeckt_allocateSpace target true tables s c h inv
 
 /-- Every context's frame of a state satisfies the invariant. -/
 def MemState.TlbGedeckt (s : MemState) : Prop := ∀ c, (s.lokal c).TlbGedeckt

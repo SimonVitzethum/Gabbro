@@ -92,6 +92,21 @@ theorem tlbFuellen_verweigert_ausstehend (target : ZielDaten) (core sp page : Na
   simp only [MemInstruction.evaluate, found, hnone, Option.bind_eq_bind, Option.bind_some,
     Option.bind_none]
 
+private theorem allocateAddressSpace_tlb (target : ZielDaten) (guestPhysical : Bool) (tables : Nat)
+    (s : MemState) (c : Kontext) {next : MemFrame}
+    (step : allocateAddressSpace target guestPhysical s c tables = some next) :
+    next.tlb = (s.lokal c).tlb := by
+  simp only [allocateAddressSpace] at step
+  cases hr : heldMemRegion target s c tables with
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
+  | some region =>
+      simp only [hr, Option.bind_eq_bind, Option.bind_some] at step
+      split at step
+      · simp only [Option.pure_def, Option.some.injEq] at step
+        subst next
+        rfl
+      · cases step
+
 /-- Every instruction other than `tlbFuellen` keeps the cache or drops cells from it, so it cannot
     introduce a cell that was not already cached. -/
 private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstruction) (s : MemState)
@@ -116,17 +131,9 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
       rw [keep.1] at hz
       exact hz
   | newSpace tables =>
-      simp only [MemInstruction.evaluate] at step
-      cases hr : heldMemRegion target s c tables with
-      | none => simp only [hr, Option.bind_eq_bind, Option.bind_none] at step <;> cases step
-      | some region =>
-          simp only [hr, Option.bind_eq_bind, Option.bind_some] at step
-          split at step
-          · simp only [Option.pure_def, Option.some.injEq] at step
-            subst next
-            intro zelle hz
-            exact hz
-          · cases step
+      intro zelle hz
+      rw [allocateAddressSpace_tlb target false tables s c step] at hz
+      exact hz
   | mapSpace sp virt slot rights =>
       simp only [MemInstruction.evaluate] at step
       cases hs : (s.lokal c).spaces[sp]? with
@@ -214,6 +221,10 @@ private theorem tlb_subset_ohne_fuellen (target : ZielDaten) (op : MemInstructio
       intro zelle hz
       rw [keep.1] at hz
       exact hz
+  | newGuestSpace tables =>
+      intro zelle hz
+      rw [allocateAddressSpace_tlb target true tables s c step] at hz
+      exact hz
 
 /-- **The memory machine's `keineFuellung` law.** While a token is pending, every cell of its range
     that is cached after one more step was already cached before the step. No step can newly create a
@@ -273,5 +284,6 @@ theorem keineFuellung_speicher (target : ZielDaten) (op : MemInstruction) (s : M
   | activateSpace space => exact rest (by intro a b d e; cases e)
   | tlbVerdraengen core sp page => exact rest (by intro a b d e; cases e)
   | bindToken name => exact rest (by intro a b d e; cases e)
+  | newGuestSpace tables => exact rest (by intro a b d e; cases e)
 
 end Gabbro.Core.Ast.LowLevel

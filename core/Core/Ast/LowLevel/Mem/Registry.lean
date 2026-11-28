@@ -113,6 +113,7 @@ def MeaningAussageMem : MemForm → Prop
   | .unmapSpace => UnmapMeaningAussage
   | .flushSpace => FlushMeaningAussage
   | .activateSpace => ActivateMeaningAussage
+  | .newGuestSpace => NewGuestSpaceMeaningAussage ∧ GuestSpaceHostIsolationAussage
 
 def JointAussageMem : MemForm → Prop
   | .mapSpace => MapJointAussage
@@ -140,6 +141,18 @@ def UnmapAussage : Prop := memObligationsKern .unmapSpace ∧ UnmapMeaningAussag
 def FlushAussage : Prop := memObligationsKern .flushSpace ∧ FlushMeaningAussage ∧ FlushJointAussage
 def ActivateAussage : Prop := memObligationsKern .activateSpace ∧ ActivateMeaningAussage ∧ ActivateJointAussage
 
+def NewGuestSpaceAussage : Prop :=
+  memObligationsKern .newGuestSpace ∧ NewGuestSpaceMeaningAussage ∧
+    GuestSpaceHostIsolationAussage ∧ MemErfuellbarAussage .newGuestSpace
+
+def NewGuestSpaceOriginAussage : Prop :=
+  ∀ (form : MemForm) (scope : MemScope) (tree : MemTree form) (slot : Nat),
+    elaborateMem scope tree = some (.newGuestSpace slot) →
+    ∃ table, ∃ eq : form = .newGuestSpace,
+      (eq ▸ tree) = MemTree.newGuestSpace table ∧ scope.slotRegion table = some slot
+
+def NewGuestSpaceCoreAussage : Prop := NewGuestSpaceOriginAussage ∧ NewGuestSpaceAussage
+
 def statementsMem (constructor : Lean.Name) (form : MemForm) : RegistryStatements constructor .surface where
   realization := .surface (MemParseAussage form ∧ MemInversionAussage form ∧
     MemEindeutigAussage form ∧ MemDruckAussage form)
@@ -162,6 +175,7 @@ def schemaMem (constructor : Lean.Name) : RegistrySchema constructor :=
     else if constructor == ``MemTree.protectSpace then MemForm.protectSpace
     else if constructor == ``MemTree.unmapSpace then MemForm.unmapSpace
     else if constructor == ``MemTree.flushSpace then MemForm.flushSpace
+    else if constructor == ``MemTree.newGuestSpace then MemForm.newGuestSpace
     else MemForm.activateSpace
   ⟨.surface, statementsMem constructor form⟩
 

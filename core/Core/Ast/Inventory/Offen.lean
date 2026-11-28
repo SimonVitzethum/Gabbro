@@ -19,8 +19,8 @@ public import Core.Ast.Inventory.All
   * `entwurf`  - async/await/join/Executor, probability (M9P), persistence (M9),
                  predicates, contracts and declaration families: waits for a design.
 
-  Counts over the 546 inventory entries: 85 covered, 205 productions, 256 open
-  (116 sofort, 9 substrat, 1 pegel, 130 entwurf). The five L4 forms marked
+  Counts over the 546 inventory entries: 86 covered, 205 productions, 255 open
+  (115 sofort, 9 substrat, 1 pegel, 130 entwurf). The five L4 forms marked
   `skeleton` below have rejected constructors in `Core.Ast.LowLevel.Exec.Syntax`.
   No form here has a grammar or parser production in `grammatik/`; enabling a
   form adds its spelling, meaning and duties in separate modules.
@@ -42,7 +42,7 @@ structure OffeneForm where
   kategorie : OffenKategorie
   grund : String
 
-/-- 116 entries. -/
+/-- 115 entries. -/
 def offenSofort : List OffeneForm :=
   [
     ⟨"surface.SExpr.float", "Float", "Expr", .sofort, "A floating-point literal, retaining its spelling."⟩,
@@ -139,7 +139,6 @@ def offenSofort : List OffeneForm :=
     ⟨"low.L14.2", "2", "Decl / ExecTree", .sofort, "Configuration declaration"⟩,
     ⟨"low.L14.3", "3", "Decl / ExecTree", .sofort, "Compile-time selection of items or statements"⟩,
     ⟨"low.L14.4", "4", "Decl / ExecTree", .sofort, "Compile-time selection of an expression"⟩,
-    ⟨"low.L15.1", "1", "ExecTree / Device", .sofort, "space.new_guest"⟩,
     ⟨"low.L15.2", "2", "ExecTree / Device", .sofort, "vm.new with mandatory isolation controls and optional intercepts"⟩,
     ⟨"low.L15.3", "3", "ExecTree / Device", .sofort, "Create a virtual CPU with named registers"⟩,
     ⟨"low.L15.4", "4", "ExecTree / Device", .sofort, "enter vm"⟩,

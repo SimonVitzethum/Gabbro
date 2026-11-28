@@ -339,7 +339,7 @@ private theorem wideHfind :
     ((wideS5.lokal entryContext).marken.find? (fun p => p.1.val == wideName.val)).map Prod.snd =
       some wideToken := by rfl
 
-private def mappedSpaceW : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsW, 0⟩)], 0, []⟩
+private def mappedSpaceW : Adressraum := ⟨⟨0, 4096⟩, [(0, ⟨1, mapRightsW, 0⟩)], 0, [], false⟩
 private def narrowedSpaceW : Adressraum := narrowRights mappedSpaceW 0 1 narrowRightsW
 private theorem wideHspace : (wideS5.lokal entryContext).spaces[wideToken.raum]? =
     some narrowedSpaceW := by rfl

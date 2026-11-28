@@ -154,10 +154,10 @@ theorem tlbGedeckt_tlbFuellen (target : ZielDaten) (core sp page : Nat) (s : Mem
       · exact ⟨space, hs, Or.inl ⟨entry, hm, rfl⟩⟩
       · exact inv zelle old
 
-theorem tlbGedeckt_newSpace (target : ZielDaten) (tables : Nat) (s : MemState) (c : Kontext)
-    {next : MemFrame} (h : (MemInstruction.newSpace tables).evaluate target s c = some next)
+theorem tlbGedeckt_allocateSpace (target : ZielDaten) (guestPhysical : Bool) (tables : Nat) (s : MemState) (c : Kontext)
+    {next : MemFrame} (h : allocateAddressSpace target guestPhysical s c tables = some next)
     (inv : (s.lokal c).TlbGedeckt) : next.TlbGedeckt := by
-  simp only [MemInstruction.evaluate] at h
+  simp only [allocateAddressSpace] at h
   cases hr : heldMemRegion target s c tables with
   | none => simp only [hr, Option.bind_eq_bind, Option.bind_none] at h <;> cases h
   | some region =>

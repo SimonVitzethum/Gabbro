@@ -138,7 +138,7 @@ theorem tabellenGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s :
   | mergeRegions first second =>
     have keep := erhaelt_mergeRegions target first second s c next h
     exact inv.aus_gleich keep.2.1 keep.2.2
-  | newSpace tables => exact tabellenGedeckt_newSpace target tables s c h inv
+  | newSpace tables => exact tabellenGedeckt_allocateSpace target false tables s c h inv
   | mapSpace space virt frames rights =>
     exact tabellenGedeckt_mapSpace target space virt frames rights s c h inv
   | protectSpace space virt pages rights =>
@@ -154,6 +154,7 @@ theorem tabellenGedeckt_evaluate (target : ZielDaten) (op : MemInstruction) (s :
   | tlbFuellen core space page => exact tabellenGedeckt_tlbFuellen target core space page s c h inv
   | tlbVerdraengen core space page =>
     exact tabellenGedeckt_tlbVerdraengen target core space page s c h inv
+  | newGuestSpace tables => exact tabellenGedeckt_allocateSpace target true tables s c h inv
 
 /-- Every context's frame of a state satisfies the table invariant. -/
 def MemState.TabellenGedeckt (s : MemState) : Prop := ∀ c, (s.lokal c).TabellenGedeckt

@@ -28,6 +28,7 @@ inductive MemInstruction where
       table. No source form elaborates to it; it is what lets a completion step (`flush`) become
       enabled. -/
   | tlbVerdraengen (core space page : Nat)
+  | newGuestSpace (tables : Nat)
 
 def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
   | .splitAt region point => (scope.slotRegion region).map (fun slot => .splitRegion slot point)
@@ -49,6 +50,7 @@ def elaborateMem (scope : MemScope) : MemTree form → Option MemInstruction
     pure (.unmapSpace sp virt pages)
   | .flushSpace name => (scope.slotMarke name).map (fun _ => .flushSpace name)
   | .activateSpace space => (scope.slotRaum space).map .activateSpace
+  | .newGuestSpace tables => (scope.slotRegion tables).map .newGuestSpace
 
 /-- A single region cut supplies both the left and the right authority. -/
 def MemFrame.partition (frame : MemFrame) (slot : Nat) (region : MemRegion) (point : Nat) : MemFrame :=
@@ -194,6 +196,15 @@ theorem MemFrame.verengtFrei_eq_true {frame : MemFrame} {raum base pages : Nat} 
 
 /-- The operations use the acting frame as their authority source. Table
     updates and invalidation are reflected in a single successor frame. -/
+def allocateAddressSpace (target : ZielDaten) (guestPhysical : Bool) (s : MemState)
+    (c : Kontext) (tables : Nat) : Option MemFrame := do
+  let region ← heldMemRegion target s c tables
+  if region.extent.seiten target then
+    let frame := s.lokal c
+    let space : Adressraum := ⟨region.extent, [], 0, [], guestPhysical⟩
+    pure { frame with result := some (.space frame.spaces.length), spaces := frame.spaces ++ [space] }
+  else none
+
 def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
     (s : MemState) (c : Kontext) : Option MemFrame :=
   let frame := s.lokal c
@@ -222,12 +233,7 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
         result := some (.merged joined)
         regions := (frame.regions.set first (some joined)).set second none }
     else none
-  | .newSpace tables => do
-    let region ← heldMemRegion target s c tables
-    if region.extent.seiten target then
-      let space : Adressraum := ⟨region.extent, [], 0, []⟩
-      pure { frame with result := some (.space frame.spaces.length), spaces := frame.spaces ++ [space] }
-    else none
+  | .newSpace tables => allocateAddressSpace target false s c tables
   | .mapSpace sp virt slot rights => do
     let space ← frame.spaces[sp]?
     let region ← heldMemRegion target s c slot
@@ -314,6 +320,7 @@ def MemInstruction.evaluate (target : ZielDaten) (op : MemInstruction)
   | .tlbVerdraengen core sp page =>
     some { frame with tlb := ⟨frame.tlb.zellen.filter fun zelle =>
       !decide (zelle.kern = core ∧ zelle.raum = sp ∧ zelle.seite = page)⟩ }
+  | .newGuestSpace tables => allocateAddressSpace target true s c tables
 
 /-- Evaluation reads only the acting frame, region rights and loans. -/
 theorem MemInstruction.evaluate_congr (op : MemInstruction) (target : ZielDaten) (c : Kontext)

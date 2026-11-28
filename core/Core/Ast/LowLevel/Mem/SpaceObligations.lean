@@ -18,6 +18,23 @@ def NewSpaceMeaningAussage : Prop :=
       space.Wohlgeformt target) ∧
     (¬ region.extent.seiten target → (MemInstruction.newSpace slot).evaluate target s c = none)
 
+/-- Creation reserves aligned, live table memory and appends an empty stage-two table.
+    All other frame state, including the active host space and translation cache, is framed. -/
+def NewGuestSpaceMeaningAussage : Prop :=
+  ∀ target s c slot next,
+    (MemInstruction.newGuestSpace slot).evaluate target s c = some next ↔
+      ∃ region, heldMemRegion target s c slot = some region ∧ region.extent.seiten target ∧
+        let frame := s.lokal c
+        next = { frame with
+          result := some (.space frame.spaces.length)
+          spaces := frame.spaces ++ [⟨region.extent, [], 0, [], true⟩] }
+
+/-- A stage-two table is never a valid target of a host translation switch. -/
+def GuestSpaceHostIsolationAussage : Prop :=
+  ∀ target s c slot space,
+    (s.lokal c).spaces[slot]? = some space → space.guestPhysical = true →
+    (MemInstruction.activateSpace slot).evaluate target s c = none
+
 def MapMeaningAussage : Prop :=
   ∀ target s c sp virt slot rights space region,
     (s.lokal c).spaces[sp]? = some space → heldMemRegion target s c slot = some region →
