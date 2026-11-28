@@ -54,7 +54,7 @@ theorem prueferKombiniert_basisBeleg_gedeckt : PrueferDecktFormenAussage pruefer
   | binary => exact prueferKombiniert_aus_code _ _ basisUnit_code_binary ⟨rfl, rfl, rfl⟩
   | trueLit => exact prueferKombiniert_aus_code _ _ basisUnit_code_trueLit ⟨rfl, rfl, rfl⟩
   | falseLit => exact prueferKombiniert_aus_code _ _ basisUnit_code_falseLit ⟨rfl, rfl, rfl⟩
-  | variable => exact prueferKombiniert_aus_code _ _ basisUnit_code_variable ⟨rfl, rfl, rfl⟩
+  | «variable» => exact prueferKombiniert_aus_code _ _ basisUnit_code_variable ⟨rfl, rfl, rfl⟩
   | negativeLit => exact prueferKombiniert_aus_code _ _ basisUnit_code_negativeLit ⟨rfl, rfl, rfl⟩
   | neg => exact prueferKombiniert_aus_code _ _ basisUnit_code_neg ⟨rfl, rfl, rfl⟩
   | not => exact prueferKombiniert_aus_code _ _ basisUnit_code_not ⟨rfl, rfl, rfl⟩
