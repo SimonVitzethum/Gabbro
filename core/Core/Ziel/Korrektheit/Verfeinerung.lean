@@ -101,8 +101,8 @@ def FortschrittAkzeptiertAussage : Prop :=
 /-- The fair-history part of refinement: one matched ideal run has no hanging context.
     This is the outstanding progress obligation for the goal. The scheduler theorem can
     supply it once interrupt handling ensures return or another admissible completion
-    on the chosen fair run. The proposed return route requires a finite handler-stack
-    completion argument on a suffix without a crash. -/
+    on the chosen fair run. The hard step for the return route is proving finite
+    handler-stack completion on every suffix without a crash. -/
 def FairSimOhneHaengenAussage (P : Katalog.Plattform) : Prop :=
   ∀ (t : Ast.Unit), Ast.Semantik.zugelassen P Ast.Category.unit t →
     Annahme.Akzeptiert (einheitVon P t) →

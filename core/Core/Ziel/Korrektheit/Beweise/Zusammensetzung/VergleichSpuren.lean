@@ -15,8 +15,9 @@ namespace Gabbro.Core.Ziel.Korrektheit
 open Gabbro.Core Beobachtung Katalog
 
 /-- The comparison-trace obligation outside the image of the three unit constructions.
-    Source acceptance binds the ideal rule projections. A proof here would need to
-    control the implementation loader, steps, and low projections of the actual unit. -/
+    The counterexample below uses a loader that branches on a private byte while its
+    ideal rule projections satisfy the source binding. The concrete implementation
+    would need a binding that preserves the checked public behavior. -/
 def VergleichSpurenOhneHerkunftAussage : Prop :=
   ∀ (E : Ast.Semantik.Einheit), Annahme.Quelle.Akzeptiert E → ¬ EinheitHerkunft E →
     ∀ {H₁ H₂ : Katalog.Umgebung} {ρ₁ ρ₂ : Maschine.Lauf E},
