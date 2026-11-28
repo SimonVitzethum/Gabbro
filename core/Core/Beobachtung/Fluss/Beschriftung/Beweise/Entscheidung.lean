@@ -100,6 +100,6 @@ theorem endlicheFlussAussage_beweis : EndlicheFlussAussage :=
 theorem Fragment.pruefeFluss_lokal (p : Fragment) (platform : Katalog.Plattform)
     (t : EndlicheBeschriftung) (h : p.pruefeFluss t = true) :
     FlussLokal (p.beschriftet platform t.deutung) :=
-  p.flussAkzeptiert_lokal platform t.deutung (of_decide_eq_true h)
+  p.flussAkzeptiert_lokal platform t.deutung ((endlicheFlussAussage_beweis p t).mp h)
 
 end Gabbro.Core.Ast.Semantik
