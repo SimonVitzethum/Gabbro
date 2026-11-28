@@ -26,7 +26,7 @@ public import Core.Maschine.Start
 public import Core.Annahme.Waechter
 public import Core.Ast.Semantik.Elaborierung
 public import Core.Ast.Semantik.Runtime.Mehrkontext.System
-public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.NichtAkzeptierteEinheit
 
 @[expose] public section

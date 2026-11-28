@@ -17,11 +17,12 @@ module
 
 public import Core.Ziel.Korrektheit.Pruefer
 public import Core.Ziel.Korrektheit.Zusammensetzung
-public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Waechter.WaechterAnalyse
 public import Core.Linken.GegenbeispielVerknuepft
 public import Core.Annahme.Annahme
 public import Core.Ast.TextValue.IndexProofs
+import Core.Ziel.Korrektheit.Beweise.BildGueltig
 
 @[expose] public section
 
@@ -66,8 +67,10 @@ theorem textIndexUnit_code :
         .bindeWert 0 (.int 0 255) true, .starte mainName, .ende] := by
   rfl
 
-/-- The elaborated witness unit on the approved x86-64 rows. -/
-def textIndexEinheit : Ast.Semantik.Einheit := einheitVon Katalog.Plattform.x86_64 textIndexUnit
+/-- The elaborated witness unit on the selected platform rows. -/
+def textIndexEinheit (P : Plattform) : Ast.Semantik.Einheit := einheitVon P textIndexUnit
+
+variable {P : Plattform}
 
 /-- The hardware offer for the witness run: core `k` always runs, nothing else happens. -/
 def txtAngebot (k : Nat) : Gelegenheit :=
@@ -79,18 +82,18 @@ def txtHw (h : Umgebung) (k : Nat) : HwLauf :=
 
 /-- The boot status at the entry context. -/
 theorem txt_status_entry (s : AussenStart) :
-    ((I.start textIndexEinheit s).2).status eintritt = .laeuft :=
+    ((I.start (textIndexEinheit P) s).2).status eintritt = .laeuft :=
   rfl
 
 /-- The boot status away from the entry context. -/
 theorem txt_status_other (s : AussenStart) (c : Kontext) (hne : c ≠ eintritt) :
-    ((I.start textIndexEinheit s).2).status c = .ruht := by
+    ((I.start (textIndexEinheit P) s).2).status c = .ruht := by
   show (if c = eintritt then Status.laeuft else Status.ruht) = .ruht
   rw [if_neg hne]
 
 /-- The boot dispatch runs the entry context on its assigned core. -/
 theorem txt_dispatch (s : AussenStart) (k : Nat) (assigned : s.assignment 0 = some k) :
-    (((I.start textIndexEinheit s).2).kerne k).laeuft = some eintritt := by
+    (((I.start (textIndexEinheit P) s).2).kerne k).laeuft = some eintritt := by
   show (if some k = s.assignment 0 then some eintritt else none) = some eintritt
   rw [assigned]
   exact if_pos rfl
@@ -102,7 +105,7 @@ theorem txt_kopf_ruht {s : Zustand} {c : Kontext}
 
 /-- The system head is the code head. -/
 theorem txt_system_kopf (s : Zustand) (c : Kontext) :
-    textIndexEinheit.system.kopf s c = kopf textIndexCode s c := by
+    (textIndexEinheit P).system.kopf s c = kopf textIndexCode s c := by
   rfl
 
 /-- Liveness ignores the recorded graph. -/
@@ -112,16 +115,16 @@ theorem txt_regionLive_graph_irrelevant (s : Zustand) (g : _) :
 
 /-- No context steps at a resting head. -/
 theorem txt_keinSchritt_ruht {c : Kontext} {s : Zustand} {w : PUnit.{1}} {plans : List Plan}
-    {u : Zustand} (h : s.status c = .ruht) (step : textIndexEinheit.system.ISchritt c s w plans u) :
+    {u : Zustand} (h : s.status c = .ruht) (step : (textIndexEinheit P).system.ISchritt c s w plans u) :
     False := by
   obtain ⟨b, head, _⟩ := step
-  rw [txt_system_kopf, txt_kopf_ruht h] at head
+  rw [txt_system_kopf (P := P), txt_kopf_ruht h] at head
   cases head
 
 /-- The witness hardware is conformant. -/
-theorem txt_konformHw (h : Umgebung) (s : AussenStart) (zul : textIndexEinheit.ZulStart h s)
+theorem txt_konformHw (h : Umgebung) (s : AussenStart) (zul : (textIndexEinheit P).ZulStart h s)
     (k : Nat) (assigned : s.assignment 0 = some k) :
-    (txtHw h k).konform textIndexEinheit.katalog h := by
+    (txtHw h k).konform (textIndexEinheit P).katalog h := by
   unfold HwLauf.konform
   refine ⟨rfl, fun i => ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -140,14 +143,14 @@ theorem txt_konformHw (h : Umgebung) (s : AussenStart) (zul : textIndexEinheit.Z
     · cases hcrash
 
 /-- The prefix states of the witness run. -/
-def sTxt (s : AussenStart) : Zustand :=
-  (I.start textIndexEinheit s).2
+def sTxt (P : Plattform) (s : AussenStart) : Zustand :=
+  (I.start (textIndexEinheit P) s).2
 
-def sTxt1 (s : AussenStart) : Zustand :=
-  (Befehl.textLiteral 0 []).nach eintritt (sTxt s)
+def sTxt1 (P : Plattform) (s : AussenStart) : Zustand :=
+  (Befehl.textLiteral 0 []).nach eintritt (sTxt P s)
 
-def sTxt2 (s : AussenStart) : Zustand :=
-  (Befehl.literal 1 0).nach eintritt (sTxt1 s)
+def sTxt2 (P : Plattform) (s : AussenStart) : Zustand :=
+  (Befehl.literal 1 0).nach eintritt (sTxt1 P s)
 
 /-- Forcing one ideal step: from local, status and core agreement with a concrete
     pre-state, the run takes the forced step and agrees with the concrete post-state. -/
@@ -285,13 +288,13 @@ theorem fragmentForceStep (p : Fragment) (platform : Plattform)
     cases label
 
 /-- The text slot at the violation cut holds the empty text; the offset slot holds zero. -/
-theorem sTxt2_temp0 (s : AussenStart) :
-    ((sTxt2 s).lokal eintritt).temp 0 =
+theorem sTxt2_temp0 (P : Plattform) (s : AussenStart) :
+    ((sTxt2 P s).lokal eintritt).temp 0 =
       some ⟨.text (sourceUtf8 []).size, TextValue.literal []⟩ := by
   rfl
 
-theorem sTxt2_zahl1 (s : AussenStart) :
-    ((sTxt2 s).lokal eintritt).zahl 1 =
+theorem sTxt2_zahl1 (P : Plattform) (s : AussenStart) :
+    ((sTxt2 P s).lokal eintritt).zahl 1 =
       some (⟨0, 0, Zahl.literal 0⟩ : Ganzzahl) := by
   rfl
 
@@ -299,51 +302,51 @@ theorem sTxt2_zahl1 (s : AussenStart) :
     without any acceptance assumption. The two wrappers below feed the guard
     conjunct of `WaechterHalten` and of `Akzeptiert` respectively. -/
 theorem textIndexUnit_guardVersagt
-    (hG : ∀ (ρ : Maschine.I.Lauf textIndexEinheit),
-      Maschine.I.Laeufe textIndexEinheit ρ →
-      ∀ (t : Maschine.I.Schnitt textIndexEinheit ρ) (op : PartielleOperation)
+    (hG : ∀ (ρ : Maschine.I.Lauf (textIndexEinheit P)),
+      Maschine.I.Laeufe (textIndexEinheit P) ρ →
+      ∀ (t : Maschine.I.Schnitt (textIndexEinheit P) ρ) (op : PartielleOperation)
         (args : Operanden op),
-        (kanonischeVerwendung textIndexEinheit).bedarf ρ t op args →
+        (kanonischeVerwendung (textIndexEinheit P)).bedarf ρ t op args →
           waechterBedarf op args) :
     False := by
   obtain ⟨h, hwF, hardwareH, fairH⟩ :=
-    katalog_nichtLeer textIndexEinheit.katalog (Plattform.katalog_wohlgeformt .x86_64)
-  have imageH : textIndexEinheit.bild.gueltig textIndexEinheit.katalog.plattform.ziel :=
-    Sicherheit.Laufkonstruktion.bild_gueltig
+    katalog_nichtLeer (textIndexEinheit P).katalog (Plattform.katalog_wohlgeformt P)
+  have imageH : (textIndexEinheit P).bild.gueltig (textIndexEinheit P).katalog.plattform.ziel :=
+    bildGueltig_einheitVon P textIndexUnit
   obtain ⟨s, zul⟩ := zulStart_erfuellbar hardwareH imageH
   obtain ⟨k, assigned⟩ := zul.2.2.1 0 (Nat.zero_lt_succ _)
   obtain ⟨zeit, init⟩ := Zeitlauf.existiert
-    (I.Schritt textIndexEinheit.einrichtung textIndexEinheit.system textIndexEinheit.katalog
+    (I.Schritt (textIndexEinheit P).einrichtung (textIndexEinheit P).system (textIndexEinheit P).katalog
       (txtHw h k))
-    (I.start textIndexEinheit s).2
+    (I.start (textIndexEinheit P) s).2
   have pauseOk : ∀ t z,
-      KeinSchritt (I.Schritt textIndexEinheit.einrichtung textIndexEinheit.system
-        textIndexEinheit.katalog (txtHw h k)) t z →
-        ¬ AbsturzAngeboten textIndexEinheit.katalog (txtHw h k) t :=
+      KeinSchritt (I.Schritt (textIndexEinheit P).einrichtung (textIndexEinheit P).system
+        (textIndexEinheit P).katalog (txtHw h k)) t z →
+        ¬ AbsturzAngeboten (textIndexEinheit P).katalog (txtHw h k) t :=
     fun t z _ offer => Bool.false_ne_true offer.2
-  let ρ : I.Lauf textIndexEinheit :=
+  let ρ : I.Lauf (textIndexEinheit P) :=
     ⟨s, h, txtHw h k, zeit.erlaubePausen pauseOk, fun _ => none⟩
-  have hρ : I.Laeufe textIndexEinheit ρ :=
-    ⟨hardwareH, txt_konformHw h s zul k assigned, zul, init,
+  have hρ : I.Laeufe (textIndexEinheit P) ρ :=
+    ⟨hardwareH, txt_konformHw (P := P) h s zul k assigned, zul, init,
       zeit.erlaubePausen_maximal pauseOk _ (fun _ => rfl), fun _ _ h => nomatch h⟩
-  have baseL : (ρ.zeit.zustand 0).lokal = (sTxt s).lokal := by
-    have e : ρ.zeit.zustand 0 = (I.start textIndexEinheit s).2 := init
+  have baseL : (ρ.zeit.zustand 0).lokal = (sTxt P s).lokal := by
+    have e : ρ.zeit.zustand 0 = (I.start (textIndexEinheit P) s).2 := init
     rw [e]
     rfl
-  have baseS : (ρ.zeit.zustand 0).status = (sTxt s).status := by
-    have e : ρ.zeit.zustand 0 = (I.start textIndexEinheit s).2 := init
+  have baseS : (ρ.zeit.zustand 0).status = (sTxt P s).status := by
+    have e : ρ.zeit.zustand 0 = (I.start (textIndexEinheit P) s).2 := init
     rw [e]
     rfl
-  have baseK : (ρ.zeit.zustand 0).kerne = (sTxt s).kerne := by
-    have e : ρ.zeit.zustand 0 = (I.start textIndexEinheit s).2 := init
+  have baseK : (ρ.zeit.zustand 0).kerne = (sTxt P s).kerne := by
+    have e : ρ.zeit.zustand 0 = (I.start (textIndexEinheit P) s).2 := init
     rw [e]
     rfl
-  have baseF : (ρ.zeit.zustand 0).fragen = (sTxt s).fragen := by
-    have e : ρ.zeit.zustand 0 = (I.start textIndexEinheit s).2 := init
+  have baseF : (ρ.zeit.zustand 0).fragen = (sTxt P s).fragen := by
+    have e : ρ.zeit.zustand 0 = (I.start (textIndexEinheit P) s).2 := init
     rw [e]
     rfl
-  have baseR : Zustand.regionLive (ρ.zeit.zustand 0) = Zustand.regionLive (sTxt s) := by
-    have e : ρ.zeit.zustand 0 = (I.start textIndexEinheit s).2 := init
+  have baseR : Zustand.regionLive (ρ.zeit.zustand 0) = Zustand.regionLive (sTxt P s) := by
+    have e : ρ.zeit.zustand 0 = (I.start (textIndexEinheit P) s).2 := init
     rw [e]
     rfl
   have hwCrash : ∀ t, (ρ.hw.angebot t).crash = false := fun t => rfl
@@ -353,36 +356,34 @@ theorem textIndexUnit_guardVersagt
   have hwDel : ∀ t, (ρ.hw.angebot t).delivery = fun _ => false := fun t => rfl
   have hwFrei : ∀ t, ρ.belegt t = none := fun t => rfl
   have hStPre : ∀ (sPre : Zustand) (c : Kontext), c ≠ eintritt →
-      sPre.status = ((I.start textIndexEinheit s).2).status → sPre.status c = .ruht := by
+      sPre.status = ((I.start (textIndexEinheit P) s).2).status → sPre.status c = .ruht := by
     intro sPre c hne heq
     rw [heq]
-    exact txt_status_other s c hne
+    exact txt_status_other (P := P) s c hne
   have readyAt : ∀ (sPre : Zustand) (t : Nat),
-      sPre.kerne = ((I.start textIndexEinheit s).2).kerne →
-      sPre.status = ((I.start textIndexEinheit s).2).status →
+      sPre.kerne = ((I.start (textIndexEinheit P) s).2).kerne →
+      sPre.status = ((I.start (textIndexEinheit P) s).2).status →
       KannSchreiten ρ.hw t eintritt sPre := by
     intro sPre t hK hS
     refine ⟨k, hwCore t, ?_, ?_⟩
     · rw [hK]
-      exact txt_dispatch s k assigned
+      exact txt_dispatch (P := P) s k assigned
     · rw [hS]
-      exact txt_status_entry s
-  have st0 := fragmentForceStep (fragment .unit textIndexUnit) .x86_64 ρ hρ 0 k (.textLiteral 0 []) (sTxt s)
+      exact txt_status_entry (P := P) s
+  have st0 := fragmentForceStep (fragment .unit textIndexUnit) P ρ hρ 0 k (.textLiteral 0 []) (sTxt P s)
     (hwCrash 0) (hwCore 0) (hwInt 0) hwInts (hwDel 0) (hwFrei 0)
     baseL baseS baseK baseF baseR
-    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl)
-    (by first | exact Or.inl rfl | exact Or.inr rfl)
+    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl) (by first | exact Or.inl rfl | exact Or.inr rfl)
     (readyAt _ _ rfl rfl) (fun c hne => hStPre _ c hne rfl) (by rfl)
-  have st1 := fragmentForceStep (fragment .unit textIndexUnit) .x86_64 ρ hρ 1 k (.literal 1 0) (sTxt1 s)
+  have st1 := fragmentForceStep (fragment .unit textIndexUnit) P ρ hρ 1 k (.literal 1 0) (sTxt1 P s)
     (hwCrash 1) (hwCore 1) (hwInt 1) hwInts (hwDel 1) (hwFrei 1)
     st0.2.1 st0.2.2.1 st0.2.2.2.1 st0.2.2.2.2.1 st0.2.2.2.2.2
-    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl)
-    (by first | exact Or.inl rfl | exact Or.inr rfl)
+    (by change kopf textIndexCode _ _ = _; rw [textIndexUnit_code]; rfl) (by first | exact Or.inl rfl | exact Or.inr rfl)
     (readyAt _ _ rfl rfl) (fun c hne => hStPre _ c hne rfl) (by rfl)
   obtain ⟨ev1, hspur1⟩ := st1.1
-  have hEqL2 : (ρ.zeit.zustand 2).lokal = (sTxt2 s).lokal := st1.2.1
-  have hEqS2 : (ρ.zeit.zustand 2).status = (sTxt2 s).status := st1.2.2.1
-  have hHead2 : kopf textIndexCode (sTxt2 s) eintritt =
+  have hEqL2 : (ρ.zeit.zustand 2).lokal = (sTxt2 P s).lokal := st1.2.1
+  have hEqS2 : (ρ.zeit.zustand 2).status = (sTxt2 P s).status := st1.2.2.1
+  have hHead2 : kopf textIndexCode (sTxt2 P s) eintritt =
       some (.textIndex 0 (sourceUtf8 []).size) := by
     rw [textIndexUnit_code]
     rfl
@@ -393,19 +394,19 @@ theorem textIndexUnit_guardVersagt
   have htemp0 : ((ρ.zeit.zustand 2).lokal eintritt).temp 0 =
       some ⟨.text (sourceUtf8 []).size, TextValue.literal []⟩ := by
     rw [hEqL2]
-    exact sTxt2_temp0 s
+    exact sTxt2_temp0 P s
   have hzahl1 : ((ρ.zeit.zustand 2).lokal eintritt).zahl 1 =
       some (⟨0, 0, Zahl.literal 0⟩ : Ganzzahl) := by
     rw [hEqL2]
-    exact sTxt2_zahl1 s
+    exact sTxt2_zahl1 P s
   have guard2 : (Befehl.textIndex 0 (sourceUtf8 []).size).guard
       ((ρ.zeit.zustand 2).lokal eintritt) = some ⟨.index, (0, 0)⟩ := by
     have hg := (textIndexBytes (sourceUtf8 []).size (TextValue.literal [])
       (⟨0, 0, Zahl.literal 0⟩ : Ganzzahl) ((ρ.zeit.zustand 2).lokal eintritt)
       htemp0 hzahl1).1
     simpa [TextValue.literal, sourceUtf8, Zahl.literal] using hg
-  let cut : I.Schnitt textIndexEinheit ρ := ⟨2, Or.inr ⟨1, ev1, rfl, hspur1⟩⟩
-  have need2 : (kanonischeVerwendung textIndexEinheit).bedarf ρ cut .index (0, 0) :=
+  let cut : I.Schnitt (textIndexEinheit P) ρ := ⟨2, Or.inr ⟨1, ev1, rfl, hspur1⟩⟩
+  have need2 : (kanonischeVerwendung (textIndexEinheit P)).bedarf ρ cut .index (0, 0) :=
     ⟨eintritt, .textIndex 0 (sourceUtf8 []).size, head2, guard2⟩
   have hbad := hG ρ hρ cut .index (0, 0) need2
   simp only [waechterBedarf] at hbad
@@ -413,16 +414,20 @@ theorem textIndexUnit_guardVersagt
 
 /-- The witness source unit is not accepted: its elaboration indexes an empty text at
     offset `0`, and the pinned guard row for `.index` refuses the canonical demand. -/
-theorem textIndexUnit_nicht_akzeptiert :
-    ¬ Annahme.Akzeptiert (einheitVon Katalog.Plattform.x86_64 textIndexUnit) := by
+theorem textIndexUnit_nicht_akzeptiert_auf (P : Plattform) :
+    ¬ Annahme.Akzeptiert (einheitVon P textIndexUnit) := by
   intro ha
-  exact textIndexUnit_guardVersagt ha.2.2.1
+  exact textIndexUnit_guardVersagt (P := P) ha.2.2.1
+
+theorem textIndexUnit_nicht_akzeptiert :
+    ¬ Annahme.Akzeptiert (einheitVon Plattform.x86_64 textIndexUnit) :=
+  textIndexUnit_nicht_akzeptiert_auf .x86_64
 
 /-- The witness unit fails the guard conjunct: `WaechterHalten` already fails. -/
 theorem textIndexUnit_nicht_waechter :
-    ¬ Annahme.WaechterHalten textIndexEinheit := by
+    ¬ Annahme.WaechterHalten (textIndexEinheit .x86_64) := by
   intro hW
-  exact textIndexUnit_guardVersagt hW.1
+  exact textIndexUnit_guardVersagt (P := .x86_64) hW.1
 
 /-- The witness unit lies on the decidable guard fragment. -/
 theorem textIndexFragment : WaechterAnalyse.waechterFragmentCode textIndexCode = true := by

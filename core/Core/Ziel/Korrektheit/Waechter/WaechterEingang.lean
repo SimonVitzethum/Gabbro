@@ -79,7 +79,7 @@ private theorem belegterEingang_guardVersagt :
   obtain ⟨k, assigned⟩ := legal.2.2.1 0 (Nat.zero_lt_succ _)
   let hw := txtHw ambient k
   have conform : hw.konform E.katalog ambient :=
-    txt_konformHw ambient start legal k assigned
+    txt_konformHw (P := .x86_64) ambient start legal k assigned
   obtain ⟨time, init⟩ := Zeitlauf.existiert
     (I.Schritt E.einrichtung E.system E.katalog hw) (I.start E start).2
   have pause (t s) (_ : KeinSchritt (I.Schritt E.einrichtung E.system E.katalog hw) t s) :
@@ -110,13 +110,13 @@ private theorem belegterEingang_guardVersagt :
     have ready : KannSchreiten ρ.hw t eintritt (eingangZustand start t) := by
       refine ⟨k, rfl, ?_, ?_⟩
       · rw [cores]
-        exact txt_dispatch start k assigned
+        exact txt_dispatch (P := .x86_64) start k assigned
       · rw [status]
         rfl
     have asleep : ∀ d, d ≠ eintritt → (eingangZustand start t).status d = .ruht := by
       intro d other
       rw [status]
-      exact txt_status_other start d other
+      exact txt_status_other (P := .x86_64) start d other
     have forced := fragmentForceStep belegterEingang .x86_64 ρ run t k b (eingangZustand start t)
       rfl rfl rfl (fun _ => rfl) rfl rfl localEq statusEq coresEq
       (requestsEq.trans noRequests.symm) regionsEq head (.inl internal) ready asleep noRequests

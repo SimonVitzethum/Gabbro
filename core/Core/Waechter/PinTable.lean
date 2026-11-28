@@ -325,6 +325,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.PauseNIAussage, 1240744865446557209),
   (`Gabbro.Core.Ziel.Korrektheit.KorrektheitAussagen, 16274964262857766716),
   (`Gabbro.Core.Ziel.Korrektheit.VergleichSpurenAussage, 11780966314716571393),
+  (`Gabbro.Core.Ziel.Korrektheit.VergleichSpurenOhneHerkunftAussage, 5435396033559534237),
+  (`Gabbro.Core.Ziel.Korrektheit.FairSimOhneHaengenAussage, 15334909641778450991),
   (`Gabbro.Core.Beobachtung.ZugriffFormNIAussage, 11317061299248730025),
   (`Gabbro.Core.Ast.Semantik.AnkunftUnveraendertAussage, 9319740293710160447),
   (`Gabbro.Core.Linken.LinkAkzeptanzAussage, 14334262145364764644),
@@ -427,6 +429,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 17945051885790618584),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 16448971613045062056),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 2542038767378499604),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 12788718937498996416)]
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 12788718937498996416),
+  (`Gabbro.Core.Ast.Semantik.regionStmtSchema, 9470412458078157297),
+  (`Gabbro.Core.Ast.Semantik.regionBefehlSchema, 16047216272278227145),
+  (`Gabbro.Core.Ast.Semantik.AddressTypeRegistryAussage, 16168430082618885746)]
 
 end Gabbro.Core.Waechter
