@@ -1,5 +1,5 @@
 /-
-  File:      core/Core/Ziel/Korrektheit/Beweise/BegleitZusammensetzung.lean
+  File:      core/Core/Ziel/Korrektheit/Beweise/Zusammensetzung/BegleitZusammensetzung.lean
   Subject:   COMPANION LEMMAS for the pinned statements of `Core/Ziel/Korrektheit/Zusammensetzung.lean`
               (the goal theorem over the concrete frame, composed from its legs): for every `…Aussage`
               an `X.erfuellbar` (premises hold jointly) and an `X.nichtTrivial` (the statement is sharp:

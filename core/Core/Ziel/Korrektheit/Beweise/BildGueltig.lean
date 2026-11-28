@@ -21,11 +21,9 @@ namespace Gabbro.Core.Ziel.Korrektheit
 
 open Gabbro.Core
 
-/-- THE IMAGE OF AN ADMITTED UNIT IS VALID (the pinned `BildGueltigAussage`). The elaborated image is the fixed
-    image of the current loader and the target is the selected platform's target data, so validity holds
-    independently of the source tree and of the admission premise. -/
-theorem bildGueltig (P : Katalog.Plattform) : BildGueltigAussage P := by
-  intro t _
+/-- The fixed loader image is valid on the target selected by any source elaboration. -/
+theorem bildGueltig_einheitVon (P : Katalog.Plattform) (t : Ast.Unit) :
+    (einheitVon P t).bild.gueltig (einheitVon P t).katalog.plattform.ziel := by
   change (Ast.Semantik.bild : Katalog.Bild).gueltig P.ziel
   rcases Katalog.ziele_gut P with ⟨_, _, _, _, _, _, _, _, _, helf⟩
   refine ⟨helf, ?_, ?_⟩
@@ -39,5 +37,9 @@ theorem bildGueltig (P : Katalog.Plattform) : BildGueltigAussage P := by
     have entryZero : entry = 0 := List.mem_singleton.mp mem
     subst entry
     exact ⟨0, rfl⟩
+
+/-- The image of an admitted unit is valid. -/
+theorem bildGueltig (P : Katalog.Plattform) : BildGueltigAussage P :=
+  fun t _ => bildGueltig_einheitVon P t
 
 end Gabbro.Core.Ziel.Korrektheit

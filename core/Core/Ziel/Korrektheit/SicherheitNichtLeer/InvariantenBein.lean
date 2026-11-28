@@ -14,7 +14,7 @@
 module
 
 public import Core.Ziel.Korrektheit.PrueferKlauseln
-public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 public import Core.Ast.Semantik.Runtime.Klasse.ZugriffSicher.RennenLauf
 public import Core.Maschine.Start
 public import Core.Katalog.Erfuellbar

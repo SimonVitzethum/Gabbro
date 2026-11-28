@@ -287,6 +287,9 @@ public import Core.Beobachtung.SchrankenBeweise.Kosten.PrologKosten
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.BindungEndlich
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.StartHandoff
 public import Core.Beobachtung.SchrankenBeweise.Ressourcen.StartByteHandoff
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Stapelgrenze
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Startbuchung
+public import Core.Beobachtung.SchrankenBeweise.Ressourcen.Maschinengrenzen
 public import Core.Ast.Semantik.Runtime.Speicherplan.Zelle
 public import Core.Ast.Semantik.Runtime.Befehl
 public import Core.Ast.Semantik.Runtime.Praedikat
@@ -383,11 +386,16 @@ public import Core.Ziel.Korrektheit.Beweise.BegleitMaschine
 public import Core.Ziel.Korrektheit.Beweise.BegleitFrontend
 public import Core.Ziel.Korrektheit.Beweise.BegleitPruefer
 public import Core.Ziel.Korrektheit.Beweise.BegleitVerfeinerung
-public import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasis
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegBasisRegistry
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegAggregate
 public import Core.Ziel.Korrektheit.Beweise2.FormBelegDatensatz
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.PrueferFormen
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.NICounterexample
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.ZielInhalt
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.VergleichSpuren
+public import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.ZielAusTeilen
 public import Core.Ziel.Korrektheit.Beweise.Kohaerenz
 public import Core.Ziel.Korrektheit.Beweise.FalsifizierbarBasis
 public import Core.Ziel.Korrektheit.Beweise.Falsifizierbar

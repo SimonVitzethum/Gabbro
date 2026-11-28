@@ -20,7 +20,7 @@ public import Core.Verfeinerung.Fortschritt
 public import Core.Verfeinerung.Simulation
 public import Core.Ziel.Korrektheit.Beweise.Fortschritt.EinheitLaeufe
 public import Core.Ziel.Korrektheit.Zugriff
-import Core.Ziel.Korrektheit.Beweise.BegleitZusammensetzung
+import Core.Ziel.Korrektheit.Beweise.Zusammensetzung.BegleitZusammensetzung
 import Core.Fortschritt.Verdraengung
 
 @[expose] public section
