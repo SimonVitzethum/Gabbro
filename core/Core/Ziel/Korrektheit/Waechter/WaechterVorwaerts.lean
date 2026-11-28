@@ -15,6 +15,12 @@ private theorem vorwaerts_privat {b : Befehl} (allowed : vorwaertsBefehl b = tru
     b.Privat := by
   apply Befehl.privat_von_kein_zugriff <;> intro form eq <;> subst b <;> cases allowed
 
+private theorem sprungweite_pos {distance : Nat} (allowed : decide (0 < distance) = true) :
+    0 < distance := by
+  cases distance with
+  | zero => cases allowed
+  | succ n => exact Nat.zero_lt_succ n
+
 /-- Forward code installs no call targets. Every live post-state is at a larger position. -/
 private theorem vorwaerts_auswerten (b : Befehl) (allowed : vorwaertsBefehl b = true)
     (r : Semantik.Rahmen) (live : Nat → Bool) (empty : r.funktionen = []) :
@@ -29,12 +35,12 @@ private theorem vorwaerts_auswerten (b : Befehl) (allowed : vorwaertsBefehl b = 
     | skip
   case ende => exact ⟨empty, .inl (Option.some_ne_none _)⟩
   case springe distance =>
-    exact ⟨empty, .inr (Nat.lt_add_of_pos_right (of_decide_eq_true allowed))⟩
+    exact ⟨empty, .inr (Nat.lt_add_of_pos_right (sprungweite_pos allowed))⟩
   case springeWenn source flag distance =>
     refine ⟨empty, .inr ?_⟩
     change r.pc < r.pc + (if (r.temp source).bind alsBoolean = some flag then distance else 1)
     split
-    · exact Nat.lt_add_of_pos_right (of_decide_eq_true allowed)
+    · exact Nat.lt_add_of_pos_right (sprungweite_pos allowed)
     · exact Nat.lt_succ_self _
   case starte name =>
     have halts : (Befehl.starte name).auswerten r live = r.halt (.ungueltigerRuf name) := by
