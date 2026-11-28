@@ -12,6 +12,7 @@ public import Core.Ziel.Sicherheit
 public import Core.Text.Model
 public import Core.Text.Review.Befunde
 public import Core.Ast
+public import Core.Ast.LowLevel.Proofs.RegionRegistry
 public import Core.Ast.Inventory.Entries.PointerTypeUse
 public import Core.Ast.Semantik.Runtime.ProgramKernSicherheit
 public import Core.Speicher
@@ -357,6 +358,7 @@ public import Core.Ziel.Korrektheit.Waechter.WaechterErhalt
 public import Core.Ziel.Korrektheit.Waechter.WaechterRahmen
 public import Core.Ziel.Korrektheit.Waechter.WaechterBedarf
 public import Core.Ziel.Korrektheit.Waechter.WaechterAbstrakt
+public import Core.Ziel.Korrektheit.Waechter.WaechterGegenbeispiel
 public import Core.Ziel.Korrektheit.Frontend
 public import Core.Ziel.Korrektheit.Instanz
 public import Core.Ziel.Korrektheit.Speicher

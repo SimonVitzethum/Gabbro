@@ -429,6 +429,9 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockPrecAussage, 17945051885790618584),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindKonvergenzAussage, 16448971613045062056),
   (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.rfindDivergenzAussage, 2542038767378499604),
-  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 12788718937498996416)]
+  (`Gabbro.Core.Beobachtung.Unentscheidbar.Simulation.Uebersetzer.blockRfindAussage, 12788718937498996416),
+  (`Gabbro.Core.Ast.Semantik.regionStmtSchema, 9470412458078157297),
+  (`Gabbro.Core.Ast.Semantik.regionBefehlSchema, 16047216272278227145),
+  (`Gabbro.Core.Ast.Semantik.AddressTypeRegistryAussage, 16168430082618885746)]
 
 end Gabbro.Core.Waechter
