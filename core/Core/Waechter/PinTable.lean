@@ -84,6 +84,8 @@ public meta def pinTable : Array (Name × UInt64) :=
   (`Gabbro.Core.Beobachtung.SpeicherverwaltungsNIAussage, 10244334509587526514),
   (`Gabbro.Core.Beobachtung.GeraeteNIAussage, 2999450716466424783),
   (`Gabbro.Core.Beobachtung.PegelNIAussage, 11966806904041898232),
+  (`Gabbro.Core.Ast.Semantik.EndlicheFlussAussage, 4369738801329401257),
+  (`Gabbro.Core.Beobachtung.AusgabeJournalAussage, 8175905976242886908),
   (`Gabbro.Core.Katalog.Plattform.spekulationshuelle, 9646114676836847360),
   (`Gabbro.Core.Beobachtung.NiedrigGleich, 9004155814124888468),
   (`Gabbro.Core.Beobachtung.GleicheNiedrigeUmgebung, 14233553552709306252),
